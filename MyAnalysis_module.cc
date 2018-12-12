@@ -24,6 +24,14 @@
 #include "TNtuple.h"
 #include "TROOT.h"
 #include "TLorentzVector.h"
+#include "TH1D.h"
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "TLatex.h"
+#include "TStyle.h"
+#include "TColor.h"
+#include "TGraph.h"
+
 
 namespace TrackID {
   class MyAnalysis;
@@ -66,6 +74,8 @@ private:
   simb::MCTrajectory True_trajectory ;
   TLorentzVector MC_Track_Position ;
   double fMCLenght ;
+  double fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
+
 };
 
 
@@ -107,11 +117,36 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  True_trajectory = trueParticle.Trajectory() ;
 	  fMCLenght = True_trajectory.TotalLength() ;
 	  MC_Track_Position = True_trajectory.Position( True_trajectory.size() ) ;
+	  
 	}
       }
+      /*      for ( unsigned int j = 0; j<True_trajectory.size(); ++j){
+	fTrack_position_x = True_trajectory.X( j ) ;                                  // Need to fill the tree in the right way so that every hit is stored
+	fTrack_position_y = True_trajectory.Y( j ) ;
+	fTrack_position_z = True_trajectory.Z( j ) ;
+	fTrack_position_T = True_trajectory.T( j ) ;
+	}*/
+
+      // This should be a function called Print 
+      TH1D *h_track = new TH1D("h_track", " Particle Track ", True_trajectory.size(), True_trajectory.X(0), True_trajectory.X(True_trajectory.size()));
+      for( unsigned int i = 0; i < True_trajectory.size(); ++i ){
+	h_track-> Fill(True_trajectory.X(i), True_trajectory.T(i));
+      }
+  
+      gStyle->SetPalette(55);
+      gStyle->SetNumberContours(250);
+
+      TCanvas *c = new TCanvas();
+      h_track->SetLineColor(2);
+      h_track->GetXaxis()->SetTitle("x");
+      h_track->GetYaxis()->SetTitle("t");
+      h_track->Draw("hist");
+      //  c->SaveAs((path+"_track.root").c_str());
+      c->SaveAs("particle_track.root");
+      //c->Clear();
+   
     }
   }
-  std::cout<<fMCLenght<<std::endl;
 
   // FILL TREES
   event_tree      -> Fill();
@@ -148,6 +183,10 @@ void TrackID::MyAnalysis::beginJob( )
   fFirstDaughter = -999 ;
   fDaughter = -999 ;
   fMCLenght = -999 ;
+  fTrack_position_x = -999. ;
+  fTrack_position_y = -999. ;
+  fTrack_position_z = -999. ;
+  fTrack_position_T = -999.;
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
@@ -172,6 +211,11 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "First_Daughter",         &fFirstDaughter,      "First_d/I");
   //  mcparticle_tree -> Branch( "Daughter",               &fDaughter,           "d/I");
   mcparticle_tree -> Branch( "MC_Length",              &fMCLenght,      "Lenght/D");
+  /*  mcparticle_tree -> Branch( "MC_track_position_x",              &fTrack_position_x,      "Position_x/D");
+  mcparticle_tree -> Branch( "MC_track_position_y",              &fTrack_position_y,      "Position_y/D");
+  mcparticle_tree -> Branch( "MC_track_position_z",              &fTrack_position_z,      "Position_z/D");
+  mcparticle_tree -> Branch( "MC_track_position_T",              &fTrack_position_T,      "Position_T/D");
+  */
 
   /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
