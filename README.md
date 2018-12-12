@@ -47,3 +47,11 @@ True hit level information
 - [ ] Precise hit information: 3D track reconstructed ( position, time and calorimetry )
 - [ ] Keep hiearchy information
   
+  
+ # To do List:
+ - [ ] Access all information for MC particles
+ - [ ] Access all information for RECO particles
+ - [ ] Add usefull features and functions for fitter 
+ - [ ] Develop fitter itself
+ - [ ] Check differences between muons and pions
+ - [ ] Implement purity cuts
