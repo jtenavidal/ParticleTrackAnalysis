@@ -32,8 +32,9 @@ Keep hiearchy information : possible at this level?
 - [X] NumberDaughters() {int type}
 - [ ] Daughter( ) {int type}
 
-True hit level information -> detector effects, smearing (future?)
-- [ ] simb::MCTrajectory Trajectory 
+True hit level information
+- [X] simb::MCTrajectory Trajectory -> Positioning and energy available, also plotting  
+- [X] MCLenght information 
 
 ### Reco track tree contains information of the reconstructed track, including hit level information
 - [X] Event_id
