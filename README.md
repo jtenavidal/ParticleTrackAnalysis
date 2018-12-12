@@ -2,13 +2,13 @@
 
 Developed to look for specific features characteristic for muon and pion events -> develop a new PID method
 
-##OUTPUT: 
+## OUTPUT file: 
 
 RooT file containging three trees,
 
 ## Information in each tree: 
 
-Event Tree contains general information of the event regardless of its nature
+### Event Tree contains general information of the event regardless of its nature
 
 - [X] event id
 - [ ] time now
@@ -19,7 +19,7 @@ Event Tree contains general information of the event regardless of its nature
 - [ ] number of tracks
 - [ ] number of showers 
 
-MC Particle tree contains information at the truth level
+### MC Particle tree contains information at the truth level
 - [X] ID
 - [X] PDG code
 - [X] Mass
@@ -27,13 +27,14 @@ MC Particle tree contains information at the truth level
 - [ ] direction -> Can have a TLorenzVector
 - [X] Energy 
 - [ ] Process
-- [ ] Keep hiearchy information : possible at this level?
--- [X] NumberDaughters() {int type}
--- [ ] Daughter( ) {int type}
-- [?] True hit level information -> detector effects, smearing (future?)
--- [ ] simb::MCTrajectory Trajectory 
+Keep hiearchy information : possible at this level?
+- [X] NumberDaughters() {int type}
+- [ ] Daughter( ) {int type}
+True hit level information -> detector effects, smearing (future?)
+- [ ] simb::MCTrajectory Trajectory 
 
-Reco track tree contains information of the reconstructed track, including hit level information
+### Reco track tree contains information of the reconstructed track, including hit level information
+- [X] Event_id
 - [ ] Chi2 hipotesis for: muons, pions, kaons and protons (the last two should not be seen but just in case)
 - [ ] dE/dx (must be able to split it if needed)
 - [ ] Residual range
