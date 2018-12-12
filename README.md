@@ -27,9 +27,11 @@ RooT file containging three trees,
 - [ ] direction -> Can have a TLorenzVector
 - [X] Energy 
 - [ ] Process
+
 Keep hiearchy information : possible at this level?
 - [X] NumberDaughters() {int type}
 - [ ] Daughter( ) {int type}
+
 True hit level information -> detector effects, smearing (future?)
 - [ ] simb::MCTrajectory Trajectory 
 
