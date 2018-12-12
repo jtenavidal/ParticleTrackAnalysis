@@ -64,6 +64,8 @@ private:
   float fTrueParticleEnergy, fMass;
   float fpx, fpy, fpz, fpt, fp; // momentum variables
   simb::MCTrajectory True_trajectory ;
+  TLorentzVector MC_Track_Position ;
+  double fMCLenght ;
 };
 
 
@@ -103,13 +105,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fFirstDaughter = trueParticle.FirstDaughter() ;
 	  //	  fDaughter = trueParticle.Daughter() ;
 	  True_trajectory = trueParticle.Trajectory() ;
+	  fMCLenght = True_trajectory.TotalLength() ;
+	  MC_Track_Position = True_trajectory.Position( True_trajectory.size() ) ;
 	}
       }
     }
   }
-  std::cout<<fNumDaughters<<std::endl;
-  std::cout<<fFirstDaughter<<std::endl;
-  std::cout<<fDaughter<<"\n"<<std::endl;
+  std::cout<<fMCLenght<<std::endl;
 
   // FILL TREES
   event_tree      -> Fill();
@@ -142,43 +144,19 @@ void TrackID::MyAnalysis::beginJob( )
   fpz = -999. ;
   fpt = -999. ;
   fp  = -999. ;
-  fNumDaughters = -1 ;
-  fFirstDaughter = -1 ;
-  fDaughter = -1 ;
+  fNumDaughters = -999 ;
+  fFirstDaughter = -999 ;
+  fDaughter = -999 ;
+  fMCLenght = -999 ;
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
   recotrack_tree  = new TTree( "recoparticle_tree",    "Reco tree: reconstructed information of the tracks, hit level included");
 
-  /*
-   Event Tree contains general information of the event regardless of its nature
-   [ ] event id
-   [ ] time now
-   [ ] mother particle pdg code (particle beam , sanity check )
-   [ ] starting point
-   [ ] End point 
-   [ ] number of particles (including daughter particles) per type 
-   [ ] number of tracks
-   [ ] number of showers 
-  */
-
   event_tree      -> Branch( "event_id",          &event_id, "event_id/I");
 
-  /*
-    MC Particle tree contains information at the truth level
-    Must have:
-    [X] ID
-    [X] PDG code
-    [X] Mass
-    [X] Momentum 
-    [ ] direction -> Can have a TLorenzVector
-    [X] Energy 
-    [ ] Process
-    [ ] Keep hiearchy information : possible at this level?
-       [X] NumberDaughters() {int type}
-       [ ] Daughter( ) {int type}
-    [?] True hit level information -> detector effects, smearing (future?)
-       [ ] simb::MCTrajectory Trajectory 
+  /**
+     MC PARTICLE TREE BRANCHES :
    */
   mcparticle_tree -> Branch( "event_id",               &event_id,            "event_id/I");
   mcparticle_tree -> Branch( "Track_ID",               &fTrack_ID,           "Track_id/I");
@@ -193,19 +171,11 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "Num_Daughters",          &fNumDaughters,       "num_d/I");
   mcparticle_tree -> Branch( "First_Daughter",         &fFirstDaughter,      "First_d/I");
   //  mcparticle_tree -> Branch( "Daughter",               &fDaughter,           "d/I");
+  mcparticle_tree -> Branch( "MC_Length",              &fMCLenght,      "Lenght/D");
 
-  /*
-    Reco track tree contains information of the reconstructed track, including hit level information
-    [ ] Chi2 hipotesis for: muons, pions, kaons and protons (the last two should not be seen but just in case)
-    [ ] dE/dx (must be able to split it if needed)
-    [ ] Residual range
-    [ ] Lenght 
-    [ ] Kinetic energy and missing energy 
-    [ ] Hit information: number of hits, hit_tpc, hit_plane
-    [ ] Precise hit information: 3D track reconstructed ( position, time and calorimetry )
-    [ ] Keep hiearchy information
+  /**
+     RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
-
   recotrack_tree  -> Branch( "event_id",          &event_id, "event_id/I");
 
   // Set directories
