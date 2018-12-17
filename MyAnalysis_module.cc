@@ -25,6 +25,7 @@
 #include "TROOT.h"
 #include "TLorentzVector.h"
 #include "TH1D.h"
+#include "TH3D.h"
 #include "TCanvas.h"
 #include "TLegend.h"
 #include "TLatex.h"
@@ -127,20 +128,23 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	fTrack_position_T = True_trajectory.T( j ) ;
 	}*/
 
-      // This should be a function called Print 
-      TH1D *h_track = new TH1D("h_track", " Particle Track ", True_trajectory.size(), True_trajectory.X(0), True_trajectory.X(True_trajectory.size()));
+      // This should be a function called Print : need to understand what it is printing exactly. Obviously a track, but is it the primary? 
+
+      TH3D *h_track = new TH3D("h_track", " Particle Track ", True_trajectory.size(), True_trajectory.X(0), True_trajectory.X(True_trajectory.size()), True_trajectory.size(), True_trajectory.Y(0), True_trajectory.Y(True_trajectory.size()), True_trajectory.size(), True_trajectory.Z(0), True_trajectory.Z(True_trajectory.size()));
+
       for( unsigned int i = 0; i < True_trajectory.size(); ++i ){
-	h_track-> Fill(True_trajectory.X(i), True_trajectory.T(i));
+	h_track-> Fill(True_trajectory.X(i), True_trajectory.Y(i), True_trajectory.Z(i), True_trajectory.E(i));
       }
-  
       gStyle->SetPalette(55);
       gStyle->SetNumberContours(250);
 
       TCanvas *c = new TCanvas();
       h_track->SetLineColor(2);
-      h_track->GetXaxis()->SetTitle("x");
-      h_track->GetYaxis()->SetTitle("t");
+      h_track->GetXaxis()->SetTitle("X");
+      h_track->GetYaxis()->SetTitle("Y");
+      h_track->GetXaxis()->SetTitle("Z");
       h_track->Draw("hist");
+      h_track->Draw("BOX2Z");
       //  c->SaveAs((path+"_track.root").c_str());
       c->SaveAs("particle_track.root");
       //c->Clear();
