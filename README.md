@@ -33,7 +33,8 @@ Keep hiearchy information : possible at this level?
 - [ ] Daughter( ) {int type}
 
 True hit level information
-- [X] simb::MCTrajectory Trajectory -> Positioning and energy available, also plotting  
+- [X] simb::MCTrajectory Trajectory -> Positioning and energy available
+- [ ] Enable plotting  ( 3D HIST with E as weight )
 - [X] MCLenght information 
 
 ### Reco track tree contains information of the reconstructed track, including hit level information
@@ -44,7 +45,7 @@ True hit level information
 - [ ] Lenght 
 - [ ] Kinetic energy and missing energy 
 - [ ] Hit information: number of hits, hit_tpc, hit_plane
-- [ ] Precise hit information: 3D track reconstructed ( position, time and calorimetry )
+- [ ] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
 - [ ] Keep hiearchy information
   
   
