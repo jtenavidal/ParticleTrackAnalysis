@@ -34,7 +34,7 @@ Keep hiearchy information : possible at this level?
 
 True hit level information
 - [X] simb::MCTrajectory Trajectory -> Positioning and energy available
-- [ ] Enable plotting  ( 3D HIST with E as weight )
+- [X] Enable plotting  ( 3D HIST with E as weight ) : SHOULD SET AS A FUNCTION
 - [X] MCLenght information 
 
 ### Reco track tree contains information of the reconstructed track, including hit level information
