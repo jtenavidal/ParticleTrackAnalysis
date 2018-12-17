@@ -56,3 +56,10 @@ True hit level information
  - [ ] Develop fitter itself
  - [ ] Check differences between muons and pions
  - [ ] Implement purity cuts
+
+# To consider:
+ -  Save track information in tree?
+    -> Requires reading and programing all from scratch outside analyzer
+ -  Analyze the track information in analyzer and save in tree number of kinks, DE kink, position? 
+    ->  more compact information 
+  ->  Requires running analyzer each time 
