@@ -42,7 +42,6 @@
 #include "TColor.h"
 #include "TGraph.h"
 
-
 namespace TrackID {
   class MyAnalysis;
 }
@@ -90,6 +89,7 @@ private:
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
+  recob::TrackTrajectory primary_trajectory ;
 };
 
 
@@ -194,13 +194,17 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
   for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
     art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-    //    std::cout<<"primary? "<<pfparticle->IsPrimary()<<std::endl;
     
-    //if( pfparticle->IsPrimary() == 0 ) continue;
     if( pfparticle->IsPrimary() == 1 ){
       r_pdg_primary = pfparticle->PdgCode() ;
       r_nu_daughters = pfparticle->NumDaughters();
+      std::vector< art::Ptr<recob::Track> > primary_track = findTracks.at(i);
+      for( unsigned int j = 0 ; j < primary_track.size() ; ++j ){
+	primary_trajectory = primary_track[j]->Trajectory(); 
+	//	std::cout<<"x= "<<primary_track[j]->TrajectoryPoint( 0 ).X()<<std::endl;
+      }
     } else {
+
       if( pfparticle->PdgCode() == 13 ) {
 	r_mu_daughters ++ ;
       } else if ( pfparticle->PdgCode() == 211 ) {
@@ -210,8 +214,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       } else {
 	r_other_daughters ++ ;
       }
+      //       std::vector< art::Ptr<recob::Track> > daughter_track = findTracks.at(i);
     }
   }
+
 
   // FILL TREES
   event_tree      -> Fill();
