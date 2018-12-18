@@ -88,7 +88,8 @@ private:
 
 
   // Reco information
-  int r_pdg_primary, r_pdg_daughters, r_nu_daughters ;
+  int r_pdg_primary, r_nu_daughters ;
+  int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
 };
 
 
@@ -184,7 +185,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   
   // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
   art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, m_recotrackLabel );
-  std::cout<<" PARTICLE 1 " <<std::endl;
+
+  r_mu_daughters = 0;
+  r_pi_daughters = 0;
+  r_e_daughters = 0;
+  r_p_daughters = 0;
+  r_other_daughters = 0;
+
   for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
     art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
     //    std::cout<<"primary? "<<pfparticle->IsPrimary()<<std::endl;
@@ -194,7 +201,15 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       r_pdg_primary = pfparticle->PdgCode() ;
       r_nu_daughters = pfparticle->NumDaughters();
     } else {
-      r_pdg_daughters = pfparticle->PdgCode() ; // this will take the last one -> Needs fixing?
+      if( pfparticle->PdgCode() == 13 ) {
+	r_mu_daughters ++ ;
+      } else if ( pfparticle->PdgCode() == 211 ) {
+	r_pi_daughters ++ ;
+      } else if ( pfparticle->PdgCode() == 11 ) {
+	r_e_daughters ++ ;
+      } else {
+	r_other_daughters ++ ;
+      }
     }
   }
 
@@ -240,8 +255,13 @@ void TrackID::MyAnalysis::beginJob( )
 
   // reco information
   r_pdg_primary   = 0 ;
-  r_pdg_daughters = 0 ;
   r_nu_daughters  = 0 ;
+  r_mu_daughters = 0 ;
+  r_pi_daughters = 0 ;
+  r_e_daughters = 0 ;
+  r_p_daughters = 0 ;
+  r_other_daughters = 0 ;
+  
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
@@ -275,10 +295,15 @@ void TrackID::MyAnalysis::beginJob( )
   /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
-  recotrack_tree  -> Branch( "event_id",          &event_id, "event_id/I");
+  recotrack_tree  -> Branch( "event_id",          &event_id,      "event_id/I");
   recotrack_tree  -> Branch( "pdg_primary",       &r_pdg_primary, "pdg_primary/I");
   recotrack_tree  -> Branch( "nu_daughters",      &r_nu_daughters, "nu_daughters/I");
-  recotrack_tree  -> Branch( "pdg_daughters",      &r_pdg_daughters, "pdg_daughters/I");
+  recotrack_tree  -> Branch( "mu_daughters",      &r_mu_daughters, "mu_daughters/I");
+  recotrack_tree  -> Branch( "pi_daughters",      &r_pi_daughters, "pi_daughters/I");
+  recotrack_tree  -> Branch( "e_daughters",       &r_e_daughters,  "e_daughters/I");
+  recotrack_tree  -> Branch( "p_daughters",       &r_p_daughters,  "p_daughters/I");
+  recotrack_tree  -> Branch( "other_daughters",  &r_other_daughters, "others_daughters/I");
+
   // Set directories
   event_tree->SetDirectory(0);
   mcparticle_tree->SetDirectory(0);
