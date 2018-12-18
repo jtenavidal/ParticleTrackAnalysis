@@ -41,6 +41,7 @@
 #include "TStyle.h"
 #include "TColor.h"
 #include "TGraph.h"
+#include "Math/PositionVector3D.h"
 
 namespace TrackID {
   class MyAnalysis;
@@ -199,10 +200,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       r_pdg_primary = pfparticle->PdgCode() ;
       r_nu_daughters = pfparticle->NumDaughters();
       std::vector< art::Ptr<recob::Track> > primary_track = findTracks.at(i);
-      for( unsigned int j = 0 ; j < primary_track.size() ; ++j ){
-	primary_trajectory = primary_track[j]->Trajectory(); 
-	//	std::cout<<"x= "<<primary_track[j]->TrajectoryPoint( 0 ).X()<<std::endl;
-      }
+      std::cout<<"primary track size "<<primary_track.size()<<std::endl;
+      //##      std::cout<<"vertex x = "<< primary_track[0]->Vertex()[0]<<std::endl;
+      //for( unsigned int j = 0 ; j < primary_track.size() ; ++j ){
+      //      primary_trajectory = primary_track[0]->Trajectory(); 
+      //std::cout<<"+++++++++++++++++++++"<<std::endl;
+      //      std::cout<<"x= "<<primary_track[0]->TrajectoryPoint( 0 ).position.X()<<std::endl;
+      //  }
     } else {
 
       if( pfparticle->PdgCode() == 13 ) {
