@@ -23,7 +23,7 @@
 #include "lardataobj/RecoBase/Track.h"
 #include "lardataobj/RecoBase/Vertex.h"
 #include "lardataobj/RecoBase/Hit.h"
-#include "lardataobj/Shower.h"
+#include "lardataobj/RecoBase/Shower.h"
 #include "lardataobj/AnalysisBase/Calorimetry.h"
 #include "lardataobj/AnalysisBase/ParticleID.h"
 #include "canvas/Persistency/Common/FindManyP.h"
@@ -77,7 +77,7 @@ private:
   int event_id ; 
 
   // Truth information
-  std::string fTruthLabel ; 
+  std::string fTruthLabel, m_particleLabel, m_hitfinderLabel;
   int fPDG_Code, fTrack_ID, fNumDaughters, fFirstDaughter, fDaughter; 
   float fTrueParticleEnergy, fMass;
   float fpx, fpy, fpz, fpt, fp; // momentum variables
@@ -97,6 +97,9 @@ TrackID::MyAnalysis::MyAnalysis(fhicl::ParameterSet const & p)
 
   // Get the .fcl parameters
   fTruthLabel = p.get<std::string>("TruthLabel");
+  m_particleLabel = p.get<std::string>("PFParticleModule","pandora");
+  m_hitfinderLabel = p.get<std::string>("HitFinderModule","linecluster");
+  
   this->reconfigure(p);
 }
 
@@ -157,7 +160,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       //  c->SaveAs((path+"_track.root").c_str());
       c->SaveAs("particle_track.root");
       //c->Clear();
-   
     }
   }
 
@@ -165,6 +167,23 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   event_tree      -> Fill();
   mcparticle_tree -> Fill();
   recotrack_tree  -> Fill();
+
+
+      /**************************************************************************************************
+       *  RECO INFORMATION
+       *************************************************************************************************/
+  // Get PFParticle Handle
+  art::Handle< std::vector< recob::PFParticle > > pfParticleHandle ;
+  e.getByLabel(m_particleLabel, pfParticleHandle ) ;
+
+  //Find the hits associated to the reconstructed PFParticle
+  art::Handle< std::vector< recob::Hit > > hitListHandle ;
+  e.getByLabel(m_hitfinderLabel, hitListHandle);
+
+  //Find the reco tracks
+  //  art::Handle< std::vector< recob::Track > > trackHandle ;
+  //  e.getByLabel(m_recotrackLabel, trackHandle ) ;
+  
 
 }
 
