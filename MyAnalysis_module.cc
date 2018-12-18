@@ -20,7 +20,12 @@
 #include "nusimdata/SimulationBase/MCTrajectory.h"
 #include "lardataobj/RecoBase/PFParticle.h"
 #include "lardataobj/RecoBase/Cluster.h"
+#include "lardataobj/RecoBase/Track.h"
+#include "lardataobj/RecoBase/Vertex.h"
 #include "lardataobj/RecoBase/Hit.h"
+#include "lardataobj/Shower.h"
+#include "lardataobj/AnalysisBase/Calorimetry.h"
+#include "lardataobj/AnalysisBase/ParticleID.h"
 #include "canvas/Persistency/Common/FindManyP.h"
 
 #include "TTree.h"
