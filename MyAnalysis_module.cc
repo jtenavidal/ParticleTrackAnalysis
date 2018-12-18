@@ -77,7 +77,7 @@ private:
   int event_id ; 
 
   // Truth information
-  std::string fTruthLabel, m_particleLabel, m_hitfinderLabel;
+  std::string fTruthLabel, m_particleLabel, m_hitfinderLabel, m_recotrackLabel;
   int fPDG_Code, fTrack_ID, fNumDaughters, fFirstDaughter, fDaughter; 
   float fTrueParticleEnergy, fMass;
   float fpx, fpy, fpz, fpt, fp; // momentum variables
@@ -99,7 +99,8 @@ TrackID::MyAnalysis::MyAnalysis(fhicl::ParameterSet const & p)
   fTruthLabel = p.get<std::string>("TruthLabel");
   m_particleLabel = p.get<std::string>("PFParticleModule","pandora");
   m_hitfinderLabel = p.get<std::string>("HitFinderModule","linecluster");
-  
+  m_recotrackLabel = p.get<std::string>("RecoTrackLabel","pandoraTrack");
+
   this->reconfigure(p);
 }
 
@@ -181,8 +182,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   e.getByLabel(m_hitfinderLabel, hitListHandle);
 
   //Find the reco tracks
-  //  art::Handle< std::vector< recob::Track > > trackHandle ;
-  //  e.getByLabel(m_recotrackLabel, trackHandle ) ;
+  art::Handle< std::vector< recob::Track > > trackHandle ;
+  e.getByLabel(m_recotrackLabel, trackHandle ) ;
   
 
 }
