@@ -86,6 +86,9 @@ private:
   double fMCLenght ;
   double fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
 
+
+  // Reco information
+  int r_pdg_primary, r_pdg_daughters, r_nu_daughters ;
 };
 
 
@@ -164,15 +167,9 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     }
   }
 
-  // FILL TREES
-  event_tree      -> Fill();
-  mcparticle_tree -> Fill();
-  recotrack_tree  -> Fill();
-
-
-      /**************************************************************************************************
-       *  RECO INFORMATION
-       *************************************************************************************************/
+/**************************************************************************************************
+ *  RECO INFORMATION
+ *************************************************************************************************/
   // Get PFParticle Handle
   art::Handle< std::vector< recob::PFParticle > > pfParticleHandle ;
   e.getByLabel(m_particleLabel, pfParticleHandle ) ;
@@ -185,6 +182,26 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   art::Handle< std::vector< recob::Track > > trackHandle ;
   e.getByLabel(m_recotrackLabel, trackHandle ) ;
   
+  // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
+  art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, m_recotrackLabel );
+  std::cout<<" PARTICLE 1 " <<std::endl;
+  for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
+    art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
+    //    std::cout<<"primary? "<<pfparticle->IsPrimary()<<std::endl;
+    
+    //if( pfparticle->IsPrimary() == 0 ) continue;
+    if( pfparticle->IsPrimary() == 1 ){
+      r_pdg_primary = pfparticle->PdgCode() ;
+      r_nu_daughters = pfparticle->NumDaughters();
+    } else {
+      r_pdg_daughters = pfparticle->PdgCode() ; // this will take the last one -> Needs fixing?
+    }
+  }
+
+  // FILL TREES
+  event_tree      -> Fill();
+  mcparticle_tree -> Fill();
+  recotrack_tree  -> Fill();
 
 }
 
@@ -220,6 +237,11 @@ void TrackID::MyAnalysis::beginJob( )
   fTrack_position_y = -999. ;
   fTrack_position_z = -999. ;
   fTrack_position_T = -999.;
+
+  // reco information
+  r_pdg_primary   = 0 ;
+  r_pdg_daughters = 0 ;
+  r_nu_daughters  = 0 ;
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
@@ -254,7 +276,9 @@ void TrackID::MyAnalysis::beginJob( )
      RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
   recotrack_tree  -> Branch( "event_id",          &event_id, "event_id/I");
-
+  recotrack_tree  -> Branch( "pdg_primary",       &r_pdg_primary, "pdg_primary/I");
+  recotrack_tree  -> Branch( "nu_daughters",      &r_nu_daughters, "nu_daughters/I");
+  recotrack_tree  -> Branch( "pdg_daughters",      &r_pdg_daughters, "pdg_daughters/I");
   // Set directories
   event_tree->SetDirectory(0);
   mcparticle_tree->SetDirectory(0);
