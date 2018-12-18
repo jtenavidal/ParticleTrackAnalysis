@@ -18,6 +18,10 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTrajectory.h"
+#include "lardataobj/RecoBase/PFParticle.h"
+#include "lardataobj/RecoBase/Cluster.h"
+#include "lardataobj/RecoBase/Hit.h"
+#include "canvas/Persistency/Common/FindManyP.h"
 
 #include "TTree.h"
 #include "TFile.h"
