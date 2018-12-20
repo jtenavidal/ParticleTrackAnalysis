@@ -42,10 +42,10 @@ True hit level information
 - [ ] Chi2 hipotesis for: muons, pions, kaons and protons (the last two should not be seen but just in case)
 - [ ] dE/dx (must be able to split it if needed)
 - [ ] Residual range
-- [ ] Lenght 
+- [X] Lenght 
 - [ ] Kinetic energy and missing energy 
 - [ ] Hit information: number of hits, hit_tpc, hit_plane
-- [ ] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
+- [X] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
 - [ ] Keep hiearchy information
   
   
