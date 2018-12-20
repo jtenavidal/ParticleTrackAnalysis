@@ -192,33 +192,39 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_e_daughters = 0;
   r_p_daughters = 0;
   r_other_daughters = 0;
+  if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
 
-  for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
-    art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
+    for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
+      art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
     
-    if( pfparticle->IsPrimary() == 1 ){
-      r_pdg_primary = pfparticle->PdgCode() ;
-      r_nu_daughters = pfparticle->NumDaughters();
-      std::vector< art::Ptr<recob::Track> > primary_track = findTracks.at(i);
-      std::cout<<"primary track size "<<primary_track.size()<<std::endl;
-      //##      std::cout<<"vertex x = "<< primary_track[0]->Vertex()[0]<<std::endl;
-      //for( unsigned int j = 0 ; j < primary_track.size() ; ++j ){
-      //      primary_trajectory = primary_track[0]->Trajectory(); 
-      //std::cout<<"+++++++++++++++++++++"<<std::endl;
-      //      std::cout<<"x= "<<primary_track[0]->TrajectoryPoint( 0 ).position.X()<<std::endl;
-      //  }
-    } else {
-
-      if( pfparticle->PdgCode() == 13 ) {
-	r_mu_daughters ++ ;
-      } else if ( pfparticle->PdgCode() == 211 ) {
-	r_pi_daughters ++ ;
-      } else if ( pfparticle->PdgCode() == 11 ) {
-	r_e_daughters ++ ;
+      if( pfparticle->IsPrimary() == 1 ){
+	r_pdg_primary = pfparticle->PdgCode() ;
+	r_nu_daughters = pfparticle->NumDaughters();
       } else {
-	r_other_daughters ++ ;
+      	if( pfparticle->PdgCode() == 13 ) {
+	  r_mu_daughters ++ ;
+	} else if ( pfparticle->PdgCode() == 211 ) {
+	  r_pi_daughters ++ ;
+	} else if ( pfparticle->PdgCode() == 11 ) {
+	  r_e_daughters ++ ;
+	} else {
+	  r_other_daughters ++ ;
+	  }
       }
-      //       std::vector< art::Ptr<recob::Track> > daughter_track = findTracks.at(i);
+	
+	if ( findTracks.at(i).size()!=0 ){
+	  std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(i);
+	
+	//std::cout<<"primary track size "<<primary_track.size()<<std::endl;
+	//##      std::cout<<"vertex x = "<< primary_track[0]->Vertex()[0]<<std::endl;
+	  std::cout<<"---------------"<<std::endl;
+	  
+	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
+	    std::cout<<"+++++++++++++++++++++"<<std::endl;
+	    std::cout<<"size"<<track_f.size()<<std::endl;
+	    std::cout<<"x= "<<track_f[j]->TrajectoryPoint( 0 ).position.X()<<std::endl;
+	  }
+	} else{ std::cout<<" i " << i << "has no data" <<std::endl;}
     }
   }
 
