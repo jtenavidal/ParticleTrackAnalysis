@@ -91,6 +91,7 @@ private:
   int r_pdg_primary, r_nu_daughters ;
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
+
 };
 
 
@@ -214,17 +215,18 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	
 	if ( findTracks.at(i).size()!=0 ){
 	  std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(i);
-	
-	//std::cout<<"primary track size "<<primary_track.size()<<std::endl;
-	//##      std::cout<<"vertex x = "<< primary_track[0]->Vertex()[0]<<std::endl;
-	  std::cout<<"---------------"<<std::endl;
-	  
+
 	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
-	    std::cout<<"+++++++++++++++++++++"<<std::endl;
-	    std::cout<<"size"<<track_f.size()<<std::endl;
 	    std::cout<<"x= "<<track_f[j]->TrajectoryPoint( 0 ).position.X()<<std::endl;
+	    //	    std::cout<<"chi2= "<<track_f[j]->Chi2()<<std::endl;
+	    std::cout<<"start_x= "<<track_f[j]->Start( ).X()<<std::endl;
+	    std::cout<<"end_x= "<<track_f[j]->End( ).X()<<std::endl;
+	    std::cout<<"Vertex_x= "<<track_f[j]->Vertex( ).X()<<std::endl;
+	    std::cout<<"lenght= "<<track_f[j]->Length()<<std::endl;
+	    std::cout<<"momentum= "<<track_f[j]->MomentumAtPoint( 0 )<<std::endl;
+
 	  }
-	} else{ std::cout<<" i " << i << "has no data" <<std::endl;}
+	} 
     }
   }
 
