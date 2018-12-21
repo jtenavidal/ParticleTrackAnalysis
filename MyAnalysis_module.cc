@@ -83,7 +83,7 @@ private:
   float fpx, fpy, fpz, fpt, fp; // momentum variables
   simb::MCTrajectory True_trajectory ;
   TLorentzVector MC_Track_Position ;
-  double fMCLenght ;
+  double fMCLength ;
   double fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
 
 
@@ -91,7 +91,7 @@ private:
   int r_pdg_primary, r_nu_daughters ;
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
-
+  double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z, rLength, rMomentum ;
 };
 
 
@@ -135,7 +135,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fFirstDaughter = trueParticle.FirstDaughter() ;
 	  //	  fDaughter = trueParticle.Daughter() ;
 	  True_trajectory = trueParticle.Trajectory() ;
-	  fMCLenght = True_trajectory.TotalLength() ;
+	  fMCLength = True_trajectory.TotalLength() ;
 	  MC_Track_Position = True_trajectory.Position( True_trajectory.size() ) ;
 	  
 	}
@@ -217,14 +217,16 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(i);
 
 	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
-	    std::cout<<"x= "<<track_f[j]->TrajectoryPoint( 0 ).position.X()<<std::endl;
+	    //	    std::cout<<"x= "<<track_f[j]->TrajectoryPoint( 0 ).position.X()<<std::endl;
 	    //	    std::cout<<"chi2= "<<track_f[j]->Chi2()<<std::endl;
-	    std::cout<<"start_x= "<<track_f[j]->Start( ).X()<<std::endl;
-	    std::cout<<"end_x= "<<track_f[j]->End( ).X()<<std::endl;
-	    std::cout<<"Vertex_x= "<<track_f[j]->Vertex( ).X()<<std::endl;
-	    std::cout<<"lenght= "<<track_f[j]->Length()<<std::endl;
-	    std::cout<<"momentum= "<<track_f[j]->MomentumAtPoint( 0 )<<std::endl;
-
+	    rVertex_x = track_f[j]->Vertex( ).X() ;
+	    rVertex_y = track_f[j]->Vertex( ).Y() ;
+	    rVertex_z = track_f[j]->Vertex( ).Z() ;
+	    rEnd_x    = track_f[j]->End( ).X() ;
+	    rEnd_y    = track_f[j]->End( ).Y() ;
+	    rEnd_z    = track_f[j]->End( ).Z() ;
+	    rLength   = track_f[j]->Length() ;
+	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	  }
 	} 
     }
@@ -265,7 +267,7 @@ void TrackID::MyAnalysis::beginJob( )
   fNumDaughters = -999 ;
   fFirstDaughter = -999 ;
   fDaughter = -999 ;
-  fMCLenght = -999 ;
+  fMCLength = -999 ;
   fTrack_position_x = -999. ;
   fTrack_position_y = -999. ;
   fTrack_position_z = -999. ;
@@ -279,7 +281,16 @@ void TrackID::MyAnalysis::beginJob( )
   r_e_daughters = 0 ;
   r_p_daughters = 0 ;
   r_other_daughters = 0 ;
-  
+  rVertex_x = -999. ;
+  rVertex_y = -999. ;
+  rVertex_z = -999. ;
+  rEnd_x = -999. ;
+  rEnd_y = -999. ;
+  rEnd_z = -999. ;
+  rLength = -999. ;
+  rMomentum = -999. ;
+
+
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
@@ -303,7 +314,7 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "Num_Daughters",          &fNumDaughters,       "num_d/I");
   mcparticle_tree -> Branch( "First_Daughter",         &fFirstDaughter,      "First_d/I");
   //  mcparticle_tree -> Branch( "Daughter",               &fDaughter,           "d/I");
-  mcparticle_tree -> Branch( "MC_Length",              &fMCLenght,      "Lenght/D");
+  mcparticle_tree -> Branch( "MC_Length",              &fMCLength,      "Length/D");
   /*  mcparticle_tree -> Branch( "MC_track_position_x",              &fTrack_position_x,      "Position_x/D");
   mcparticle_tree -> Branch( "MC_track_position_y",              &fTrack_position_y,      "Position_y/D");
   mcparticle_tree -> Branch( "MC_track_position_z",              &fTrack_position_z,      "Position_z/D");
@@ -313,14 +324,22 @@ void TrackID::MyAnalysis::beginJob( )
   /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
-  recotrack_tree  -> Branch( "event_id",          &event_id,      "event_id/I");
-  recotrack_tree  -> Branch( "pdg_primary",       &r_pdg_primary, "pdg_primary/I");
-  recotrack_tree  -> Branch( "nu_daughters",      &r_nu_daughters, "nu_daughters/I");
-  recotrack_tree  -> Branch( "mu_daughters",      &r_mu_daughters, "mu_daughters/I");
-  recotrack_tree  -> Branch( "pi_daughters",      &r_pi_daughters, "pi_daughters/I");
-  recotrack_tree  -> Branch( "e_daughters",       &r_e_daughters,  "e_daughters/I");
-  recotrack_tree  -> Branch( "p_daughters",       &r_p_daughters,  "p_daughters/I");
-  recotrack_tree  -> Branch( "other_daughters",  &r_other_daughters, "others_daughters/I");
+  recotrack_tree  -> Branch( "event_id",          &event_id,          "event_id/I");
+  recotrack_tree  -> Branch( "pdg_primary",       &r_pdg_primary,     "pdg_primary/I");
+  recotrack_tree  -> Branch( "nu_daughters",      &r_nu_daughters,    "nu_daughters/I");
+  recotrack_tree  -> Branch( "mu_daughters",      &r_mu_daughters,    "mu_daughters/I");
+  recotrack_tree  -> Branch( "pi_daughters",      &r_pi_daughters,    "pi_daughters/I");
+  recotrack_tree  -> Branch( "e_daughters",       &r_e_daughters,     "e_daughters/I");
+  recotrack_tree  -> Branch( "p_daughters",       &r_p_daughters,     "p_daughters/I");
+  recotrack_tree  -> Branch( "other_daughters",   &r_other_daughters, "others_daughters/I");
+  recotrack_tree  -> Branch( "Vertex_x",          &rVertex_x,         "rVertex_x/D");
+  recotrack_tree  -> Branch( "Vertex_y",          &rVertex_y,         "rVertex_y/D");
+  recotrack_tree  -> Branch( "Vertex_z",          &rVertex_z,         "rVertex_z/D");
+  recotrack_tree  -> Branch( "End_x",             &rEnd_x,            "rEnd_x/D");
+  recotrack_tree  -> Branch( "End_y",             &rEnd_y,            "rEnd_y/D");
+  recotrack_tree  -> Branch( "End_z",             &rEnd_z,            "rEnd_z/D");
+  recotrack_tree  -> Branch( "Length",            &rLength,           "rLength/D");
+  recotrack_tree  -> Branch( "Momentum",          &rMomentum,         "rMomentum/D");
 
   // Set directories
   event_tree->SetDirectory(0);
