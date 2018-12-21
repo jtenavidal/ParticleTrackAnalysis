@@ -72,12 +72,14 @@ private:
 
   // Declare member data here.
 
+  // Labels
+  std::string fTruthLabel, m_particleLabel, m_hitfinderLabel, m_recotrackLabel, m_recoPIDLabel, m_recoCaloLabel;
+
   // Tree members
   TTree * event_tree, * mcparticle_tree, * recotrack_tree ; 
   int event_id ; 
 
   // Truth information
-  std::string fTruthLabel, m_particleLabel, m_hitfinderLabel, m_recotrackLabel;
   int fPDG_Code, fTrack_ID, fNumDaughters, fFirstDaughter, fDaughter; 
   float fTrueParticleEnergy, fMass;
   float fpx, fpy, fpz, fpt, fp; // momentum variables
@@ -91,7 +93,11 @@ private:
   int r_pdg_primary, r_nu_daughters ;
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
-  double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z, rLength, rMomentum ;
+  double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
+  int rnu_hits ;
+  double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
+  float rLength, rMomentum ;
+
 };
 
 
@@ -106,6 +112,8 @@ TrackID::MyAnalysis::MyAnalysis(fhicl::ParameterSet const & p)
   m_particleLabel = p.get<std::string>("PFParticleModule","pandora");
   m_hitfinderLabel = p.get<std::string>("HitFinderModule","linecluster");
   m_recotrackLabel = p.get<std::string>("RecoTrackLabel","pandoraTrack");
+  m_recoCaloLabel = p.get<std::string>("RecoCaloLabel","pandoraCalo");
+  m_recoPIDLabel = p.get<std::string>("RecoPIDLabel","pandoraPid");
 
   this->reconfigure(p);
 }
@@ -215,7 +223,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	
 	if ( findTracks.at(i).size()!=0 ){
 	  std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(i);
-
+	  art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
+	  art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
+	  art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
+	  // Loop over tracks per event
 	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
 	    //	    std::cout<<"x= "<<track_f[j]->TrajectoryPoint( 0 ).position.X()<<std::endl;
 	    //	    std::cout<<"chi2= "<<track_f[j]->Chi2()<<std::endl;
@@ -227,6 +238,39 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rEnd_z    = track_f[j]->End( ).Z() ;
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
+
+	    // Get track based variables
+	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
+	    std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
+	    std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[j]->ID());
+
+	    std::cout<< "hit_f size " << hit_f.size() <<std::endl;
+	    std::cout<< "pid_f size " << pid_f.size() <<std::endl;
+	    std::cout<< "cal_f size " << cal_f.size() <<std::endl;
+
+	    //Loop over PID associations 
+	    for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
+	      if( !pid_f[k] ) continue ;
+	      if( !pid_f[k]->PlaneID().isValid) continue ;
+	      // only look at collection plane for dEdx information
+	      if( pid_f[k]->PlaneID().Plane != 2 ) continue ;
+
+	      //Loop over calo information also in collection plane
+	      for ( unsigned int n = 0 ; n < cal_f.size() ; ++n ) {
+		if( !cal_f[n] ) continue ;
+		if( !cal_f[n]->PlaneID().isValid) continue ;
+		if( cal_f[n]->PlaneID().Plane != 2 ) continue ;
+		// save information 
+		rnu_hits  = hit_f.size() ;
+		r_chi2_mu = pid_f[k]->Chi2Muon() ;
+		r_chi2_pi = pid_f[k]->Chi2Pion() ;
+		r_chi2_p  = pid_f[k]->Chi2Proton() ;
+		r_PIDA    = pid_f[k]->PIDA();
+		r_missenergy = pid_f[k]->MissingE();
+		r_KineticEnergy = cal_f[n]->KineticEnergy();
+		r_Range = cal_f[n]->Range();
+	      }
+	    }
 	  }
 	} 
     }
@@ -248,7 +292,6 @@ void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 
 void TrackID::MyAnalysis::beginJob( )
 {
-  // Implementation of required member function here.
   // Define default for parameters and create variables and trees
 
   // Event ID
@@ -289,7 +332,14 @@ void TrackID::MyAnalysis::beginJob( )
   rEnd_z = -999. ;
   rLength = -999. ;
   rMomentum = -999. ;
-
+  rnu_hits  = -999 ;
+  r_chi2_mu = -999. ;
+  r_chi2_pi = -999. ;
+  r_chi2_p  = -999. ;
+  r_PIDA    = -999. ;
+  r_missenergy = -999. ;
+  r_KineticEnergy = -999. ;
+  r_Range = -999. ;
 
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
@@ -315,13 +365,8 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "First_Daughter",         &fFirstDaughter,      "First_d/I");
   //  mcparticle_tree -> Branch( "Daughter",               &fDaughter,           "d/I");
   mcparticle_tree -> Branch( "MC_Length",              &fMCLength,      "Length/D");
-  /*  mcparticle_tree -> Branch( "MC_track_position_x",              &fTrack_position_x,      "Position_x/D");
-  mcparticle_tree -> Branch( "MC_track_position_y",              &fTrack_position_y,      "Position_y/D");
-  mcparticle_tree -> Branch( "MC_track_position_z",              &fTrack_position_z,      "Position_z/D");
-  mcparticle_tree -> Branch( "MC_track_position_T",              &fTrack_position_T,      "Position_T/D");
-  */
 
-  /**
+ /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
   recotrack_tree  -> Branch( "event_id",          &event_id,          "event_id/I");
@@ -338,9 +383,17 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "End_x",             &rEnd_x,            "rEnd_x/D");
   recotrack_tree  -> Branch( "End_y",             &rEnd_y,            "rEnd_y/D");
   recotrack_tree  -> Branch( "End_z",             &rEnd_z,            "rEnd_z/D");
-  recotrack_tree  -> Branch( "Length",            &rLength,           "rLength/D");
-  recotrack_tree  -> Branch( "Momentum",          &rMomentum,         "rMomentum/D");
-
+  recotrack_tree  -> Branch( "Length",            &rLength,           "rLength/F");
+  recotrack_tree  -> Branch( "Momentum",          &rMomentum,         "rMomentum/F");
+  recotrack_tree  -> Branch( "nu_hits",           &rnu_hits,          "rnu_hits/I");
+  recotrack_tree  -> Branch( "r_chi2_mu",         &r_chi2_mu,         "r_chi2_mu/D");
+  recotrack_tree  -> Branch( "r_chi2_pi",         &r_chi2_pi,         "r_chi2_pi/D");
+  recotrack_tree  -> Branch( "r_chi2_p",          &r_chi2_p,          "r_chi2_p/D");
+  recotrack_tree  -> Branch( "r_PIDA",            &r_PIDA,            "r_PIDA/D");
+  recotrack_tree  -> Branch( "r_missing_energy",  &r_missenergy,      "r_missenergy/D");
+  recotrack_tree  -> Branch( "r_KineticEnergy",   &r_KineticEnergy,   "r_KineticEnergy/D");
+  recotrack_tree  -> Branch( "r_Range",           &r_Range,           "r_Range/D");
+  
   // Set directories
   event_tree->SetDirectory(0);
   mcparticle_tree->SetDirectory(0);
