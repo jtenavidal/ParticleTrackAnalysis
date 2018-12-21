@@ -1,0 +1,20 @@
+21-Dec-2018 09:43:57 CST  Initiating request to open input file "/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodsingle_mu_bnblike_newflux/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/99/reco-3d5cfbc3-dee6-4e2d-b3d1-64e3fd419585.root"
+21-Dec-2018 09:43:58 CST  Opened input file "/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodsingle_mu_bnblike_newflux/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/99/reco-3d5cfbc3-dee6-4e2d-b3d1-64e3fd419585.root"
+21-Dec-2018 09:44:01 CST  Closed input file "/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodsingle_mu_bnblike_newflux/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/99/reco-3d5cfbc3-dee6-4e2d-b3d1-64e3fd419585.root"
+
+====================================================================================================================
+TimeTracker printout (sec)            Min           Avg           Max         Median          RMS         nEvts   
+====================================================================================================================
+Full event                         0.0058283     0.095482      0.408519      0.0284302     0.124717        15     
+--------------------------------------------------------------------------------------------------------------------
+source:RootInput(read)            0.000246447   0.000537678   0.00297185    0.000358623   0.000655095      15     
+end_path:myana:MyAnalysis         0.00552198     0.094867      0.408132      0.0278386      0.12436        15     
+====================================================================================================================
+
+====================================================================================================
+MemoryTracker summary (base-10 MB units used)
+
+  Peak virtual memory usage (VmPeak)  : 1507 MB
+  Peak resident set size usage (VmHWM): 788.668 MB
+  Details saved in: 'memory.db'
+====================================================================================================

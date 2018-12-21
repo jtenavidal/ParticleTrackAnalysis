@@ -1,0 +1,97 @@
+%MSG-i MF_INIT_OK:  Early 21-Dec-2018 09:43:55 CST JobSetup
+Messagelogger initialization complete.
+%MSG
+%MSG-i AuxDetGeometryCore:  Early 21-Dec-2018 09:43:57 CST JobSetup
+New detector geometry loaded from 
+	/nashome/j/jtenavid/Desktop/Exercises/PiMuStudy/MyWorkingDir/localProducts_larsoft_v07_11_00_e17_prof/sbndcode/v07_11_00/gdml/sbnd_v01_01.gdml
+	/nashome/j/jtenavid/Desktop/Exercises/PiMuStudy/MyWorkingDir/localProducts_larsoft_v07_11_00_e17_prof/sbndcode/v07_11_00/gdml/sbnd_v01_01.gdml
+
+%MSG
+%MSG-i GeometryCore:  Early 21-Dec-2018 09:43:57 CST JobSetup
+New detector geometry loaded from 
+	/nashome/j/jtenavid/Desktop/Exercises/PiMuStudy/MyWorkingDir/localProducts_larsoft_v07_11_00_e17_prof/sbndcode/v07_11_00/gdml/sbnd_v01_01.gdml
+	/nashome/j/jtenavid/Desktop/Exercises/PiMuStudy/MyWorkingDir/localProducts_larsoft_v07_11_00_e17_prof/sbndcode/v07_11_00/gdml/sbnd_v01_01_nowires.gdml
+
+%MSG
+%MSG-i GeometryCore:  Early 21-Dec-2018 09:43:57 CST JobSetup
+Sorting volumes...
+%MSG
+%MSG-i ChannelMapStandardAlg:  Early 21-Dec-2018 09:43:57 CST JobSetup
+Initializing Standard ChannelMap...
+%MSG
+%MSG-i SimpleChannelStatusService:  Early 21-Dec-2018 09:43:57 CST JobSetup
+Loaded from configuration:
+  - 0 bad channels
+  - 0 noisy channels
+  - largest channel ID: 11275, largest present: 11275
+%MSG
+%MSG-i setupProvider<DetectorPropertiesStandard>:  Early  21-Dec-2018 09:43:57 CST JobSetup
+Asked to ignore 1 keys: 'InheritNumberTimeSamples'
+%MSG
+%MSG-i SignalShapingServiceSBND:  Early 21-Dec-2018 09:43:57 CST JobSetup
+Getting Filter from .fcl file
+%MSG
+%MSG-i SignalShapingServiceSBND:  Early 21-Dec-2018 09:43:57 CST JobSetup
+Using the field response provided from '/cvmfs/sbnd.opensciencegrid.org/products/sbnd/sbnd_data/v01_02_00/Response/sbnd_response_v1.0.root' (histograms 'FieldResponse_*')
+%MSG
+21-Dec-2018 09:43:57 CST  Initiating request to open input file "/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodsingle_mu_bnblike_newflux/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/99/reco-3d5cfbc3-dee6-4e2d-b3d1-64e3fd419585.root"
+21-Dec-2018 09:43:58 CST  Opened input file "/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodsingle_mu_bnblike_newflux/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/99/reco-3d5cfbc3-dee6-4e2d-b3d1-64e3fd419585.root"
+%MSG-w LoadNewGeometry:  BeginRun 21-Dec-2018 09:43:59 CST run: 1
+cannot find sumdata::RunData object to grab detector name
+this is expected if generating MC files
+using default geometry from configuration file
+
+%MSG
+%MSG-w Geometry:  BeginRun 21-Dec-2018 09:43:59 CST run: 1
+cannot find sumdata::RunData object to grab detector name
+this is expected if generating MC files
+using default geometry from configuration file
+
+%MSG
+Begin processing the 1st record. run: 1 subRun: 99 event: 1 at 21-Dec-2018 09:43:59 CST
+Begin processing the 2nd record. run: 1 subRun: 99 event: 2 at 21-Dec-2018 09:43:59 CST
+Begin processing the 3rd record. run: 1 subRun: 99 event: 3 at 21-Dec-2018 09:43:59 CST
+Begin processing the 4th record. run: 1 subRun: 99 event: 4 at 21-Dec-2018 09:43:59 CST
+Begin processing the 5th record. run: 1 subRun: 99 event: 5 at 21-Dec-2018 09:44:00 CST
+Begin processing the 6th record. run: 1 subRun: 99 event: 6 at 21-Dec-2018 09:44:00 CST
+Begin processing the 7th record. run: 1 subRun: 99 event: 7 at 21-Dec-2018 09:44:00 CST
+Begin processing the 8th record. run: 1 subRun: 99 event: 8 at 21-Dec-2018 09:44:00 CST
+Begin processing the 9th record. run: 1 subRun: 99 event: 9 at 21-Dec-2018 09:44:00 CST
+Begin processing the 10th record. run: 1 subRun: 99 event: 10 at 21-Dec-2018 09:44:00 CST
+Begin processing the 11th record. run: 1 subRun: 99 event: 11 at 21-Dec-2018 09:44:00 CST
+Begin processing the 12th record. run: 1 subRun: 99 event: 12 at 21-Dec-2018 09:44:00 CST
+Begin processing the 13th record. run: 1 subRun: 99 event: 13 at 21-Dec-2018 09:44:00 CST
+Begin processing the 14th record. run: 1 subRun: 99 event: 14 at 21-Dec-2018 09:44:01 CST
+Begin processing the 15th record. run: 1 subRun: 99 event: 15 at 21-Dec-2018 09:44:01 CST
+21-Dec-2018 09:44:01 CST  Closed input file "/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodsingle_mu_bnblike_newflux/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/99/reco-3d5cfbc3-dee6-4e2d-b3d1-64e3fd419585.root"
+
+====================================================================================================================
+TimeTracker printout (sec)            Min           Avg           Max         Median          RMS         nEvts   
+====================================================================================================================
+Full event                         0.0058283     0.095482      0.408519      0.0284302     0.124717        15     
+--------------------------------------------------------------------------------------------------------------------
+source:RootInput(read)            0.000246447   0.000537678   0.00297185    0.000358623   0.000655095      15     
+end_path:myana:MyAnalysis         0.00552198     0.094867      0.408132      0.0278386      0.12436        15     
+====================================================================================================================
+
+====================================================================================================
+MemoryTracker summary (base-10 MB units used)
+
+  Peak virtual memory usage (VmPeak)  : 1507 MB
+  Peak resident set size usage (VmHWM): 788.668 MB
+  Details saved in: 'memory.db'
+====================================================================================================
+
+TrigReport ---------- Event  Summary ------------
+TrigReport Events total = 15 passed = 15 failed = 0
+
+TrigReport ------ Modules in End-Path: end_path ------------
+TrigReport  Trig Bit#        Run    Success      Error Name
+TrigReport     0    0         15         15          0 myana
+
+TimeReport ---------- Time  Summary ---[sec]----
+TimeReport CPU = 1.539766 Real = 1.584172
+
+MemReport  ---------- Memory  Summary ---[base-10 MB]----
+MemReport  VmPeak = 1507 VmHWM = 788.668
+
