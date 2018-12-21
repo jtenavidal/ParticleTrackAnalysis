@@ -39,15 +39,15 @@ True hit level information
 
 ### Reco track tree contains information of the reconstructed track, including hit level information
 - [X] Event_id
-- [ ] Chi2 hipotesis for: muons, pions, kaons and protons (the last two should not be seen but just in case) <- From hit based information
-- [ ] dE/dx (must be able to split it if needed)
-- [ ] Residual range
+- [X] Chi2 hipotesis for: muons, pions, kaons and protons (the last two should not be seen but just in case) <- From hit based information
+- [X] dE/dx (must be able to split it if needed) -> Ready to access, also dQdx
+- [X] Residual range
 - [X] Lenght 
-- [ ] Kinetic energy and missing energy 
-- [ ] Hit information: number of hits, hit_tpc, hit_plane
+- [X] Kinetic energy and missing energy 
+- [X] Hit information: number of hits, hit_tpc [],  hit_plane
 - [X] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
 - [ ] Keep hiearchy information: need to understand why primary tracks are mostly empty?
-  
+- [ ] Need plots to further understand this: Chi2 plots?, dEdx, dQdx
   
  # To do List:
  - [ ] Access all information for MC particles
