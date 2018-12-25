@@ -148,12 +148,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  
 	}
       }
-      /*      for ( unsigned int j = 0; j<True_trajectory.size(); ++j){
-	fTrack_position_x = True_trajectory.X( j ) ;                                  // Need to fill the tree in the right way so that every hit is stored
-	fTrack_position_y = True_trajectory.Y( j ) ;
-	fTrack_position_z = True_trajectory.Z( j ) ;
-	fTrack_position_T = True_trajectory.T( j ) ;
-	}*/
 
       // This should be a function called Print : need to understand what it is printing exactly. Obviously a track, but is it the primary? 
 
@@ -196,11 +190,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
   art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, m_recotrackLabel );
 
+
   r_mu_daughters = 0;
   r_pi_daughters = 0;
   r_e_daughters = 0;
   r_p_daughters = 0;
   r_other_daughters = 0;
+	   
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
@@ -228,8 +224,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
 	  // Loop over tracks per event
 	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
-	    //	    std::cout<<"x= "<<track_f[j]->TrajectoryPoint( 0 ).position.X()<<std::endl;
-	    //	    std::cout<<"chi2= "<<track_f[j]->Chi2()<<std::endl;
 	    rVertex_x = track_f[j]->Vertex( ).X() ;
 	    rVertex_y = track_f[j]->Vertex( ).Y() ;
 	    rVertex_z = track_f[j]->Vertex( ).Z() ;
@@ -239,14 +233,31 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 
+
+	    TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(track_f[j]->CountValidPoints()/5), track_f[j]->Vertex().X(), track_f[j]->End().X(), int(track_f[j]->CountValidPoints()/5), track_f[j]->Vertex().Y(), track_f[j]->End().Y(), int(track_f[j]->CountValidPoints()/5), track_f[j]->Vertex().Z(), track_f[j]->End().Z() );
+
+	    for ( unsigned int t_hit = 0 ; t_hit < track_f[j]->LastValidPoint()+1; ++t_hit ){
+	      h_recotrack -> Fill( track_f[j]->TrajectoryPoint( t_hit ).position.X(), track_f[j]->TrajectoryPoint( t_hit ).position.Y(), track_f[j]->TrajectoryPoint( t_hit ).position.Z(), track_f[j]->MomentumAtPoint( t_hit ));
+	    }
+
+	    gStyle->SetPalette(55);
+	    gStyle->SetNumberContours(250);
+	    
+	    TCanvas *c2 = new TCanvas();
+	    h_recotrack->SetLineColor(2);
+	    h_recotrack->GetXaxis()->SetTitle("X");
+	    h_recotrack->GetYaxis()->SetTitle("Y");
+	    h_recotrack->GetXaxis()->SetTitle("Z");
+	    h_recotrack->Draw("hist");
+	    h_recotrack->Draw("BOX2Z");
+	    c2->SaveAs("particle_recotrack.root");
+	    c2->Clear();
+	      
+	    
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
 	    std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
 	    std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[j]->ID());
-
-	    std::cout<< "hit_f size " << hit_f.size() <<std::endl;
-	    std::cout<< "pid_f size " << pid_f.size() <<std::endl;
-	    std::cout<< "cal_f size " << cal_f.size() <<std::endl;
 
 	    //Loop over PID associations 
 	    for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
@@ -270,11 +281,14 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
 		r_Range = cal_f[n]->Range();
 	      }
-	    }
-	  }
-	} 
-    }
-  }
+	    }// close pip loop
+	  }// close loop reco track
+	}  // end if
+    } // for
+  } // if
+
+
+  
 
 
   // FILL TREES
