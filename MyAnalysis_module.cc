@@ -42,6 +42,8 @@
 #include "TColor.h"
 #include "TGraph.h"
 #include "Math/PositionVector3D.h"
+#include <sstream>
+#include <string> 
 
 namespace TrackID {
   class MyAnalysis;
@@ -122,6 +124,11 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 {
   // Implementation of required member function here.
   event_id = e.id().event();
+  std::stringstream t_path, r_path ;
+  t_path << "eid_"<<event_id<<"_truth_track.root" ;
+  r_path << "eid_"<<event_id<<"_reco_track.root" ;
+  std::string truth_path = t_path.str();
+  std::string reco_path = r_path.str();
 
   if( !e.isRealData()){
     art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(fTruthLabel);
@@ -167,7 +174,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       h_track->Draw("hist");
       h_track->Draw("BOX2Z");
       //  c->SaveAs((path+"_track.root").c_str());
-      c->SaveAs("particle_track.root");
+      c->SaveAs(truth_path.c_str());
       //c->Clear();
     }
   }
@@ -250,7 +257,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    h_recotrack->GetXaxis()->SetTitle("Z");
 	    h_recotrack->Draw("hist");
 	    h_recotrack->Draw("BOX2Z");
-	    c2->SaveAs("particle_recotrack.root");
+	    c2->SaveAs(reco_path.c_str());
 	    c2->Clear();
 	      
 	    
