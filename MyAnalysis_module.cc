@@ -90,7 +90,6 @@ private:
   double fMCLength ;
   double fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
 
-
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
@@ -103,6 +102,8 @@ private:
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) ;
   void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
+  std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;
+  
 };
 
 
@@ -291,6 +292,7 @@ void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std:
   c->SaveAs(path.c_str());
   c->Clear();
 }
+
 void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) {
   
   TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/5), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Z(), reco_track->End().Z() );
@@ -312,6 +314,27 @@ void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_tra
   c2->SaveAs( path.c_str() );
   c2->Clear();
 
+}
+
+std::vector< std::vector<double> > TrackID::MyAnalysis::Straight(  art::Ptr<recob::Track> const & reco_track ){
+  std::vector< std::vector<double> > track_hipotesis ;
+  std::vector< double > v ;
+  double distx, disty, distz ;
+  
+  track_hipotesis.reserve(reco_track->CountValidPoints()-1);
+  distx = ( reco_track->End().X() - reco_track->Vertex().X() )/ (reco_track->CountValidPoints()-1);
+  disty = ( reco_track->End().Y() - reco_track->Vertex().Y() )/ (reco_track->CountValidPoints()-1);
+  distz = ( reco_track->End().Z() - reco_track->Vertex().Z() )/ (reco_track->CountValidPoints()-1);
+  
+  for ( unsigned int i = 0 ; i< reco_track->CountValidPoints() ; ++i ){
+    v.clear();
+    v.push_back(reco_track->Vertex().X()+i*distx);
+    v.push_back(reco_track->Vertex().Y()+i*disty);
+    v.push_back(reco_track->Vertex().Z()+i*distz);
+    track_hipotesis.push_back(v); 
+  }
+
+  return track_hipotesis ;
 }
 
 
