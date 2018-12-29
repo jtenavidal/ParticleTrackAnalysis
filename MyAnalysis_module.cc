@@ -100,10 +100,11 @@ private:
   float rLength, rMomentum ;
 
   // Functions
-  void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) ;
-  void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
+  void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
+  void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const ;
   std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;
-  
+  double FitToLine(  art::Ptr<recob::Track> const & reco_track ) ;
+
 };
 
 
@@ -269,7 +270,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
 // Functions
 
-void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) {
+void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const {
 
   // This should be a function called Print : need to understand what it is printing exactly. Obviously a track, but is it the primary? 
   
@@ -293,7 +294,7 @@ void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std:
   c->Clear();
 }
 
-void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) {
+void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const {
   
   TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/5), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Z(), reco_track->End().Z() );
   
@@ -337,6 +338,18 @@ std::vector< std::vector<double> > TrackID::MyAnalysis::Straight(  art::Ptr<reco
   return track_hipotesis ;
 }
 
+double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_track ){
+  double residual2 = 0.;
+  std::vector< std::vector<double> > track_hipotesis ;
+  track_hipotesis = TrackID::MyAnalysis::Straight( reco_track );
+  for ( unsigned int i = 0 ; i < reco_track->CountValidPoints(); ++i){
+    residual2 += ( track_hipotesis[i][0] - reco_track->TrajectoryPoint( i ).position.X() )*( track_hipotesis[i][0] - reco_track->TrajectoryPoint( i ).position.X() );
+    residual2 += ( track_hipotesis[i][1] - reco_track->TrajectoryPoint( i ).position.Y() )*( track_hipotesis[i][1] - reco_track->TrajectoryPoint( i ).position.Y() );
+    residual2 += ( track_hipotesis[i][2] - reco_track->TrajectoryPoint( i ).position.Z() )*( track_hipotesis[i][2] - reco_track->TrajectoryPoint( i ).position.Z() );
+  }
+  return residual2;
+  // Loop efficiently over possible values
+}
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 {
