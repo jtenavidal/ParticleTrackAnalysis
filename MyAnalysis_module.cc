@@ -100,6 +100,9 @@ private:
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
 
+  // Functions
+  void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) ;
+  void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
 };
 
 
@@ -155,27 +158,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  
 	}
       }
-
-      // This should be a function called Print : need to understand what it is printing exactly. Obviously a track, but is it the primary? 
-
-      TH3D *h_track = new TH3D("h_track", " Particle Track ", True_trajectory.size(), True_trajectory.X(0), True_trajectory.X(True_trajectory.size()), True_trajectory.size(), True_trajectory.Y(0), True_trajectory.Y(True_trajectory.size()), True_trajectory.size(), True_trajectory.Z(0), True_trajectory.Z(True_trajectory.size()));
-
-      for( unsigned int i = 0; i < True_trajectory.size(); ++i ){
-	h_track-> Fill(True_trajectory.X(i), True_trajectory.Y(i), True_trajectory.Z(i), True_trajectory.E(i));
-      }
-      gStyle->SetPalette(55);
-      gStyle->SetNumberContours(250);
-
-      TCanvas *c = new TCanvas();
-      h_track->SetLineColor(2);
-      h_track->GetXaxis()->SetTitle("X");
-      h_track->GetYaxis()->SetTitle("Y");
-      h_track->GetXaxis()->SetTitle("Z");
-      h_track->Draw("hist");
-      h_track->Draw("BOX2Z");
-      //  c->SaveAs((path+"_track.root").c_str());
-      c->SaveAs(truth_path.c_str());
-      //c->Clear();
+      SaveMCTrack( True_trajectory , truth_path ) ;
     }
   }
 
@@ -239,28 +222,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rEnd_z    = track_f[j]->End( ).Z() ;
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
-
-
-	    TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(track_f[j]->CountValidPoints()/5), track_f[j]->Vertex().X(), track_f[j]->End().X(), int(track_f[j]->CountValidPoints()/5), track_f[j]->Vertex().Y(), track_f[j]->End().Y(), int(track_f[j]->CountValidPoints()/5), track_f[j]->Vertex().Z(), track_f[j]->End().Z() );
-
-	    for ( unsigned int t_hit = 0 ; t_hit < track_f[j]->LastValidPoint()+1; ++t_hit ){
-	      h_recotrack -> Fill( track_f[j]->TrajectoryPoint( t_hit ).position.X(), track_f[j]->TrajectoryPoint( t_hit ).position.Y(), track_f[j]->TrajectoryPoint( t_hit ).position.Z(), track_f[j]->MomentumAtPoint( t_hit ));
-	    }
-
-	    gStyle->SetPalette(55);
-	    gStyle->SetNumberContours(250);
-	    
-	    TCanvas *c2 = new TCanvas();
-	    h_recotrack->SetLineColor(2);
-	    h_recotrack->GetXaxis()->SetTitle("X");
-	    h_recotrack->GetYaxis()->SetTitle("Y");
-	    h_recotrack->GetXaxis()->SetTitle("Z");
-	    h_recotrack->Draw("hist");
-	    h_recotrack->Draw("BOX2Z");
-	    c2->SaveAs(reco_path.c_str());
-	    c2->Clear();
-	      
-	    
+	    SaveRecoTrack( track_f[j], reco_path );
+   
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
 	    std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
@@ -294,16 +257,63 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     } // for
   } // if
 
-
-  
-
-
   // FILL TREES
   event_tree      -> Fill();
   mcparticle_tree -> Fill();
   recotrack_tree  -> Fill();
 
 }
+
+
+
+// Functions
+
+void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) {
+
+  // This should be a function called Print : need to understand what it is printing exactly. Obviously a track, but is it the primary? 
+  
+  TH3D *h_track = new TH3D("h_track", " Particle Track ", mc_track.size(), mc_track.X(0), mc_track.X(mc_track.size()), mc_track.size(), mc_track.Y(0), mc_track.Y(mc_track.size()), mc_track.size(), mc_track.Z(0), mc_track.Z(mc_track.size()));
+  
+  for( unsigned int i = 0; i < mc_track.size(); ++i ){
+    h_track-> Fill(mc_track.X(i), mc_track.Y(i), mc_track.Z(i), mc_track.E(i));
+  }
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+  
+  TCanvas *c = new TCanvas();
+  h_track->SetLineColor(2);
+  h_track->GetXaxis()->SetTitle("X");
+  h_track->GetYaxis()->SetTitle("Y");
+  h_track->GetXaxis()->SetTitle("Z");
+  h_track->Draw("hist");
+  h_track->Draw("BOX2Z");
+  //  c->SaveAs((path+"_track.root").c_str());
+  c->SaveAs(path.c_str());
+  c->Clear();
+}
+void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) {
+  
+  TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/5), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Z(), reco_track->End().Z() );
+  
+  for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
+    h_recotrack -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y(), reco_track->TrajectoryPoint( t_hit ).position.Z(), reco_track->MomentumAtPoint( t_hit ));
+  }
+  
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+	    
+  TCanvas *c2 = new TCanvas();
+  h_recotrack->SetLineColor(2);
+  h_recotrack->GetXaxis()->SetTitle("X");
+  h_recotrack->GetYaxis()->SetTitle("Y");
+  h_recotrack->GetXaxis()->SetTitle("Z");
+  h_recotrack->Draw("hist");
+  h_recotrack->Draw("BOX2Z");
+  c2->SaveAs( path.c_str() );
+  c2->Clear();
+
+}
+
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 {
