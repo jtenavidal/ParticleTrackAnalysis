@@ -104,8 +104,9 @@ private:
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
   void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const ;
   std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;
+  void PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
   double FitToLine(  art::Ptr<recob::Track> const & reco_track ) ;
-
+  
 };
 
 
@@ -226,6 +227,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	    SaveRecoTrack( track_f[j], reco_path );
+	    PrintHipotesis( track_f[j], "hipotesis.root" );
 	    std::cout<< "fit to line residual for track in event " << event_id<< "= " <<FitToLine( track_f[j] ) << std::endl;
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
@@ -317,7 +319,8 @@ void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_tra
   c2->Clear();
 
 
-  TH1D *h_rtrackX = new TH1D("h_rtrackX", "Reco Particle Track (X)", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X());
+  /*  May use this as a fiter for each of the coordinates
+      TH1D *h_rtrackX = new TH1D("h_rtrackX", "Reco Particle Track (X)", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X());
   
   for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
     h_rtrackX -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y());
@@ -331,10 +334,10 @@ void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_tra
   h_rtrackX->GetXaxis()->SetTitle("x");
   h_rtrackX->GetYaxis()->SetTitle("y");
   h_rtrackX->Draw("hist");
-  c->SaveAs("reco_Xtrack.root");
+  c->SaveAs("reco_Xtrack.root"); */
 }
 
-std::vector< std::vector<double> > TrackID::MyAnalysis::Straight(  art::Ptr<recob::Track> const & reco_track ){
+std::vector< std::vector<double> > TrackID::MyAnalysis::Straight( art::Ptr<recob::Track> const & reco_track ) {
   std::vector< std::vector<double> > track_hipotesis ;
   std::vector< double > v ;
   double distx, disty, distz ;
@@ -355,6 +358,33 @@ std::vector< std::vector<double> > TrackID::MyAnalysis::Straight(  art::Ptr<reco
   return track_hipotesis ;
 }
 
+
+void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) {
+  std::vector< std::vector<double> > track_hipotesis = Straight ( reco_track ) ;
+
+  TH3D *h_hipotesis = new TH3D("h_hipotesis", "Reco hipotesis", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
+  
+  for ( unsigned int t_hit = 0 ; t_hit < track_hipotesis.size(); ++t_hit ){
+      h_hipotesis -> Fill( track_hipotesis[t_hit][0], track_hipotesis[t_hit][1], track_hipotesis[t_hit][2]);
+  }
+	    
+  TCanvas *c2 = new TCanvas();
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+  /*
+  h_recotrack->SetLineColor(2);
+  h_recotrack->GetXaxis()->SetTitle("X");
+  h_recotrack->GetYaxis()->SetTitle("Y");
+  h_recotrack->GetXaxis()->SetTitle("Z");
+  h_recotrack->Draw("hist");
+  h_recotrack->Draw("BOX2Z");
+  c2->SaveAs( path.c_str() );
+  c2->Clear();
+  */
+  h_hipotesis->Draw("hist");
+  c2->SaveAs( path.c_str() ) ;
+
+}
 double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_track ){
   /* 
    * This function calculates the distance btw the hipotesis track and the reconstructed points, and returns the 
@@ -377,7 +407,7 @@ double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_trac
     residual_total += residual[i] ;
   }
   
-  return residual_total;
+  return residual_total/reco_track->CountValidPoints(); // returns mean value 
 }
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
