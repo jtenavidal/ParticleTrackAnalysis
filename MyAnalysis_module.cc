@@ -44,6 +44,7 @@
 #include "Math/PositionVector3D.h"
 #include <sstream>
 #include <string> 
+#include "TVector3.h"
 
 namespace TrackID {
   class MyAnalysis;
@@ -225,7 +226,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	    SaveRecoTrack( track_f[j], reco_path );
-   
+	    std::cout<< "fit to line residual for track in event " << event_id<< "= " <<FitToLine( track_f[j] ) << std::endl;
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
 	    std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
@@ -296,7 +297,7 @@ void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std:
 
 void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const {
   
-  TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/5), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/5), reco_track->Vertex().Z(), reco_track->End().Z() );
+  TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
   
   for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
     h_recotrack -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y(), reco_track->TrajectoryPoint( t_hit ).position.Z(), reco_track->MomentumAtPoint( t_hit ));
@@ -315,6 +316,22 @@ void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_tra
   c2->SaveAs( path.c_str() );
   c2->Clear();
 
+
+  TH1D *h_rtrackX = new TH1D("h_rtrackX", "Reco Particle Track (X)", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X());
+  
+  for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
+    h_rtrackX -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y());
+  }
+
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+
+  TCanvas *c = new TCanvas();
+  h_rtrackX->SetLineColor(2);
+  h_rtrackX->GetXaxis()->SetTitle("x");
+  h_rtrackX->GetYaxis()->SetTitle("y");
+  h_rtrackX->Draw("hist");
+  c->SaveAs("reco_Xtrack.root");
 }
 
 std::vector< std::vector<double> > TrackID::MyAnalysis::Straight(  art::Ptr<recob::Track> const & reco_track ){
@@ -339,16 +356,28 @@ std::vector< std::vector<double> > TrackID::MyAnalysis::Straight(  art::Ptr<reco
 }
 
 double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_track ){
-  double residual2 = 0.;
-  std::vector< std::vector<double> > track_hipotesis ;
-  track_hipotesis = TrackID::MyAnalysis::Straight( reco_track );
-  for ( unsigned int i = 0 ; i < reco_track->CountValidPoints(); ++i){
-    residual2 += ( track_hipotesis[i][0] - reco_track->TrajectoryPoint( i ).position.X() )*( track_hipotesis[i][0] - reco_track->TrajectoryPoint( i ).position.X() );
-    residual2 += ( track_hipotesis[i][1] - reco_track->TrajectoryPoint( i ).position.Y() )*( track_hipotesis[i][1] - reco_track->TrajectoryPoint( i ).position.Y() );
-    residual2 += ( track_hipotesis[i][2] - reco_track->TrajectoryPoint( i ).position.Z() )*( track_hipotesis[i][2] - reco_track->TrajectoryPoint( i ).position.Z() );
+  /* 
+   * This function calculates the distance btw the hipotesis track and the reconstructed points, and returns the 
+   * cummulative distance.
+   */
+
+  TVector3 vertex(reco_track->Vertex().X(),reco_track->Vertex().Y(),reco_track->Vertex().Z());
+  TVector3 direction, vertex_P ;
+  std::vector< double > residual ;
+  double residual_total = 0 ;
+  direction.SetX((reco_track->End().X() - reco_track->Vertex().X())/ (reco_track->CountValidPoints()-1));
+  direction.SetY((reco_track->End().Y() - reco_track->Vertex().Y())/ (reco_track->CountValidPoints()-1));
+  direction.SetZ((reco_track->End().Z() - reco_track->Vertex().Z())/ (reco_track->CountValidPoints()-1));
+    
+  for( unsigned int i = 0; i < reco_track->CountValidPoints(); ++i ){
+    vertex_P.SetX(reco_track->TrajectoryPoint( i ).position.X()-vertex.X());
+    vertex_P.SetY(reco_track->TrajectoryPoint( i ).position.Y()-vertex.Y());
+    vertex_P.SetZ(reco_track->TrajectoryPoint( i ).position.Z()-vertex.Z());
+    residual.push_back((vertex_P.Cross( direction )).Mag()/direction.Mag()); // use this to find possible kinked trakcs: angle btw them? 
+    residual_total += residual[i] ;
   }
-  return residual2;
-  // Loop efficiently over possible values
+  
+  return residual_total;
 }
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
