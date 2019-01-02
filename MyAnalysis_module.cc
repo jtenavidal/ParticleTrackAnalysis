@@ -81,7 +81,7 @@ private:
   std::string fTruthLabel, m_particleLabel, m_hitfinderLabel, m_recotrackLabel, m_recoPIDLabel, m_recoCaloLabel;
 
   // Tree members
-  TTree * event_tree, * mcparticle_tree, * recotrack_tree ; 
+  TTree * event_tree, * mcparticle_tree, * recotrack_tree, * recoTrackInfo_tree ; 
   int event_id ; 
 
   // Truth information
@@ -102,6 +102,11 @@ private:
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
   std::vector< float > dEdx ;
+
+
+  //Track example information to test future Track class. This is the information needed for the Track class. 
+  // Saving it into a root file to work offline...
+  double tr_x, tr_y, tr_z, tr_t, tr_dEdx, tr_dQdx ; //info per hit
 
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
@@ -260,8 +265,22 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		dEdx = cal_f[n]->dEdx();
 		PrintdEdx( dEdx , reco_path);
 		r_Range = cal_f[n]->Range();
-
+	
 	      }
+	      std::cout<<event_id<<std::endl;
+	      if( event_id == 1 ) {
+		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
+		
+		  tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
+		  tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
+		  tr_z =  track_f[j]->TrajectoryPoint( t_hit ).position.Z();
+		  // also need time
+		  // dEdx
+		  recoTrackInfo_tree -> Fill();
+		}
+	      }
+		std::cout<<"dEdx size = "<<dEdx.size()<< " &  track_f[j] size " <<  track_f[j]->LastValidPoint() <<std::endl;
+ 
 	    }// close pip loop
 	  }// close loop reco track
 	}  // end if
@@ -272,7 +291,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   event_tree      -> Fill();
   mcparticle_tree -> Fill();
   recotrack_tree  -> Fill();
-
+  
 }
 
 
@@ -380,7 +399,7 @@ void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_tr
   h_recotrack->SetLineColor(2);
   h_recotrack->GetXaxis()->SetTitle("X");
   h_recotrack->GetYaxis()->SetTitle("Y");
-  h_recotrack->GetXaxis()->SetTitle("Z");
+  h_recotrack->GetZaxis()->SetTitle("Z");
   h_recotrack->Draw("hist");
   h_recotrack->Draw("BOX2Z");
 
@@ -492,10 +511,22 @@ void TrackID::MyAnalysis::beginJob( )
   r_KineticEnergy = -999. ;
   r_Range = -999. ;
 
+  //Track example information to test future Track class. This is the information needed for the Track class. 
+  // Saving it into a root file to work offline...
+  tr_x = -999. ;
+  tr_y = -999. ;
+  tr_z = -999. ;
+  tr_t = -999. ;
+  tr_dEdx = -999. ;
+  tr_dQdx = -999. ;
+
+
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
   recotrack_tree  = new TTree( "recoparticle_tree",    "Reco tree: reconstructed information of the tracks, hit level included");
+
+  recoTrackInfo_tree  = new TTree( "recoTrack_tree",    "Reco Track Info tree: Contains information needed for the fitter offline ");
 
   event_tree      -> Branch( "event_id",          &event_id, "event_id/I");
 
@@ -545,11 +576,20 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_KineticEnergy",   &r_KineticEnergy,   "r_KineticEnergy/D");
   recotrack_tree  -> Branch( "r_Range",           &r_Range,           "r_Range/D");
   
+
+  recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
+  recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
+  recoTrackInfo_tree -> Branch( "tr_z",           &tr_z,              "tr_z/D");
+  recoTrackInfo_tree -> Branch( "tr_t",           &tr_t,              "tr_t/D");
+  recoTrackInfo_tree -> Branch( "tr_dEdx",        &tr_dEdx,           "tr_dEdx/D");
+  recoTrackInfo_tree -> Branch( "tr_dQdx",        &tr_dQdx,           "tr_dQdx/D");
+
+
   // Set directories
   event_tree->SetDirectory(0);
   mcparticle_tree->SetDirectory(0);
   recotrack_tree->SetDirectory(0);
-
+  recoTrackInfo_tree -> SetDirectory( 0 );
 }
 
 void TrackID::MyAnalysis::endJob( )
@@ -564,9 +604,15 @@ void TrackID::MyAnalysis::endJob( )
   file.Write();
   file.Close();
 
+  TFile fileTrack("output_track_example.root", "RECREATE");
+  recoTrackInfo_tree -> Write() ;
+  fileTrack.Write();
+  fileTrack.Close();
+
   delete event_tree ; 
   delete mcparticle_tree ; 
   delete recotrack_tree ; 
+  delete recoTrackInfo_tree;
 }
 
 DEFINE_ART_MODULE(TrackID::MyAnalysis)
