@@ -101,6 +101,7 @@ private:
   int rnu_hits ;
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
+  std::vector< float > dEdx ;
 
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
@@ -108,7 +109,7 @@ private:
   std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;
   void PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
   double FitToLine(  art::Ptr<recob::Track> const & reco_track ) ;
-  
+  void PrintdEdx( std::vector< float > const & dEdx , std::string const & path ) const ;
 };
 
 
@@ -256,7 +257,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_PIDA    = pid_f[k]->PIDA();
 		r_missenergy = pid_f[k]->MissingE();
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
+		dEdx = cal_f[n]->dEdx();
+		PrintdEdx( dEdx , reco_path);
 		r_Range = cal_f[n]->Range();
+
 	      }
 	    }// close pip loop
 	  }// close loop reco track
@@ -372,7 +376,7 @@ void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_tr
   gStyle->SetPalette(55);
   gStyle->SetNumberContours(250);
 	    
-  TCanvas *c2 = new TCanvas();
+  TCanvas *c = new TCanvas();
   h_recotrack->SetLineColor(2);
   h_recotrack->GetXaxis()->SetTitle("X");
   h_recotrack->GetYaxis()->SetTitle("Y");
@@ -389,7 +393,7 @@ void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_tr
   gStyle->SetPalette(55);
   gStyle->SetNumberContours(250);
   h_hipotesis->Draw("hist SAME ");
-  c2->SaveAs( (path+"_hipotesis.root").c_str() ) ;
+  c->SaveAs( (path+"_hipotesis.root").c_str() ) ;
 
 }
 double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_track ){
@@ -416,6 +420,20 @@ double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_trac
   
   return residual_total/reco_track->CountValidPoints(); // returns mean value 
 }
+
+void TrackID::MyAnalysis::PrintdEdx( std::vector< float > const & dEdx, std::string const & path ) const {
+
+  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", dEdx.size(), 0, dEdx.size() );
+  for (unsigned int i = 0 ; i<dEdx.size() ; ++i ){
+    h_dEdx -> Fill ( i , dEdx[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_dEdx -> Draw() ;
+  c->SaveAs( (path+"_dEdx.root").c_str() ) ;
+
+}
+
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 {
