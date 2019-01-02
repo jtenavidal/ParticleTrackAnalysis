@@ -45,7 +45,7 @@
 #include <sstream>
 #include <string> 
 #include "TVector3.h"
-
+#include "math.h"
 //#include "/nashome/j/jtenavid/Desktop/Exercises/PiMuStudy/MyWorkingDir/build_slf6.x86_64/sbndcode/sbndcode/ParticleTrackAnalysis/TrackFitterJulia.h" // Including my class 
 
 namespace TrackID {
@@ -102,7 +102,7 @@ private:
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
   std::vector< float > dEdx ;
-
+  std::vector< std::vector< double >  > mu_f, dev_f;
 
   //Track example information to test future Track class. This is the information needed for the Track class. 
   // Saving it into a root file to work offline...
@@ -114,7 +114,11 @@ private:
   std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;
   void PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
   double FitToLine(  art::Ptr<recob::Track> const & reco_track ) ;
+  double Linearity( ) ;
+  std::vector< std::vector< double >  >  MeanPosition( art::Ptr<recob::Track> const & reco_track, int const & window ) ;
+  std::vector< std::vector< double >  >  DeviationPosition( art::Ptr<recob::Track> const & reco_track, int const & window ) ;
   void PrintdEdx( std::vector< float > const & dEdx , std::string const & path ) const ;
+  
 };
 
 
@@ -236,6 +240,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	    SaveRecoTrack( track_f[j], reco_path );
 	    PrintHipotesis( track_f[j], reco_path );
+	    
 	    std::cout<< "fit to line residual for track in event " << event_id<< "= " <<FitToLine( track_f[j] ) << std::endl;
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
@@ -267,7 +272,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_Range = cal_f[n]->Range();
 	
 	      }
-	      std::cout<<event_id<<std::endl;
+	      mu_f = MeanPosition( track_f[j], 5 );
+	      //	      dev_f = DeviationPosition( track_f[j], 5 );
 	      if( event_id == 1 ) {
 		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
 		
@@ -415,7 +421,7 @@ void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_tr
   c->SaveAs( (path+"_hipotesis.root").c_str() ) ;
 
 }
-double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_track ){
+double TrackID::MyAnalysis::FitToLine( art::Ptr<recob::Track> const & reco_track ){
   /* 
    * This function calculates the distance btw the hipotesis track and the reconstructed points, and returns the 
    * cummulative distance.
@@ -438,6 +444,90 @@ double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_trac
   }
   
   return residual_total/reco_track->CountValidPoints(); // returns mean value 
+}
+
+double TrackID::MyAnalysis::Linearity( ){
+  return 0.;
+}
+ 
+std::vector< std::vector< double > > TrackID::MyAnalysis::MeanPosition( art::Ptr<recob::Track> const & reco_track , int const & window ){
+  unsigned int starting_hit , end_hit;
+  double muI_x, muI_y, muI_z;
+  std::vector< double > mu_x, mu_y, mu_z ;
+  std::vector< std::vector< double > > mu ; 
+
+  for( unsigned int i = 0; i < reco_track->CountValidPoints(); ++i ){
+    muI_x = 0. ;
+    muI_y = 0. ;
+    muI_z = 0. ;
+    if ( i - window < 0 ) { 
+      starting_hit = 0 ;
+      end_hit = (i+1) + window ;
+    } else if ( i + window > reco_track->CountValidPoints()) {
+      starting_hit = i - window ;
+      end_hit = reco_track->CountValidPoints() ;
+    } else {
+      starting_hit = i - window ;
+      end_hit = (i+1) + window ;
+    }
+
+    for( unsigned int j = starting_hit ; j < end_hit -1 ; ++j ){ 
+      muI_x += reco_track->TrajectoryPoint( j ).position.X();
+      muI_y += reco_track->TrajectoryPoint( j ).position.Y();
+      muI_z += reco_track->TrajectoryPoint( j ).position.Z();
+      //std::cout<< j << std::endl;
+    } 
+    mu_x.push_back( muI_x/( end_hit - starting_hit -1 ) );
+    mu_y.push_back( muI_y/( end_hit - starting_hit -1 ) );
+    mu_z.push_back( muI_z/( end_hit - starting_hit -1 ) );
+    std::cout<< "hit number = "<< i << ":   "<<"muI_x= " << muI_x/( end_hit - starting_hit -1 )  <<" muI_y= " << muI_y/( end_hit - starting_hit -1 )  << " muI_z= "<< muI_z/( end_hit - starting_hit -1 )  << std::endl;
+  }
+
+  mu.push_back( mu_x );
+  mu.push_back( mu_y );
+  mu.push_back( mu_z );
+  return mu; 
+}
+
+
+std::vector< std::vector< double > > TrackID::MyAnalysis::DeviationPosition( art::Ptr<recob::Track> const & reco_track , int const & window ){
+  // Neet to check if number of bins is ok 
+  unsigned int starting_hit , end_hit;
+  double devI_x, devI_y, devI_z;
+  std::vector< double > dev_x, dev_y, dev_z ;
+  std::vector< std::vector< double > > dev ; 
+
+  for( unsigned int i = 0; i < reco_track->CountValidPoints(); ++i ){
+    devI_x = 0. ;
+    devI_y = 0. ;
+    devI_z = 0. ;
+    if ( i - window < 0 ) { 
+      starting_hit = 0 ;
+      end_hit = (i+1) + window ;
+    } else if ( i + window > reco_track->CountValidPoints()) {
+      starting_hit = i - window ;
+      end_hit = reco_track->CountValidPoints() ;
+    } else {
+      starting_hit = i - window ;
+      end_hit = (i+1) + window ;
+    }
+
+    for( unsigned int j = starting_hit ; j < end_hit - 1 ; ++j ){ 
+      devI_x += std::pow((reco_track->TrajectoryPoint( j ).position.X() - MeanPosition( reco_track, window )[j][0] ), 2) ;
+      devI_y += std::pow((reco_track->TrajectoryPoint( j ).position.Y() - MeanPosition( reco_track, window )[j][1] ), 2) ;
+      devI_z += std::pow((reco_track->TrajectoryPoint( j ).position.Z() - MeanPosition( reco_track, window )[j][2] ), 2) ;
+    } 
+    dev_x.push_back( std::sqrt(devI_x) );
+    dev_y.push_back( std::sqrt(devI_y) );
+    dev_z.push_back( std::sqrt(devI_z) );
+    std::cout<< "hit number = "<< i << ":   "<<"devI_x= " << devI_x/( std::sqrt(devI_x) )  <<" devI_y= " << devI_y/( std::sqrt(devI_z) )  << " devI_z= "<< devI_z/( std::sqrt(devI_z) )  << std::endl;
+  }
+
+  dev.push_back( dev_x );
+  dev.push_back( dev_y );
+  dev.push_back( dev_z );
+  return dev; 
+
 }
 
 void TrackID::MyAnalysis::PrintdEdx( std::vector< float > const & dEdx, std::string const & path ) const {
