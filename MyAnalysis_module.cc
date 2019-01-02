@@ -46,6 +46,8 @@
 #include <string> 
 #include "TVector3.h"
 
+//#include "/nashome/j/jtenavid/Desktop/Exercises/PiMuStudy/MyWorkingDir/build_slf6.x86_64/sbndcode/sbndcode/ParticleTrackAnalysis/TrackFitterJulia.h" // Including my class 
+
 namespace TrackID {
   class MyAnalysis;
 }
@@ -132,8 +134,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   // Implementation of required member function here.
   event_id = e.id().event();
   std::stringstream t_path, r_path ;
-  t_path << "eid_"<<event_id<<"_truth_track.root" ;
-  r_path << "eid_"<<event_id<<"_reco_track.root" ;
+  t_path << "Histograms/eid_"<<event_id<<"_truth_track" ;
+  r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
 
@@ -292,8 +294,7 @@ void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std:
   h_track->GetXaxis()->SetTitle("Z");
   h_track->Draw("hist");
   h_track->Draw("BOX2Z");
-  //  c->SaveAs((path+"_track.root").c_str());
-  c->SaveAs(path.c_str());
+  c->SaveAs((path+".root").c_str());
   c->Clear();
 }
 
@@ -315,7 +316,7 @@ void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_tra
   h_recotrack->GetXaxis()->SetTitle("Z");
   h_recotrack->Draw("hist");
   h_recotrack->Draw("BOX2Z");
-  c2->SaveAs( path.c_str() );
+  c2->SaveAs( (path+".root").c_str() );
   c2->Clear();
 
 
@@ -362,27 +363,33 @@ std::vector< std::vector<double> > TrackID::MyAnalysis::Straight( art::Ptr<recob
 void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) {
   std::vector< std::vector<double> > track_hipotesis = Straight ( reco_track ) ;
 
-  TH3D *h_hipotesis = new TH3D("h_hipotesis", "Reco hipotesis", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
+  TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
   
-  for ( unsigned int t_hit = 0 ; t_hit < track_hipotesis.size(); ++t_hit ){
-      h_hipotesis -> Fill( track_hipotesis[t_hit][0], track_hipotesis[t_hit][1], track_hipotesis[t_hit][2]);
+  for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
+    h_recotrack -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y(), reco_track->TrajectoryPoint( t_hit ).position.Z(), reco_track->MomentumAtPoint( t_hit ));
   }
-	    
-  TCanvas *c2 = new TCanvas();
+  
   gStyle->SetPalette(55);
   gStyle->SetNumberContours(250);
-  /*
+	    
+  TCanvas *c2 = new TCanvas();
   h_recotrack->SetLineColor(2);
   h_recotrack->GetXaxis()->SetTitle("X");
   h_recotrack->GetYaxis()->SetTitle("Y");
   h_recotrack->GetXaxis()->SetTitle("Z");
   h_recotrack->Draw("hist");
   h_recotrack->Draw("BOX2Z");
-  c2->SaveAs( path.c_str() );
-  c2->Clear();
-  */
-  h_hipotesis->Draw("hist");
-  c2->SaveAs( path.c_str() ) ;
+
+  TH3D *h_hipotesis = new TH3D("h_hipotesis", "Reco hipotesis", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
+  
+  for ( unsigned int t_hit = 0 ; t_hit < track_hipotesis.size(); ++t_hit ){
+      h_hipotesis -> Fill( track_hipotesis[t_hit][0], track_hipotesis[t_hit][1], track_hipotesis[t_hit][2]);
+  }
+	    
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+  h_hipotesis->Draw("hist SAME ");
+  c2->SaveAs( (path+"_hipotesis.root").c_str() ) ;
 
 }
 double TrackID::MyAnalysis::FitToLine(  art::Ptr<recob::Track> const & reco_track ){
