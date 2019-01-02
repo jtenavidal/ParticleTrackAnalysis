@@ -134,8 +134,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   // Implementation of required member function here.
   event_id = e.id().event();
   std::stringstream t_path, r_path ;
-  t_path << "Histograms/eid_"<<event_id<<"_truth_track" ;
-  r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
+  t_path << "Histograms/Truth/eid_"<<event_id<<"_truth_track" ;
+  r_path << "Histograms/Reco/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
 
@@ -229,7 +229,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	    SaveRecoTrack( track_f[j], reco_path );
-	    PrintHipotesis( track_f[j], "hipotesis.root" );
+	    PrintHipotesis( track_f[j], reco_path );
 	    std::cout<< "fit to line residual for track in event " << event_id<< "= " <<FitToLine( track_f[j] ) << std::endl;
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
