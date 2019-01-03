@@ -213,9 +213,25 @@ void TrackFitter::PrintdEdx( const std::string & path ) const {
 
 }
 
+std::vector< std::vector< double > > TrackFitter::Linearity( const int & window ){
+  // Calculates the linearity from Pearson correlation coefficient (corrP)
+  unsigned int starting_hit , end_hit;
+  std::vector< double > corrP_xy, corrP_xz, corrP_yz;
+  std::vector<  std::vector< double > > corrP ;//[xy, xz, yz]
+  std::vector< std::vector< double > > cov, dev ;
+  cov = CovPosition( window ) ;
+  dev = DevPosition( window ) ;
 
-double TrackFitter::Linearity( ){
-  return 0.;
+  for( int i = 0; i < int(_hits); ++i ){
+    corrP_xy.push_back( sqrt(std::pow(cov[0][i]/(dev[0][i]*dev[1][i]),2)) ) ;
+    corrP_xz.push_back( sqrt(std::pow(cov[1][i]/(dev[0][i]*dev[2][i]),2)) ) ;
+    corrP_yz.push_back( sqrt(std::pow(cov[2][i]/(dev[2][i]*dev[1][i]),2)) ) ;
+  }
+  corrP.push_back( corrP_xy );
+  corrP.push_back( corrP_xz );
+  corrP.push_back( corrP_yz );
+
+  return corrP; // corrP[x,y,z]
 }
 
 std::vector< std::vector< double > > TrackFitter::MeanPosition( const int & window ){
@@ -260,8 +276,8 @@ std::vector< std::vector< double > > TrackFitter::DevPosition( const int & windo
   unsigned int starting_hit , end_hit;
   double devI_x, devI_y, devI_z;
   std::vector< double > dev_x, dev_y, dev_z ;
-  std::vector< std::vector< double > > dev ;
-
+  std::vector< std::vector< double > > dev, mean ;
+  mean = MeanPosition( window ) ;
   for( int i = 0; i < int(_hits); ++i ){
 
     devI_x = 0. ;
@@ -280,14 +296,14 @@ std::vector< std::vector< double > > TrackFitter::DevPosition( const int & windo
     }
 
     for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
-      devI_x += std::pow( _particle_track[j][0]-MeanPosition( window )[0][j] ,2);
-      devI_y += std::pow( _particle_track[j][1]-MeanPosition( window )[1][j] ,2);
-      devI_z += std::pow( _particle_track[j][2]-MeanPosition( window )[2][j] ,2);
+      devI_x += std::pow( _particle_track[j][0]-mean[0][j] ,2);
+      devI_y += std::pow( _particle_track[j][1]-mean[1][j] ,2);
+      devI_z += std::pow( _particle_track[j][2]-mean[2][j] ,2);
     }
 
     dev_x.push_back( std::sqrt( devI_x ) );
-    dev_y.push_back( std::sqrt( devI_x ) );
-    dev_z.push_back( std::sqrt( devI_x ) );
+    dev_y.push_back( std::sqrt( devI_y ) );
+    dev_z.push_back( std::sqrt( devI_z ) );
   }
 
   dev.push_back( dev_x );
@@ -301,8 +317,8 @@ std::vector< std::vector< double > > TrackFitter::CovPosition( const int & windo
   unsigned int starting_hit , end_hit;
   double covI_xy, covI_xz, covI_yz;
   std::vector< double > cov_xy, cov_xz, cov_yz ;
-  std::vector< std::vector< double > > cov ;
-
+  std::vector< std::vector< double > > cov, mean ;
+  mean = MeanPosition( window ) ;
   for( int i = 0; i < int(_hits); ++i ){
 
     covI_xy = 0. ;
@@ -321,9 +337,9 @@ std::vector< std::vector< double > > TrackFitter::CovPosition( const int & windo
     }
 
     for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
-      covI_xy += (_particle_track[j][0]-MeanPosition( window )[0][j])*(_particle_track[j][1]-MeanPosition( window )[1][j]) ;
-      covI_xz += (_particle_track[j][0]-MeanPosition( window )[0][j])*(_particle_track[j][2]-MeanPosition( window )[2][j]) ;
-      covI_yz += (_particle_track[j][2]-MeanPosition( window )[2][j])*(_particle_track[j][1]-MeanPosition( window )[1][j]) ;
+      covI_xy += (_particle_track[j][0]-mean[0][j])*(_particle_track[j][1]-mean[1][j]) ;
+      covI_xz += (_particle_track[j][0]-mean[0][j])*(_particle_track[j][2]-mean[2][j]) ;
+      covI_yz += (_particle_track[j][2]-mean[2][j])*(_particle_track[j][1]-mean[1][j]) ;
     }
     cov_xy.push_back( covI_xy/( end_hit - starting_hit -1 ) );
     cov_xz.push_back( covI_xz/( end_hit - starting_hit -1 ) );
@@ -334,4 +350,18 @@ std::vector< std::vector< double > > TrackFitter::CovPosition( const int & windo
   cov.push_back( cov_xz );
   cov.push_back( cov_yz );
   return cov; // cov[xy,xz,yz]
+}
+
+
+void TrackFitter::PlotLinearity( const int & window, const std::string & path ) {
+  std::vector< std::vector< double > > corrP = Linearity( window ) ;
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP[0].size(), _vertex_position[0], _end_position[0] );
+  for (unsigned int i = 0 ; i < corrP[0].size() ; ++i ){
+    h_Linearity -> Fill ( _particle_track[i][0] , corrP[0][i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_Linearity -> Draw() ;
+  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
+
 }

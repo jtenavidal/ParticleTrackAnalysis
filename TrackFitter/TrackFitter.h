@@ -37,12 +37,13 @@ typedef std::vector< double > Hit_level;
     void SaveTrack( const std::string & path ) const ;
     void PrintHipotesis( const std::string & path ) ;
     void PrintdEdx( const std::string & path ) const ;
+    void PlotLinearity( const int & window, const std::string & path ) ;
 
     /**
     * Functions to guess about the geometry of the track
     */
     double FitToLine( ) ;
-    double Linearity( ) ;
+    std::vector< std::vector< double > > Linearity( const int & window ) ;
     std::vector< std::vector< double > > MeanPosition( const int & window ) ;
     std::vector< std::vector< double > > DevPosition( const int & window ) ;
     std::vector< std::vector< double > > CovPosition( const int & window ) ;
