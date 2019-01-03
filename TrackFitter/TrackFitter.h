@@ -45,6 +45,7 @@ typedef std::vector< double > Hit_level;
     double Linearity( ) ;
     std::vector< std::vector< double > > MeanPosition( const int & window ) ;
     std::vector< std::vector< double > > DevPosition( const int & window ) ;
+    std::vector< std::vector< double > > CovPosition( const int & window ) ;
 
   private :
 

@@ -249,7 +249,6 @@ std::vector< std::vector< double > > TrackFitter::MeanPosition( const int & wind
     mu_y.push_back( muI_y/( end_hit - starting_hit ) );
     mu_z.push_back( muI_z/( end_hit - starting_hit ) );
   }
-  std::cout<< mu_x.size() << "  " << _hits <<std::endl;
   mu.push_back( mu_x );
   mu.push_back( mu_y );
   mu.push_back( mu_z );
@@ -295,4 +294,44 @@ std::vector< std::vector< double > > TrackFitter::DevPosition( const int & windo
   dev.push_back( dev_y );
   dev.push_back( dev_z );
   return dev; // dev[x,y,z]
+}
+
+
+std::vector< std::vector< double > > TrackFitter::CovPosition( const int & window ){
+  unsigned int starting_hit , end_hit;
+  double covI_xy, covI_xz, covI_yz;
+  std::vector< double > cov_xy, cov_xz, cov_yz ;
+  std::vector< std::vector< double > > cov ;
+
+  for( int i = 0; i < int(_hits); ++i ){
+
+    covI_xy = 0. ;
+    covI_xz = 0. ;
+    covI_yz = 0. ;
+
+    if ( i - window < 0 ) {
+      starting_hit = 0 ;
+      end_hit = i + window ;
+    } else if ( i + window >= int(_hits)) {
+      starting_hit = i - window ;
+      end_hit = _hits ;
+    } else {
+      starting_hit = i - window ;
+      end_hit = i + window ;
+    }
+
+    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
+      covI_xy += (_particle_track[j][0]-MeanPosition( window )[0][j])*(_particle_track[j][1]-MeanPosition( window )[1][j]) ;
+      covI_xz += (_particle_track[j][0]-MeanPosition( window )[0][j])*(_particle_track[j][2]-MeanPosition( window )[2][j]) ;
+      covI_yz += (_particle_track[j][2]-MeanPosition( window )[2][j])*(_particle_track[j][1]-MeanPosition( window )[1][j]) ;
+    }
+    cov_xy.push_back( covI_xy/( end_hit - starting_hit -1 ) );
+    cov_xz.push_back( covI_xz/( end_hit - starting_hit -1 ) );
+    cov_yz.push_back( covI_yz/( end_hit - starting_hit -1 ) );
+  }
+
+  cov.push_back( cov_xy );
+  cov.push_back( cov_xz );
+  cov.push_back( cov_yz );
+  return cov; // cov[xy,xz,yz]
 }
