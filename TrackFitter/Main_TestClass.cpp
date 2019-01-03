@@ -5,9 +5,8 @@
 #include "TGraph.h"
 
 void MainTest(){
-  std::cout<<"WORKS ? " << std::endl;
-  TrackFitter reco_track( "output_track_example.root" ) ;
+  TrackFitter reco_track( "/home/jtenavidal/TrackFitter/ParticleTrackAnalysis/Histograms/output_track_example_mu.root" ) ;
   reco_track.SaveTrack( "test_reco_track" ) ;
-
+  std::cout<< reco_track.MeanPosition( 2 )[0][0] <<std::endl;
 
 } // MainTest()

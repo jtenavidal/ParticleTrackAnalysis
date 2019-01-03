@@ -230,25 +230,26 @@ std::vector< std::vector< double > > TrackFitter::MeanPosition( const int & wind
     muI_z = 0. ;
     if ( i - window < 0 ) {
       starting_hit = 0 ;
-      end_hit = (i+1) + window ;
-    } else if ( i + window > int(_hits)) {
+      end_hit = i + window ;
+    } else if ( i + window >= int(_hits)) {
       starting_hit = i - window ;
       end_hit = _hits ;
     } else {
       starting_hit = i - window ;
-      end_hit = (i+1) + window ;
+      end_hit = i + window ;
     }
 
-    for( unsigned int j = starting_hit ; j < end_hit -1 ; ++j ){
-      muI_x += _particle_track[i][0];
-      muI_y += _particle_track[i][1];
-      muI_z += _particle_track[i][2];
-      //std::cout<< j << std::endl;
+    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
+      muI_x += _particle_track[j][0];
+      muI_y += _particle_track[j][1];
+      muI_z += _particle_track[j][2];
+      std::cout<< j << std::endl;
+      std::cout<< _particle_track[j][0] << std::endl;
     }
-    mu_x.push_back( muI_x/( end_hit - starting_hit -1 ) );
-    mu_y.push_back( muI_y/( end_hit - starting_hit -1 ) );
-    mu_z.push_back( muI_z/( end_hit - starting_hit -1 ) );
-    std::cout<< "hit number = "<< i << ":   "<<"muI_x= " << muI_x/( end_hit - starting_hit -1 )  <<" muI_y= " << muI_y/( end_hit - starting_hit -1 )  << " muI_z= "<< muI_z/( end_hit - starting_hit -1 )  << std::endl;
+
+    mu_x.push_back( muI_x/( end_hit - starting_hit ) );
+    mu_y.push_back( muI_y/( end_hit - starting_hit ) );
+    mu_z.push_back( muI_z/( end_hit - starting_hit ) );
   }
 
   mu.push_back( mu_x );
