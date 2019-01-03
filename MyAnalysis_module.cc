@@ -111,14 +111,7 @@ private:
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
   void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const ;
-  std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;
-  void PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) ;
-  double FitToLine(  art::Ptr<recob::Track> const & reco_track ) ;
-  double Linearity( ) ;
-  std::vector< std::vector< double >  >  MeanPosition( art::Ptr<recob::Track> const & reco_track, int const & window ) ;
-  std::vector< std::vector< double >  >  DeviationPosition( art::Ptr<recob::Track> const & reco_track, int const & window ) ;
-  void PrintdEdx( std::vector< float > const & dEdx , std::string const & path ) const ;
-  
+  std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;  
 };
 
 
@@ -196,7 +189,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
   art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, m_recotrackLabel );
 
-
   r_mu_daughters = 0;
   r_pi_daughters = 0;
   r_e_daughters = 0;
@@ -239,9 +231,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rLength   = track_f[j]->Length() ;
 	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	    SaveRecoTrack( track_f[j], reco_path );
-	    PrintHipotesis( track_f[j], reco_path );
 	    
-	    std::cout<< "fit to line residual for track in event " << event_id<< "= " <<FitToLine( track_f[j] ) << std::endl;
 	    // Get track based variables
 	    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
 	    std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
@@ -268,12 +258,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_missenergy = pid_f[k]->MissingE();
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
 		dEdx = cal_f[n]->dEdx();
-		PrintdEdx( dEdx , reco_path);
 		r_Range = cal_f[n]->Range();
 	
 	      }
-	      mu_f = MeanPosition( track_f[j], 5 );
-	      //	      dev_f = DeviationPosition( track_f[j], 5 );
+
 	      if( event_id == 1 ) {
 		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
 		
@@ -285,7 +273,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  recoTrackInfo_tree -> Fill();
 		}
 	      }
-		std::cout<<"dEdx size = "<<dEdx.size()<< " &  track_f[j] size " <<  track_f[j]->LastValidPoint() <<std::endl;
  
 	    }// close pip loop
 	  }// close loop reco track
@@ -299,7 +286,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   recotrack_tree  -> Fill();
   
 }
-
 
 
 // Functions
@@ -347,202 +333,7 @@ void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_tra
   h_recotrack->Draw("BOX2Z");
   c2->SaveAs( (path+".root").c_str() );
   c2->Clear();
-
-
-  /*  May use this as a fiter for each of the coordinates
-      TH1D *h_rtrackX = new TH1D("h_rtrackX", "Reco Particle Track (X)", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X());
-  
-  for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
-    h_rtrackX -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y());
-  }
-
-  gStyle->SetPalette(55);
-  gStyle->SetNumberContours(250);
-
-  TCanvas *c = new TCanvas();
-  h_rtrackX->SetLineColor(2);
-  h_rtrackX->GetXaxis()->SetTitle("x");
-  h_rtrackX->GetYaxis()->SetTitle("y");
-  h_rtrackX->Draw("hist");
-  c->SaveAs("reco_Xtrack.root"); */
 }
-
-std::vector< std::vector<double> > TrackID::MyAnalysis::Straight( art::Ptr<recob::Track> const & reco_track ) {
-  std::vector< std::vector<double> > track_hipotesis ;
-  std::vector< double > v ;
-  double distx, disty, distz ;
-  
-  track_hipotesis.reserve(reco_track->CountValidPoints()-1);
-  distx = ( reco_track->End().X() - reco_track->Vertex().X() )/ (reco_track->CountValidPoints()-1);
-  disty = ( reco_track->End().Y() - reco_track->Vertex().Y() )/ (reco_track->CountValidPoints()-1);
-  distz = ( reco_track->End().Z() - reco_track->Vertex().Z() )/ (reco_track->CountValidPoints()-1);
-  
-  for ( unsigned int i = 0 ; i< reco_track->CountValidPoints() ; ++i ){
-    v.clear();
-    v.push_back(reco_track->Vertex().X()+i*distx);
-    v.push_back(reco_track->Vertex().Y()+i*disty);
-    v.push_back(reco_track->Vertex().Z()+i*distz);
-    track_hipotesis.push_back(v); 
-  }
-
-  return track_hipotesis ;
-}
-
-
-void TrackID::MyAnalysis::PrintHipotesis( art::Ptr<recob::Track> const & reco_track, std::string const & path ) {
-  std::vector< std::vector<double> > track_hipotesis = Straight ( reco_track ) ;
-
-  TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
-  
-  for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
-    h_recotrack -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y(), reco_track->TrajectoryPoint( t_hit ).position.Z(), reco_track->MomentumAtPoint( t_hit ));
-  }
-  
-  gStyle->SetPalette(55);
-  gStyle->SetNumberContours(250);
-	    
-  TCanvas *c = new TCanvas();
-  h_recotrack->SetLineColor(2);
-  h_recotrack->GetXaxis()->SetTitle("X");
-  h_recotrack->GetYaxis()->SetTitle("Y");
-  h_recotrack->GetZaxis()->SetTitle("Z");
-  h_recotrack->Draw("hist");
-  h_recotrack->Draw("BOX2Z");
-
-  TH3D *h_hipotesis = new TH3D("h_hipotesis", "Reco hipotesis", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
-  
-  for ( unsigned int t_hit = 0 ; t_hit < track_hipotesis.size(); ++t_hit ){
-      h_hipotesis -> Fill( track_hipotesis[t_hit][0], track_hipotesis[t_hit][1], track_hipotesis[t_hit][2]);
-  }
-	    
-  gStyle->SetPalette(55);
-  gStyle->SetNumberContours(250);
-  h_hipotesis->Draw("hist SAME ");
-  c->SaveAs( (path+"_hipotesis.root").c_str() ) ;
-
-}
-double TrackID::MyAnalysis::FitToLine( art::Ptr<recob::Track> const & reco_track ){
-  /* 
-   * This function calculates the distance btw the hipotesis track and the reconstructed points, and returns the 
-   * cummulative distance.
-   */
-
-  TVector3 vertex(reco_track->Vertex().X(),reco_track->Vertex().Y(),reco_track->Vertex().Z());
-  TVector3 direction, vertex_P ;
-  std::vector< double > residual ;
-  double residual_total = 0 ;
-  direction.SetX((reco_track->End().X() - reco_track->Vertex().X())/ (reco_track->CountValidPoints()-1));
-  direction.SetY((reco_track->End().Y() - reco_track->Vertex().Y())/ (reco_track->CountValidPoints()-1));
-  direction.SetZ((reco_track->End().Z() - reco_track->Vertex().Z())/ (reco_track->CountValidPoints()-1));
-    
-  for( unsigned int i = 0; i < reco_track->CountValidPoints(); ++i ){
-    vertex_P.SetX(reco_track->TrajectoryPoint( i ).position.X()-vertex.X());
-    vertex_P.SetY(reco_track->TrajectoryPoint( i ).position.Y()-vertex.Y());
-    vertex_P.SetZ(reco_track->TrajectoryPoint( i ).position.Z()-vertex.Z());
-    residual.push_back((vertex_P.Cross( direction )).Mag()/direction.Mag()); // use this to find possible kinked trakcs: angle btw them? 
-    residual_total += residual[i] ;
-  }
-  
-  return residual_total/reco_track->CountValidPoints(); // returns mean value 
-}
-
-double TrackID::MyAnalysis::Linearity( ){
-  return 0.;
-}
- 
-std::vector< std::vector< double > > TrackID::MyAnalysis::MeanPosition( art::Ptr<recob::Track> const & reco_track , int const & window ){
-  unsigned int starting_hit , end_hit;
-  double muI_x, muI_y, muI_z;
-  std::vector< double > mu_x, mu_y, mu_z ;
-  std::vector< std::vector< double > > mu ; 
-
-  for( unsigned int i = 0; i < reco_track->CountValidPoints(); ++i ){
-    muI_x = 0. ;
-    muI_y = 0. ;
-    muI_z = 0. ;
-    if ( i - window < 0 ) { 
-      starting_hit = 0 ;
-      end_hit = (i+1) + window ;
-    } else if ( i + window > reco_track->CountValidPoints()) {
-      starting_hit = i - window ;
-      end_hit = reco_track->CountValidPoints() ;
-    } else {
-      starting_hit = i - window ;
-      end_hit = (i+1) + window ;
-    }
-
-    for( unsigned int j = starting_hit ; j < end_hit -1 ; ++j ){ 
-      muI_x += reco_track->TrajectoryPoint( j ).position.X();
-      muI_y += reco_track->TrajectoryPoint( j ).position.Y();
-      muI_z += reco_track->TrajectoryPoint( j ).position.Z();
-      //std::cout<< j << std::endl;
-    } 
-    mu_x.push_back( muI_x/( end_hit - starting_hit -1 ) );
-    mu_y.push_back( muI_y/( end_hit - starting_hit -1 ) );
-    mu_z.push_back( muI_z/( end_hit - starting_hit -1 ) );
-    std::cout<< "hit number = "<< i << ":   "<<"muI_x= " << muI_x/( end_hit - starting_hit -1 )  <<" muI_y= " << muI_y/( end_hit - starting_hit -1 )  << " muI_z= "<< muI_z/( end_hit - starting_hit -1 )  << std::endl;
-  }
-
-  mu.push_back( mu_x );
-  mu.push_back( mu_y );
-  mu.push_back( mu_z );
-  return mu; 
-}
-
-
-std::vector< std::vector< double > > TrackID::MyAnalysis::DeviationPosition( art::Ptr<recob::Track> const & reco_track , int const & window ){
-  // Neet to check if number of bins is ok 
-  unsigned int starting_hit , end_hit;
-  double devI_x, devI_y, devI_z;
-  std::vector< double > dev_x, dev_y, dev_z ;
-  std::vector< std::vector< double > > dev ; 
-
-  for( unsigned int i = 0; i < reco_track->CountValidPoints(); ++i ){
-    devI_x = 0. ;
-    devI_y = 0. ;
-    devI_z = 0. ;
-    if ( i - window < 0 ) { 
-      starting_hit = 0 ;
-      end_hit = (i+1) + window ;
-    } else if ( i + window > reco_track->CountValidPoints()) {
-      starting_hit = i - window ;
-      end_hit = reco_track->CountValidPoints() ;
-    } else {
-      starting_hit = i - window ;
-      end_hit = (i+1) + window ;
-    }
-
-    for( unsigned int j = starting_hit ; j < end_hit - 1 ; ++j ){ 
-      devI_x += std::pow((reco_track->TrajectoryPoint( j ).position.X() - MeanPosition( reco_track, window )[j][0] ), 2) ;
-      devI_y += std::pow((reco_track->TrajectoryPoint( j ).position.Y() - MeanPosition( reco_track, window )[j][1] ), 2) ;
-      devI_z += std::pow((reco_track->TrajectoryPoint( j ).position.Z() - MeanPosition( reco_track, window )[j][2] ), 2) ;
-    } 
-    dev_x.push_back( std::sqrt(devI_x) );
-    dev_y.push_back( std::sqrt(devI_y) );
-    dev_z.push_back( std::sqrt(devI_z) );
-    std::cout<< "hit number = "<< i << ":   "<<"devI_x= " << devI_x/( std::sqrt(devI_x) )  <<" devI_y= " << devI_y/( std::sqrt(devI_z) )  << " devI_z= "<< devI_z/( std::sqrt(devI_z) )  << std::endl;
-  }
-
-  dev.push_back( dev_x );
-  dev.push_back( dev_y );
-  dev.push_back( dev_z );
-  return dev; 
-
-}
-
-void TrackID::MyAnalysis::PrintdEdx( std::vector< float > const & dEdx, std::string const & path ) const {
-
-  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", dEdx.size(), 0, dEdx.size() );
-  for (unsigned int i = 0 ; i<dEdx.size() ; ++i ){
-    h_dEdx -> Fill ( i , dEdx[i] ) ;
-  }
-
-  TCanvas *c = new TCanvas() ;
-  h_dEdx -> Draw() ;
-  c->SaveAs( (path+"_dEdx.root").c_str() ) ;
-
-}
-
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 {
