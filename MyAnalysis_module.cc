@@ -100,9 +100,9 @@ private:
   int rnu_hits ;
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
-  std::vector< float > dEdx ;
-  std::vector< std::vector< double >  > mu_f, dev_f;
-
+  double rdEdx_size, rdQdx_size ;
+  std::vector< float > dEdx, dQdx ;
+  double r_dEdx[100000], r_dQdx[100000] ;
   //Track example information to test future Track class. This is the information needed for the Track class. 
   // Saving it into a root file to work offline...
   double tr_x, tr_y, tr_z, tr_dEdx, tr_dQdx ; //info per hit
@@ -212,8 +212,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_pi_daughters = 0;
   r_e_daughters = 0;
   r_p_daughters = 0;
-  r_n_daughters = 0;
-  r_photon_daughters = 0;
+  r_n_daughters = 0; // expecting non reco 
+  r_photon_daughters = 0; // should not find showers
   r_other_daughters = 0;
 	   
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
@@ -231,8 +231,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	} else if ( pfparticle->PdgCode() == 2212 ) { ++ r_p_daughters ;
 	} else if ( pfparticle->PdgCode() == 2112 ) { ++ r_n_daughters ;
 	} else if ( pfparticle->PdgCode() == 22   ) { ++ r_photon_daughters ;
-	} else                                      { ++ r_other_daughters ;
-	  }
+	} else                                      { ++ r_other_daughters ; }
       }
 	
 	if ( findTracks.at(i).size()!=0 ){
@@ -240,6 +239,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	  art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
 	  art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
+	  
 	  // Loop over tracks per event
 	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
 	    rVertex_x = track_f[j]->Vertex( ).X() ;
@@ -249,7 +249,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    rEnd_y    = track_f[j]->End( ).Y() ;
 	    rEnd_z    = track_f[j]->End( ).Z() ;
 	    rLength   = track_f[j]->Length() ;
-	    rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
 	    SaveRecoTrack( track_f[j], reco_path );
 	    
 	    // Get track based variables
@@ -261,8 +260,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
 	      if( !pid_f[k] ) continue ;
 	      if( !pid_f[k]->PlaneID().isValid) continue ;
-	      // only look at collection plane for dEdx information
-	      if( pid_f[k]->PlaneID().Plane != 2 ) continue ;
+	      if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
 
 	      //Loop over calo information also in collection plane
 	      for ( unsigned int n = 0 ; n < cal_f.size() ; ++n ) {
@@ -277,9 +275,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_PIDA    = pid_f[k]->PIDA();
 		r_missenergy = pid_f[k]->MissingE();
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
+	        rdEdx_size = (cal_f[n]->dEdx()).size();
+		rdQdx_size = (cal_f[n]->dQdx()).size();
 		dEdx = cal_f[n]->dEdx();
+		dQdx = cal_f[n]->dQdx();
+		for( unsigned int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l] = cal_f[n]->dEdx()[l];
+		for( unsigned int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
-	
 	      }
 
 	      if( event_id == 35 ) {
@@ -289,7 +291,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
 		  tr_z =  track_f[j]->TrajectoryPoint( t_hit ).position.Z();
 		  // also need time
-		  // dEdx
+	//  rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
+	    	  // dEdx
 		  recoTrackInfo_tree -> Fill();
 		}
 	      }
@@ -489,7 +492,10 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_missing_energy",  &r_missenergy,      "r_missenergy/D");
   recotrack_tree  -> Branch( "r_KineticEnergy",   &r_KineticEnergy,   "r_KineticEnergy/D");
   recotrack_tree  -> Branch( "r_Range",           &r_Range,           "r_Range/D");
-  
+  recotrack_tree  -> Branch( "rdEdx_size",        &rdEdx_size,        "rdEdx_size/D");
+  recotrack_tree  -> Branch( "rdQdx_size",        &rdQdx_size,        "rdQdx_size/D");
+  recotrack_tree  -> Branch( "r_dEdx",            &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_dQdx",            &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/D").c_str());
 
   recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
   recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
