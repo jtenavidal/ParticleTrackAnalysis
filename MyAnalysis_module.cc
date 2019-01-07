@@ -85,13 +85,12 @@ private:
   int event_id ; 
 
   // Truth information
-  int fPDG_Code, fTrack_ID, fNumDaughters, fFirstDaughter, fDaughter; 
+  int fPDG_Code, fTrack_ID, fNumDaughters, fDaughter_mu, fDaughter_pi, fDaughter_e, fDaughter_p, fDaughter_n, fDaughter_photon, fDaughter_other ;
   float fTrueParticleEnergy, fMass;
   float fpx, fpy, fpz, fpt, fp; // momentum variables
   simb::MCTrajectory True_trajectory ;
   TLorentzVector MC_Track_Position ;
-  double fMCLength ;
-  double fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
+  double fMCLength, fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
 
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
@@ -134,7 +133,6 @@ TrackID::MyAnalysis::MyAnalysis(fhicl::ParameterSet const & p)
 
 void TrackID::MyAnalysis::analyze(art::Event const & e)
 {
-  // Implementation of required member function here.
   event_id = e.id().event();
   std::stringstream t_path, r_path ;
   t_path << "Histograms/Truth/eid_"<<event_id<<"_truth_track" ;
@@ -144,11 +142,23 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
   if( !e.isRealData()){
     art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(fTruthLabel);
+
     if(mcParticles.isValid()){
-      // Loop over primary particle
+      // Loop over truth info
+      fDaughter_mu = 0 ;
+      fDaughter_pi = 0 ;
+      fDaughter_e = 0 ;
+      fDaughter_p = 0 ;
+      fDaughter_n = 0 ;
+      fDaughter_photon = 0 ;
+      fDaughter_other = 0 ;
+      
       for( unsigned int t = 0; t < mcParticles->size(); ++t ){
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
-	if(trueParticle.Process() == "primary"){
+
+	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
+ 
+	if(trueParticle.Process() == "primary" ){
 	  fTrack_ID = trueParticle.TrackId() ;
 	  fPDG_Code = trueParticle.PdgCode() ;
 	  fTrueParticleEnergy = trueParticle.E() ;
@@ -159,12 +169,17 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fpt = trueParticle.Pt() ;
 	  fp  = trueParticle.P() ;
 	  fNumDaughters = trueParticle.NumberDaughters() ;
-	  fFirstDaughter = trueParticle.FirstDaughter() ;
-	  //	  fDaughter = trueParticle.Daughter() ;
 	  True_trajectory = trueParticle.Trajectory() ;
 	  fMCLength = True_trajectory.TotalLength() ;
-	  MC_Track_Position = True_trajectory.Position( True_trajectory.size() ) ;
 	  
+	} else { // secondary particle information 
+	  if      ( trueParticle.PdgCode() == 13   ) { ++fDaughter_mu ; }
+	  else if ( trueParticle.PdgCode() == 211  ) { ++fDaughter_pi ; } 
+	  else if ( trueParticle.PdgCode() == 11   ) { ++fDaughter_e ; } 
+	  else if ( trueParticle.PdgCode() == 2212 ) { ++fDaughter_p ; }
+	  else if ( trueParticle.PdgCode() == 2112 ) { ++fDaughter_n ; }
+	  else if ( trueParticle.PdgCode() == 22  )  { ++fDaughter_photon ; }
+	  else                                       { ++fDaughter_other ; }
 	}
       }
       SaveMCTrack( True_trajectory , truth_path ) ;
@@ -262,7 +277,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	
 	      }
 
-	      if( event_id == 1 ) {
+	      if( event_id == 35 ) {
 		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
 		
 		  tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
@@ -359,8 +374,13 @@ void TrackID::MyAnalysis::beginJob( )
   fpt = -999. ;
   fp  = -999. ;
   fNumDaughters = -999 ;
-  fFirstDaughter = -999 ;
-  fDaughter = -999 ;
+  fDaughter_mu = 0 ;
+  fDaughter_pi = 0 ;
+  fDaughter_e = 0 ;
+  fDaughter_p = 0 ;
+  fDaughter_n = 0 ;
+  fDaughter_photon = 0 ;
+  fDaughter_other = 0 ;
   fMCLength = -999 ;
   fTrack_position_x = -999. ;
   fTrack_position_y = -999. ;
@@ -424,9 +444,14 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "Pt",                     &fpt,                 "pt/F");
   mcparticle_tree -> Branch( "P",                      &fp,                  "p/F");
   mcparticle_tree -> Branch( "Num_Daughters",          &fNumDaughters,       "num_d/I");
-  mcparticle_tree -> Branch( "First_Daughter",         &fFirstDaughter,      "First_d/I");
-  //  mcparticle_tree -> Branch( "Daughter",               &fDaughter,           "d/I");
-  mcparticle_tree -> Branch( "MC_Length",              &fMCLength,      "Length/D");
+  mcparticle_tree -> Branch( "Daughter_mu",            &fDaughter_mu,        "Daughter_mu/I");
+  mcparticle_tree -> Branch( "Daughter_pi",            &fDaughter_pi,        "Daughter_pi/I");
+  mcparticle_tree -> Branch( "Daughter_e",             &fDaughter_e,         "Daughter_e/I");
+  mcparticle_tree -> Branch( "Daughter_p",             &fDaughter_p,         "Daughter_p/I");
+  mcparticle_tree -> Branch( "Daughter_n",             &fDaughter_n,         "Daughter_n/I");
+  mcparticle_tree -> Branch( "Daughter_photon",        &fDaughter_photon,    "Daughter_photon/I");
+  mcparticle_tree -> Branch( "Daughter_other",         &fDaughter_other,     "Daughter_other/I");
+  mcparticle_tree -> Branch( "MC_Length",              &fMCLength,           "Length/D");
 
  /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
@@ -483,7 +508,7 @@ void TrackID::MyAnalysis::endJob( )
   file.Write();
   file.Close();
 
-  TFile fileTrack("output_track_example.root", "RECREATE");
+  TFile fileTrack("output_track_ev35_mu.root", "RECREATE");
   recoTrackInfo_tree -> Write() ;
   fileTrack.Write();
   fileTrack.Close();
