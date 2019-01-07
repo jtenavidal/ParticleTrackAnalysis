@@ -94,7 +94,7 @@ private:
 
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
-  int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_other_daughters;
+  int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_n_daughters, r_photon_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
   double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
   int rnu_hits ;
@@ -141,6 +141,9 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   std::string reco_path = r_path.str();
 
   if( !e.isRealData()){
+    /**************************************************************************************************
+     *  MC INFORMATION
+     *************************************************************************************************/
     art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(fTruthLabel);
 
     if(mcParticles.isValid()){
@@ -154,6 +157,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       fDaughter_other = 0 ;
       
       for( unsigned int t = 0; t < mcParticles->size(); ++t ){
+	
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
@@ -186,9 +190,9 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     }
   }
 
-/**************************************************************************************************
- *  RECO INFORMATION
- *************************************************************************************************/
+  /**************************************************************************************************
+   *  RECO INFORMATION
+   *************************************************************************************************/
   // Get PFParticle Handle
   art::Handle< std::vector< recob::PFParticle > > pfParticleHandle ;
   e.getByLabel(m_particleLabel, pfParticleHandle ) ;
@@ -208,6 +212,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_pi_daughters = 0;
   r_e_daughters = 0;
   r_p_daughters = 0;
+  r_n_daughters = 0;
+  r_photon_daughters = 0;
   r_other_daughters = 0;
 	   
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
@@ -219,14 +225,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	r_pdg_primary = pfparticle->PdgCode() ;
 	r_nu_daughters = pfparticle->NumDaughters();
       } else {
-      	if( pfparticle->PdgCode() == 13 ) {
-	  r_mu_daughters ++ ;
-	} else if ( pfparticle->PdgCode() == 211 ) {
-	  r_pi_daughters ++ ;
-	} else if ( pfparticle->PdgCode() == 11 ) {
-	  r_e_daughters ++ ;
-	} else {
-	  r_other_daughters ++ ;
+      	if        ( pfparticle->PdgCode() == 13   ) { ++ r_mu_daughters ;
+	} else if ( pfparticle->PdgCode() == 211  ) { ++ r_pi_daughters ;
+	} else if ( pfparticle->PdgCode() == 11   ) { ++ r_e_daughters ;
+	} else if ( pfparticle->PdgCode() == 2212 ) { ++ r_p_daughters ;
+	} else if ( pfparticle->PdgCode() == 2112 ) { ++ r_n_daughters ;
+	} else if ( pfparticle->PdgCode() == 22   ) { ++ r_photon_daughters ;
+	} else                                      { ++ r_other_daughters ;
 	  }
       }
 	
@@ -394,6 +399,8 @@ void TrackID::MyAnalysis::beginJob( )
   r_pi_daughters = 0 ;
   r_e_daughters = 0 ;
   r_p_daughters = 0 ;
+  r_n_daughters = 0 ;
+  r_photon_daughters = 0 ;
   r_other_daughters = 0 ;
   rVertex_x = -999. ;
   rVertex_y = -999. ;
@@ -463,6 +470,8 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "pi_daughters",      &r_pi_daughters,    "pi_daughters/I");
   recotrack_tree  -> Branch( "e_daughters",       &r_e_daughters,     "e_daughters/I");
   recotrack_tree  -> Branch( "p_daughters",       &r_p_daughters,     "p_daughters/I");
+  recotrack_tree  -> Branch( "n_daughters",       &r_n_daughters,     "n_daughters/I");
+  recotrack_tree  -> Branch( "photon_daughters",  &r_photon_daughters,"photon_daughters/I");
   recotrack_tree  -> Branch( "other_daughters",   &r_other_daughters, "others_daughters/I");
   recotrack_tree  -> Branch( "Vertex_x",          &rVertex_x,         "rVertex_x/D");
   recotrack_tree  -> Branch( "Vertex_y",          &rVertex_y,         "rVertex_y/D");
