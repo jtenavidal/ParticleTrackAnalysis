@@ -106,7 +106,7 @@ private:
 
   //Track example information to test future Track class. This is the information needed for the Track class. 
   // Saving it into a root file to work offline...
-  double tr_x, tr_y, tr_z, tr_t, tr_dEdx, tr_dQdx ; //info per hit
+  double tr_x, tr_y, tr_z, tr_dEdx, tr_dQdx ; //info per hit
 
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
@@ -397,7 +397,6 @@ void TrackID::MyAnalysis::beginJob( )
   tr_x = -999. ;
   tr_y = -999. ;
   tr_z = -999. ;
-  tr_t = -999. ;
   tr_dEdx = -999. ;
   tr_dQdx = -999. ;
 
@@ -461,7 +460,6 @@ void TrackID::MyAnalysis::beginJob( )
   recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
   recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
   recoTrackInfo_tree -> Branch( "tr_z",           &tr_z,              "tr_z/D");
-  recoTrackInfo_tree -> Branch( "tr_t",           &tr_t,              "tr_t/D");
   recoTrackInfo_tree -> Branch( "tr_dEdx",        &tr_dEdx,           "tr_dEdx/D");
   recoTrackInfo_tree -> Branch( "tr_dQdx",        &tr_dQdx,           "tr_dQdx/D");
 
