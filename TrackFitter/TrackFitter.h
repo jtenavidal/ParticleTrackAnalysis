@@ -18,8 +18,9 @@ typedef std::vector< double > Hit_level;
     /**
     * Constructor
     */
-    TrackFitter( const Track & p_track );
-    TrackFitter( const std::string & track_file_path ) ;
+    TrackFitter( const Track & p_track ); // reads from easier and simpler file
+    TrackFitter( const std::string & track_file_path ) ; // reads all events from track_file_path
+    TrackFitter( const std::string & track_file_path, const unsigned int & event_id_track ) ; // reads only the event corresponding to event_id_track
 
     /**
     * Functions to get properties
@@ -27,8 +28,8 @@ typedef std::vector< double > Hit_level;
     unsigned int GetHits( ) ;
     Hit_level AccessVertex( ) ;
     Hit_level AccessEnd( ) ;
-    Hit_level GetdEdx( ) ;
-    Hit_level GetdQdx( ) ;
+//    std::vector< std::vector< float > > GetdEdx( ) ;
+//    std::vector< std::vector< float > > GetdQdx( ) ;
     Track GetTrack( ) ;
 
     /**
@@ -51,9 +52,15 @@ typedef std::vector< double > Hit_level;
   private :
 
   // Object information
-  unsigned int _hits ;
-  Hit_level _vertex_position, _end_position, _reco_dEdx, _reco_dQdx ;
+  int _hits, _dEdx_size, _dQdx_size ;
+  Hit_level _vertex_position, _end_position ;
+  std::vector< float > _reco_dEdx, _reco_dQdx ;
   Track _particle_track ;
+  // If loading all file
+  std::vector< int > _event_hits, _event_dEdx_size, _event_dQdx_size ;
+  std::vector< std::vector<double> > _event_vertex, _event_end ;
+  std::vector< std::vector< float > > _event_reco_dEdx, _event_reco_dQdx ;
+  std::vector< Track > _event_tracks;  // maps event and track
   /**
   * Functions to guess about the geometry of the track
   */

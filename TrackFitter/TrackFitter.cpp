@@ -26,7 +26,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
   // Should add more info ...
 }
 
-
+/*
 TrackFitter::TrackFitter( const std::string & track_file_path ){
   TFile track_file( track_file_path.c_str() );
   TTree *recoTrack_tree   = (TTree*) track_file.Get("recoTrack_tree") ;
@@ -35,7 +35,6 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
   TBranch *tr_x    = recoTrack_tree->GetBranch("tr_x");
   TBranch *tr_y    = recoTrack_tree->GetBranch("tr_y");
   TBranch *tr_z    = recoTrack_tree->GetBranch("tr_z");
-  TBranch *tr_t    = recoTrack_tree->GetBranch("tr_t");
   TBranch *tr_dEdx = recoTrack_tree->GetBranch("tr_dEdx");
   TBranch *tr_dQdx = recoTrack_tree->GetBranch("tr_dQdx");
   // add here other info if needed
@@ -48,7 +47,6 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
     track_hit.push_back( tr_x->GetLeaf("tr_x")->GetValue());
     track_hit.push_back( tr_y->GetLeaf("tr_y")->GetValue());
     track_hit.push_back( tr_z->GetLeaf("tr_z")->GetValue());
-    track_hit.push_back( tr_t->GetLeaf("tr_t")->GetValue());
     _reco_dEdx.push_back( tr_dEdx->GetLeaf("tr_dEdx")->GetValue());
     _reco_dQdx.push_back( tr_dQdx->GetLeaf("tr_dQdx")->GetValue());
     _particle_track.push_back(track_hit);
@@ -57,7 +55,180 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
   _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
   // Should add more info ...
 }
+*/
+ // THIS CONSTRUCTOR WORKS WITH THE OUTPUT TREE ( event, mc, reco )
 
+ TrackFitter::TrackFitter( const std::string & track_file_path ){
+   TFile track_file( track_file_path.c_str() );
+   // Event Tree
+   TTree * event_tree   = (TTree*) track_file.Get("event_tree") ;
+   TBranch * event_id = event_tree->GetBranch("event_id");
+   // MC Tree
+   TTree * mcparticle_tree   = (TTree*) track_file.Get("mcparticle_tree") ;
+   TBranch * mc_event_id = mcparticle_tree->GetBranch("event_id");
+   TBranch * Track_ID = mcparticle_tree->GetBranch("fTrack_ID");
+   TBranch * trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
+   TBranch * PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
+   TBranch * Mass = mcparticle_tree->GetBranch("fMass");
+   TBranch * Px = mcparticle_tree->GetBranch("fpx");
+   TBranch * Py = mcparticle_tree->GetBranch("fpy");
+   TBranch * Pz = mcparticle_tree->GetBranch("fpz");
+   TBranch * Pt = mcparticle_tree->GetBranch("fpt");
+   TBranch * P = mcparticle_tree->GetBranch("fp");
+   TBranch * Num_Daughters = mcparticle_tree->GetBranch("fNum_Daughters");
+   TBranch * Daughter_mu = mcparticle_tree->GetBranch("fDaughter_mu");
+   TBranch * Daughter_pi = mcparticle_tree->GetBranch("fDaughter_pi");
+   TBranch * Daughter_e = mcparticle_tree->GetBranch("fDaughter_e");
+   TBranch * Daughter_p = mcparticle_tree->GetBranch("fDaughter_p");
+   TBranch * Daughter_n = mcparticle_tree->GetBranch("fDaughter_n");
+   TBranch * Daughter_photon = mcparticle_tree->GetBranch("fDaughter_photon");
+   TBranch * Daughter_other = mcparticle_tree->GetBranch("fDaughter_other");
+   TBranch * MC_Lenght= mcparticle_tree->GetBranch("fMC_Lenght");
+   // RECO Tree
+   TTree * recoparticle_tree   = (TTree*) track_file.Get("recoparticle_tree") ;
+   TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
+   TBranch * pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
+   TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
+   TBranch * mu_daughters = recoparticle_tree->GetBranch("r_mu_daughters");
+   TBranch * pi_daughters = recoparticle_tree->GetBranch("r_pi_daughters");
+   TBranch * e_daughters = recoparticle_tree->GetBranch("r_e_daughters");
+   TBranch * p_daughters = recoparticle_tree->GetBranch("r_p_daughters");
+   TBranch * other_daughters = recoparticle_tree->GetBranch("r_other_daughters");
+   TBranch * Length = recoparticle_tree->GetBranch("rLength");
+   TBranch * Momentum = recoparticle_tree->GetBranch("rMomentum");
+   TBranch * nu_hits = recoparticle_tree->GetBranch("rnu_hits");
+   TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
+   TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
+   TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
+   TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
+   TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
+   TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
+   TBranch * rdEdx_size = recoparticle_tree->GetBranch("rdEdx_size");
+   TBranch * rdQdx_size = recoparticle_tree->GetBranch("rdQdx_size");
+   TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
+   TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
+   TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
+   TBranch * r_dEdx = recoparticle_tree->GetBranch("r_dEdx");
+   TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
+
+   Hit_level track_hit;
+
+   for( unsigned int i = 0; i < recoparticle_tree->GetEntries(); ++i ){
+     _particle_track.clear();
+     _reco_dEdx.clear();
+     _reco_dQdx.clear();
+
+     recoparticle_tree->GetEntry(i);
+     _hits = nu_hits->GetLeaf("rnu_hits")->GetValue() ;
+     _event_hits.push_back( _hits ) ;
+
+     for( int j = 0; j < _hits; ++j ) {
+       track_hit.clear();
+       track_hit.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
+       track_hit.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
+       track_hit.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
+       _particle_track.push_back(track_hit);
+     }
+     _event_tracks.push_back( _particle_track ) ;
+
+     _dEdx_size = rdEdx_size->GetLeaf("rdEdx_size")->GetValue() ;
+     _dQdx_size = rdQdx_size->GetLeaf("rdQdx_size")->GetValue() ;
+     _event_dEdx_size.push_back( _dEdx_size ) ;
+     _event_dQdx_size.push_back( _dQdx_size );
+
+     for( int j = 0; j < _dEdx_size; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
+     for( int j = 0; j < _dQdx_size; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
+     _event_reco_dEdx.push_back( _reco_dEdx ) ;
+     _event_reco_dQdx.push_back( _reco_dQdx ) ;
+
+     _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
+     _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
+     // Should add more info ...
+
+   }
+
+ }
+
+
+ TrackFitter::TrackFitter( const std::string & track_file_path, const unsigned int & event_id_track ){
+   TFile track_file( track_file_path.c_str() );
+   // Event Tree
+   TTree * event_tree   = (TTree*) track_file.Get("event_tree") ;
+   TBranch * event_id = event_tree->GetBranch("event_id");
+   // MC Tree
+   TTree * mcparticle_tree   = (TTree*) track_file.Get("mcparticle_tree") ;
+   TBranch * mc_event_id = mcparticle_tree->GetBranch("event_id");
+   TBranch * Track_ID = mcparticle_tree->GetBranch("fTrack_ID");
+   TBranch * trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
+   TBranch * PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
+   TBranch * Mass = mcparticle_tree->GetBranch("fMass");
+   TBranch * Px = mcparticle_tree->GetBranch("fpx");
+   TBranch * Py = mcparticle_tree->GetBranch("fpy");
+   TBranch * Pz = mcparticle_tree->GetBranch("fpz");
+   TBranch * Pt = mcparticle_tree->GetBranch("fpt");
+   TBranch * P = mcparticle_tree->GetBranch("fp");
+   TBranch * Num_Daughters = mcparticle_tree->GetBranch("fNum_Daughters");
+   TBranch * Daughter_mu = mcparticle_tree->GetBranch("fDaughter_mu");
+   TBranch * Daughter_pi = mcparticle_tree->GetBranch("fDaughter_pi");
+   TBranch * Daughter_e = mcparticle_tree->GetBranch("fDaughter_e");
+   TBranch * Daughter_p = mcparticle_tree->GetBranch("fDaughter_p");
+   TBranch * Daughter_n = mcparticle_tree->GetBranch("fDaughter_n");
+   TBranch * Daughter_photon = mcparticle_tree->GetBranch("fDaughter_photon");
+   TBranch * Daughter_other = mcparticle_tree->GetBranch("fDaughter_other");
+   TBranch * MC_Lenght= mcparticle_tree->GetBranch("fMC_Lenght");
+   // RECO Tree
+   TTree * recoparticle_tree   = (TTree*) track_file.Get("recoparticle_tree") ;
+   TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
+   TBranch * pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
+   TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
+   TBranch * mu_daughters = recoparticle_tree->GetBranch("r_mu_daughters");
+   TBranch * pi_daughters = recoparticle_tree->GetBranch("r_pi_daughters");
+   TBranch * e_daughters = recoparticle_tree->GetBranch("r_e_daughters");
+   TBranch * p_daughters = recoparticle_tree->GetBranch("r_p_daughters");
+   TBranch * other_daughters = recoparticle_tree->GetBranch("r_other_daughters");
+   TBranch * Length = recoparticle_tree->GetBranch("rLength");
+   TBranch * Momentum = recoparticle_tree->GetBranch("rMomentum");
+   TBranch * nu_hits = recoparticle_tree->GetBranch("rnu_hits");
+   TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
+   TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
+   TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
+   TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
+   TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
+   TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
+   TBranch * rdEdx_size = recoparticle_tree->GetBranch("rdEdx_size");
+   TBranch * rdQdx_size = recoparticle_tree->GetBranch("rdQdx_size");
+   TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
+   TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
+   TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
+   TBranch * r_dEdx = recoparticle_tree->GetBranch("r_dEdx");
+   TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
+
+   Hit_level track_hit;
+
+   recoparticle_tree->GetEntry( event_id_track -1 );
+   _hits = nu_hits->GetLeaf("rnu_hits")->GetValue();
+   _particle_track.clear();
+
+   for( int j = 0; j < _hits; ++j ) {
+     track_hit.clear();
+     track_hit.push_back( recoparticle_tree->GetLeaf("r_track_x")->GetValue(j));
+     track_hit.push_back( recoparticle_tree->GetLeaf("r_track_y")->GetValue(j));
+     track_hit.push_back( recoparticle_tree->GetLeaf("r_track_z")->GetValue(j));
+     _particle_track.push_back(track_hit);
+   }
+    _dEdx_size = recoparticle_tree->GetLeaf("rdEdx_size")->GetValue( );
+    _dQdx_size = recoparticle_tree->GetLeaf("rdQdx_size")->GetValue( );
+    for( int j = 0; j < _dEdx_size; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
+    for( int j = 0; j < _dQdx_size; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
+
+   _vertex_position = _particle_track[0] ;// AccessVertex( p_track );
+   _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
+   // Should add more info ...
+
+ }
+
+
+//*/
 /**
 * FUNCTIONS
 * 1 - Get Properties
@@ -74,14 +245,14 @@ Hit_level TrackFitter::AccessVertex( ) {
 Hit_level TrackFitter::AccessEnd( ) {
   return _end_position ;
 }
-
-Hit_level TrackFitter::GetdEdx( ){
+/*
+std::vector< std::vector< float > > TrackFitter::GetdEdx( ){
   return _reco_dEdx ;
 }
 
-Hit_level TrackFitter::GetdQdx( ){
+std::vector< std::vector< float > > TrackFitter::GetdQdx( ){
   return _reco_dQdx ;
-}
+}*/
 
 Track TrackFitter::GetTrack( ){
   return _particle_track ;
@@ -100,7 +271,7 @@ void TrackFitter::SaveTrack( std::string const & path ) const {
 _particle_track[0][1], _particle_track[_hits-1][1], int(_hits/10),
 _particle_track[0][2], _particle_track[_hits-1][2] );
 
-  for( unsigned int i = 0; i < _hits; ++i ){
+  for( int i = 0; i < _hits; ++i ){
     h_track-> Fill(_particle_track[i][0], _particle_track[i][1], _particle_track[i][2]); // should add dEdX
   //  std::cout<<_particle_track[i][0]<< " "<<_particle_track[i][1]<< " " << _particle_track[i][2] <<std::endl;
   }
@@ -129,7 +300,7 @@ Track TrackFitter::Straight( ) {
   disty = ( _end_position[1] - _vertex_position[1] )/ (_hits-1);
   distz = ( _end_position[2] - _vertex_position[2] )/ (_hits-1);
 
-  for ( unsigned int i = 0 ; i < _hits ; ++i ){
+  for ( int i = 0 ; i < _hits ; ++i ){
     v.clear();
     v.push_back( _vertex_position[0]+i*distx );
     v.push_back( _vertex_position[1]+i*disty );
@@ -148,7 +319,7 @@ void TrackFitter::PrintHipotesis( const std::string & path ) {
   _particle_track[0][1], _particle_track[_hits-1][1], int(_hits/10),
   _particle_track[0][2], _particle_track[_hits-1][2] );
 
-  for( unsigned int i = 0; i < _hits; ++i ){
+  for( int i = 0; i < _hits; ++i ){
     h_track-> Fill(_particle_track[i][0], _particle_track[i][1], _particle_track[i][2]); // should add dEdX
     //  std::cout<<_particle_track[i][0]<< " "<<_particle_track[i][1]<< " " << _particle_track[i][2] <<std::endl;
   }
@@ -188,7 +359,7 @@ double TrackFitter::FitToLine( ){
   direction.SetY(( _end_position[1] - _vertex_position[1])/ (_hits-1));
   direction.SetZ(( _end_position[2] - _vertex_position[2])/ (_hits-1));
 
-  for( unsigned int i = 0; i < _hits; ++i ){
+  for( int i = 0; i < _hits; ++i ){
     vertex_P.SetX( _particle_track[i][0] - _vertex_position[0] );
     vertex_P.SetY( _particle_track[i][1] - _vertex_position[1] );
     vertex_P.SetZ( _particle_track[i][2] - _vertex_position[2] );
@@ -328,6 +499,9 @@ std::vector< std::vector< double > > TrackFitter::CovPosition( const int & windo
     } else if ( i + window >= int(_hits)) {
       starting_hit = i - window ;
       end_hit = _hits ;
+    } else if ( i - window < 0  && i + window >= int(_hits)) {
+      starting_hit = 0 ;
+      end_hit = _hits ;
     } else {
       starting_hit = i - window ;
       end_hit = i + window ;
@@ -353,14 +527,21 @@ std::vector< std::vector< double > > TrackFitter::CovPosition( const int & windo
 
 void TrackFitter::PlotLinearity( const int & window, const std::string & path ) {
   std::vector< std::vector< double > > corrP = Linearity( window ) ;
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP[0].size(), 0,  corrP[0].size() );
   TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP[0].size(), 0,  corrP[0].size() );
   TH1F * h_LinearityXZ = new TH1F( "h_LinearityXZ", "Linearity", corrP[1].size(), 0,  corrP[1].size() );
   TH1F * h_LinearityYZ = new TH1F( "h_LinearityYZ", "Linearity", corrP[2].size(), 0,  corrP[2].size() );
   TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
 
   gStyle->SetOptStat(0);
+  h_Linearity->SetLineColor(46);
+  h_Linearity->SetLineWidth(2);
+  h_Linearity->SetLineStyle(1);
+  h_Linearity->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_Linearity , "r", "l") ;
+  gStyle->SetOptStat(0);
   h_LinearityXY->SetLineColor(2);
-  h_LinearityXY->SetLineStyle(1);
+  h_LinearityXY->SetLineStyle(6);
 //  h_LinearityXY->GetYaxis()->SetRangeUser(0,1);
   legend->AddEntry( h_LinearityXY , "r_{XY}", "l") ;
   h_LinearityXZ->SetLineColor(3);
@@ -373,6 +554,9 @@ void TrackFitter::PlotLinearity( const int & window, const std::string & path ) 
   for (unsigned int i = 0 ; i < corrP[0].size() ; ++i ){
     h_LinearityXY -> Fill ( i, corrP[0][i] ) ;
   }
+  for (unsigned int i = 0 ; i < corrP[0].size() ; ++i ){
+    h_Linearity -> Fill ( i, corrP[0][i]*corrP[1][i]*corrP[2][i] ) ;
+  }
   for (unsigned int i = 0 ; i < corrP[1].size() ; ++i ){
     h_LinearityXZ -> Fill ( i, corrP[1][i] ) ;
   }
@@ -381,7 +565,8 @@ void TrackFitter::PlotLinearity( const int & window, const std::string & path ) 
   }
 
   TCanvas *c = new TCanvas() ;
-  h_LinearityXY -> Draw("HIST L") ;
+  h_Linearity -> Draw("HIST L") ;
+  h_LinearityXY -> Draw("HIST L SAME") ;
   h_LinearityXZ -> Draw("HIST L SAME") ;
   h_LinearityYZ -> Draw("HIST L SAME") ;
   legend->Draw();
