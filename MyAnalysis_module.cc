@@ -97,10 +97,10 @@ private:
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_n_daughters, r_photon_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
   double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
-  int rnu_hits ;
+  int rnu_hits, rdEdx_size, rdQdx_size ;
+
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
-  int rdEdx_size, rdQdx_size ;
   std::vector< float > dEdx, dQdx ;
   float r_dEdx[100000], r_dQdx[100000], r_track_x[100000], r_track_y[100000], r_track_z[100000] ;
   //Track example information to test future Track class. This is the information needed for the Track class. 
@@ -290,7 +290,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
 	      if( event_id == 35 ) {
 		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
-		
 		  tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
 		  tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
 		  tr_z =  track_f[j]->TrajectoryPoint( t_hit ).position.Z();
