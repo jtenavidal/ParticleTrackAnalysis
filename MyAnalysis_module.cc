@@ -100,13 +100,13 @@ private:
   int rnu_hits ;
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
-  double rdEdx_size, rdQdx_size ;
+  int rdEdx_size, rdQdx_size ;
   std::vector< float > dEdx, dQdx ;
-  double r_dEdx[100000], r_dQdx[100000], r_track_x[100000], r_track_y[100000], r_track_z[100000] ;
+  float r_dEdx[100000], r_dQdx[100000], r_track_x[100000], r_track_y[100000], r_track_z[100000] ;
   //Track example information to test future Track class. This is the information needed for the Track class. 
   // Saving it into a root file to work offline...
-  double tr_x, tr_y, tr_z, tr_dEdx, tr_dQdx ; //info per hit
-
+  double tr_x, tr_y, tr_z ; //info per hit
+  float tr_dEdx, tr_dQdx ;
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
   void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const ;
@@ -280,8 +280,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		dEdx = cal_f[n]->dEdx();
 		dQdx = cal_f[n]->dQdx();
 
-		for( unsigned int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l] = cal_f[n]->dEdx()[l];
-		for( unsigned int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l] = cal_f[n]->dQdx()[l];
+		for( int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l] = cal_f[n]->dEdx()[l];
+		for( int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
 	      }
 	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) r_track_x[l] = track_f[j]->TrajectoryPoint( l ).position.X();
@@ -496,10 +496,10 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_missing_energy",  &r_missenergy,      "r_missenergy/D");
   recotrack_tree  -> Branch( "r_KineticEnergy",   &r_KineticEnergy,   "r_KineticEnergy/D");
   recotrack_tree  -> Branch( "r_Range",           &r_Range,           "r_Range/D");
-  recotrack_tree  -> Branch( "rdEdx_size",        &rdEdx_size,        "rdEdx_size/D");
-  recotrack_tree  -> Branch( "rdQdx_size",        &rdQdx_size,        "rdQdx_size/D");
-  recotrack_tree  -> Branch( "r_dEdx",            &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_dQdx",            &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "rdEdx_size",        &rdEdx_size,        "rdEdx_size/I");
+  recotrack_tree  -> Branch( "rdQdx_size",        &rdQdx_size,        "rdQdx_size/I");
+  recotrack_tree  -> Branch( "r_dEdx",            &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/F").c_str());
+  recotrack_tree  -> Branch( "r_dQdx",            &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/F").c_str());
   recotrack_tree  -> Branch( "r_track_x",         &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_y",         &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",         &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
@@ -507,8 +507,8 @@ void TrackID::MyAnalysis::beginJob( )
   recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
   recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
   recoTrackInfo_tree -> Branch( "tr_z",           &tr_z,              "tr_z/D");
-  recoTrackInfo_tree -> Branch( "tr_dEdx",        &tr_dEdx,           "tr_dEdx/D");
-  recoTrackInfo_tree -> Branch( "tr_dQdx",        &tr_dQdx,           "tr_dQdx/D");
+  recoTrackInfo_tree -> Branch( "tr_dEdx",        &tr_dEdx,           "tr_dEdx/F");
+  recoTrackInfo_tree -> Branch( "tr_dQdx",        &tr_dQdx,           "tr_dQdx/F");
 
 
   // Set directories
