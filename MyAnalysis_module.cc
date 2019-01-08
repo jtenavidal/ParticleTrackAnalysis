@@ -284,10 +284,11 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		for( int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
 	      }
-	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) r_track_x[l] = track_f[j]->TrajectoryPoint( l ).position.X();
-	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) r_track_y[l] = track_f[j]->TrajectoryPoint( l ).position.Y();
-	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) r_track_z[l] = track_f[j]->TrajectoryPoint( l ).position.Z();
-
+	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
+		r_track_x[l] = track_f[j]->TrajectoryPoint( l ).position.X();
+	        r_track_y[l] = track_f[j]->TrajectoryPoint( l ).position.Y();
+	        r_track_z[l] = track_f[j]->TrajectoryPoint( l ).position.Z();
+	      }
 	      if( event_id == 35 ) {
 		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
 		  tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
@@ -446,62 +447,62 @@ void TrackID::MyAnalysis::beginJob( )
   /**
      MC PARTICLE TREE BRANCHES :
    */
-  mcparticle_tree -> Branch( "event_id",               &event_id,            "event_id/I");
-  mcparticle_tree -> Branch( "Track_ID",               &fTrack_ID,           "Track_id/I");
-  mcparticle_tree -> Branch( "trueEnergy",             &fTrueParticleEnergy, "TrueParticleEnergy/F");
-  mcparticle_tree -> Branch( "PDG_Code",               &fPDG_Code,           "PDG_Code/I");
-  mcparticle_tree -> Branch( "Mass",                   &fMass,               "Mass/F");
-  mcparticle_tree -> Branch( "Px",                     &fpx,                 "px/F");
-  mcparticle_tree -> Branch( "Py",                     &fpy,                 "py/F");
-  mcparticle_tree -> Branch( "Pz",                     &fpz,                 "pz/F");
-  mcparticle_tree -> Branch( "Pt",                     &fpt,                 "pt/F");
-  mcparticle_tree -> Branch( "P",                      &fp,                  "p/F");
-  mcparticle_tree -> Branch( "Num_Daughters",          &fNumDaughters,       "num_d/I");
-  mcparticle_tree -> Branch( "Daughter_mu",            &fDaughter_mu,        "Daughter_mu/I");
-  mcparticle_tree -> Branch( "Daughter_pi",            &fDaughter_pi,        "Daughter_pi/I");
-  mcparticle_tree -> Branch( "Daughter_e",             &fDaughter_e,         "Daughter_e/I");
-  mcparticle_tree -> Branch( "Daughter_p",             &fDaughter_p,         "Daughter_p/I");
-  mcparticle_tree -> Branch( "Daughter_n",             &fDaughter_n,         "Daughter_n/I");
-  mcparticle_tree -> Branch( "Daughter_photon",        &fDaughter_photon,    "Daughter_photon/I");
-  mcparticle_tree -> Branch( "Daughter_other",         &fDaughter_other,     "Daughter_other/I");
-  mcparticle_tree -> Branch( "MC_Length",              &fMCLength,           "Length/D");
+  mcparticle_tree -> Branch( "event_id",                &event_id,            "event_id/I");
+  mcparticle_tree -> Branch( "fTrack_ID",               &fTrack_ID,           "Track_id/I");
+  mcparticle_tree -> Branch( "ftrueEnergy",             &fTrueParticleEnergy, "TrueParticleEnergy/F");
+  mcparticle_tree -> Branch( "fPDG_Code",               &fPDG_Code,           "PDG_Code/I");
+  mcparticle_tree -> Branch( "fMass",                   &fMass,               "Mass/F");
+  mcparticle_tree -> Branch( "fpx",                     &fpx,                 "px/F");
+  mcparticle_tree -> Branch( "fpy",                     &fpy,                 "py/F");
+  mcparticle_tree -> Branch( "fpz",                     &fpz,                 "pz/F");
+  mcparticle_tree -> Branch( "fpt",                     &fpt,                 "pt/F");
+  mcparticle_tree -> Branch( "fp",                      &fp,                  "p/F");
+  mcparticle_tree -> Branch( "fNum_Daughters",          &fNumDaughters,       "num_d/I");
+  mcparticle_tree -> Branch( "fDaughter_mu",            &fDaughter_mu,        "Daughter_mu/I");
+  mcparticle_tree -> Branch( "fDaughter_pi",            &fDaughter_pi,        "Daughter_pi/I");
+  mcparticle_tree -> Branch( "fDaughter_e",             &fDaughter_e,         "Daughter_e/I");
+  mcparticle_tree -> Branch( "fDaughter_p",             &fDaughter_p,         "Daughter_p/I");
+  mcparticle_tree -> Branch( "fDaughter_n",             &fDaughter_n,         "Daughter_n/I");
+  mcparticle_tree -> Branch( "fDaughter_photon",        &fDaughter_photon,    "Daughter_photon/I");
+  mcparticle_tree -> Branch( "fDaughter_other",         &fDaughter_other,     "Daughter_other/I");
+  mcparticle_tree -> Branch( "fMC_Length",              &fMCLength,           "Length/D");
 
  /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
-  recotrack_tree  -> Branch( "event_id",          &event_id,          "event_id/I");
-  recotrack_tree  -> Branch( "pdg_primary",       &r_pdg_primary,     "pdg_primary/I");
-  recotrack_tree  -> Branch( "nu_daughters",      &r_nu_daughters,    "nu_daughters/I");
-  recotrack_tree  -> Branch( "mu_daughters",      &r_mu_daughters,    "mu_daughters/I");
-  recotrack_tree  -> Branch( "pi_daughters",      &r_pi_daughters,    "pi_daughters/I");
-  recotrack_tree  -> Branch( "e_daughters",       &r_e_daughters,     "e_daughters/I");
-  recotrack_tree  -> Branch( "p_daughters",       &r_p_daughters,     "p_daughters/I");
-  recotrack_tree  -> Branch( "n_daughters",       &r_n_daughters,     "n_daughters/I");
-  recotrack_tree  -> Branch( "photon_daughters",  &r_photon_daughters,"photon_daughters/I");
-  recotrack_tree  -> Branch( "other_daughters",   &r_other_daughters, "others_daughters/I");
-  recotrack_tree  -> Branch( "Vertex_x",          &rVertex_x,         "rVertex_x/D");
-  recotrack_tree  -> Branch( "Vertex_y",          &rVertex_y,         "rVertex_y/D");
-  recotrack_tree  -> Branch( "Vertex_z",          &rVertex_z,         "rVertex_z/D");
-  recotrack_tree  -> Branch( "End_x",             &rEnd_x,            "rEnd_x/D");
-  recotrack_tree  -> Branch( "End_y",             &rEnd_y,            "rEnd_y/D");
-  recotrack_tree  -> Branch( "End_z",             &rEnd_z,            "rEnd_z/D");
-  recotrack_tree  -> Branch( "Length",            &rLength,           "rLength/F");
-  recotrack_tree  -> Branch( "Momentum",          &rMomentum,         "rMomentum/F");
-  recotrack_tree  -> Branch( "nu_hits",           &rnu_hits,          "rnu_hits/I");
-  recotrack_tree  -> Branch( "r_chi2_mu",         &r_chi2_mu,         "r_chi2_mu/D");
-  recotrack_tree  -> Branch( "r_chi2_pi",         &r_chi2_pi,         "r_chi2_pi/D");
-  recotrack_tree  -> Branch( "r_chi2_p",          &r_chi2_p,          "r_chi2_p/D");
-  recotrack_tree  -> Branch( "r_PIDA",            &r_PIDA,            "r_PIDA/D");
-  recotrack_tree  -> Branch( "r_missing_energy",  &r_missenergy,      "r_missenergy/D");
-  recotrack_tree  -> Branch( "r_KineticEnergy",   &r_KineticEnergy,   "r_KineticEnergy/D");
-  recotrack_tree  -> Branch( "r_Range",           &r_Range,           "r_Range/D");
-  recotrack_tree  -> Branch( "rdEdx_size",        &rdEdx_size,        "rdEdx_size/I");
-  recotrack_tree  -> Branch( "rdQdx_size",        &rdQdx_size,        "rdQdx_size/I");
-  recotrack_tree  -> Branch( "r_dEdx",            &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/F").c_str());
-  recotrack_tree  -> Branch( "r_dQdx",            &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/F").c_str());
-  recotrack_tree  -> Branch( "r_track_x",         &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_y",         &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_z",         &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
+  recotrack_tree  -> Branch( "r_pdg_primary",       &r_pdg_primary,     "pdg_primary/I");
+  recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "nu_daughters/I");
+  recotrack_tree  -> Branch( "r_mu_daughters",      &r_mu_daughters,    "mu_daughters/I");
+  recotrack_tree  -> Branch( "r_pi_daughters",      &r_pi_daughters,    "pi_daughters/I");
+  recotrack_tree  -> Branch( "r_e_daughters",       &r_e_daughters,     "e_daughters/I");
+  recotrack_tree  -> Branch( "r_p_daughters",       &r_p_daughters,     "p_daughters/I");
+  recotrack_tree  -> Branch( "r_n_daughters",       &r_n_daughters,     "n_daughters/I");
+  recotrack_tree  -> Branch( "r_photon_daughters",  &r_photon_daughters,"photon_daughters/I");
+  recotrack_tree  -> Branch( "r_other_daughters",   &r_other_daughters, "others_daughters/I");
+  recotrack_tree  -> Branch( "rVertex_x",           &rVertex_x,         "rVertex_x/D");
+  recotrack_tree  -> Branch( "rVertex_y",           &rVertex_y,         "rVertex_y/D");
+  recotrack_tree  -> Branch( "rVertex_z",           &rVertex_z,         "rVertex_z/D");
+  recotrack_tree  -> Branch( "rEnd_x",              &rEnd_x,            "rEnd_x/D");
+  recotrack_tree  -> Branch( "rEnd_y",              &rEnd_y,            "rEnd_y/D");
+  recotrack_tree  -> Branch( "rEnd_z",              &rEnd_z,            "rEnd_z/D");
+  recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
+  recotrack_tree  -> Branch( "rMomentum",           &rMomentum,         "rMomentum/F");
+  recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
+  recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         "r_chi2_mu/D");
+  recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         "r_chi2_pi/D");
+  recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          "r_chi2_p/D");
+  recotrack_tree  -> Branch( "r_PIDA",              &r_PIDA,            "r_PIDA/D");
+  recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      "r_missenergy/D");
+  recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   "r_KineticEnergy/D");
+  recotrack_tree  -> Branch( "r_Range",             &r_Range,           "r_Range/D");
+  recotrack_tree  -> Branch( "rdEdx_size",          &rdEdx_size,        "rdEdx_size/I");
+  recotrack_tree  -> Branch( "rdQdx_size",          &rdQdx_size,        "rdQdx_size/I");
+  recotrack_tree  -> Branch( "r_dEdx",              &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/F").c_str());
+  recotrack_tree  -> Branch( "r_dQdx",              &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/F").c_str());
+  recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
 
   recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
   recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
