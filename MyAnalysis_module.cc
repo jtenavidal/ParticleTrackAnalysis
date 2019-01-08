@@ -102,7 +102,8 @@ private:
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength, rMomentum ;
   std::vector< float > dEdx, dQdx ;
-  float r_dEdx[100000], r_dQdx[100000], r_track_x[100000], r_track_y[100000], r_track_z[100000] ;
+  float r_dEdx[100000], r_dQdx[100000];
+  double r_track_x[100000], r_track_y[100000], r_track_z[100000] ;
   //Track example information to test future Track class. This is the information needed for the Track class. 
   // Saving it into a root file to work offline...
   double tr_x, tr_y, tr_z ; //info per hit
@@ -289,7 +290,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	        r_track_y[l] = track_f[j]->TrajectoryPoint( l ).position.Y();
 	        r_track_z[l] = track_f[j]->TrajectoryPoint( l ).position.Z();
 	      }
-	      if( event_id == 35 ) {
+	      if( event_id == 1 ) {
 		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
 		  tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
 		  tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
