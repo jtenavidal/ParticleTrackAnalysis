@@ -269,7 +269,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		if( !cal_f[n]->PlaneID().isValid) continue ;
 		if( cal_f[n]->PlaneID().Plane != 2 ) continue ;
 		// save information 
-		rnu_hits  = hit_f.size() ;
+		rnu_hits  = track_f[j]->LastValidPoint() ;
 		r_chi2_mu = pid_f[k]->Chi2Muon() ;
 		r_chi2_pi = pid_f[k]->Chi2Pion() ;
 		r_chi2_p  = pid_f[k]->Chi2Proton() ;
