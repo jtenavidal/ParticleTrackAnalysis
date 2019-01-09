@@ -81,7 +81,7 @@ private:
   std::string fTruthLabel, m_particleLabel, m_hitfinderLabel, m_recotrackLabel, m_recoPIDLabel, m_recoCaloLabel;
 
   // Tree members
-  TTree * event_tree, * mcparticle_tree, * recotrack_tree, * recoTrackInfo_tree ; 
+  TTree * event_tree, * mcparticle_tree, * recotrack_tree ; 
   int event_id ; 
 
   // Truth information
@@ -502,15 +502,10 @@ void TrackID::MyAnalysis::endJob( )
   file.Write();
   file.Close();
 
-  TFile fileTrack("output_track_ev2_pi_check.root", "RECREATE");
-  recoTrackInfo_tree -> Write() ;
-  fileTrack.Write();
-  fileTrack.Close();
-
   delete event_tree ; 
   delete mcparticle_tree ; 
   delete recotrack_tree ; 
-  delete recoTrackInfo_tree;
+ 
 }
 
 DEFINE_ART_MODULE(TrackID::MyAnalysis)
