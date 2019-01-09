@@ -53,8 +53,8 @@ True hit level information
 
 ## Method 1: using local linearity
 - Calculates Pearson coefficient per hit regarding the surrounding hits within a specified window ( eg: taking 15 hits preceeding and after hit_i )
-- r < 0.9 defined as a clear kinked. The algorithm works for simple cases
-- Only finds clear kinks: if kinked track is close to the initial one, no deviation is found
+- r < 0.9 defined as a clear kink. The algorithm works for simple cases
+- Only finds clear kinks: if the kinked track is close to the "mother" track, no deviation is found
 
 ## Method 2: should consider direction of track 
 
