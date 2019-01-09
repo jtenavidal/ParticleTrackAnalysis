@@ -104,10 +104,7 @@ private:
   std::vector< float > dEdx, dQdx ;
   float r_dEdx[100000], r_dQdx[100000], r_track_p[100000];
   double r_track_x[100000], r_track_y[100000], r_track_z[100000];
-  //Track example information to test future Track class. This is the information needed for the Track class. 
-  // Saving it into a root file to work offline...
-  double tr_x, tr_y, tr_z ; //info per hit
-  float tr_dEdx, tr_dQdx ;
+
   // Functions
   void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
   void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const ;
@@ -216,7 +213,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_n_daughters = 0; // expecting non reco 
   r_photon_daughters = 0; // should not find showers
   r_other_daughters = 0;
-	   
+  rnu_hits = 0 ;
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
@@ -291,18 +288,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  r_track_y[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Y();
 		  r_track_z[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Z();
 		  r_track_p[l+rnu_hits] = track_f[j]->MomentumAtPoint( l ) ; 
-		}
-		if( event_id == 1 ) {
-		  for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
-		    tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
-		    tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
-		    tr_z =  track_f[j]->TrajectoryPoint( t_hit ).position.Z();
-		    
-		    // also need time
-		    //  rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
-		    // dEdx
-		    recoTrackInfo_tree -> Fill();
-		  }
 		}
 		rnu_hits  += track_f[j]->LastValidPoint() + 1 ; // ?: +1 
 		
@@ -431,21 +416,10 @@ void TrackID::MyAnalysis::beginJob( )
   r_KineticEnergy = -999. ;
   r_Range = -999. ;
 
-  //Track example information to test future Track class. This is the information needed for the Track class. 
-  // Saving it into a root file to work offline...
-  tr_x = -999. ;
-  tr_y = -999. ;
-  tr_z = -999. ;
-  tr_dEdx = -999. ;
-  tr_dQdx = -999. ;
-
-
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
   recotrack_tree  = new TTree( "recoparticle_tree",    "Reco tree: reconstructed information of the tracks, hit level included");
-
-  recoTrackInfo_tree  = new TTree( "recoTrack_tree",    "Reco Track Info tree: Contains information needed for the fitter offline ");
 
   event_tree      -> Branch( "event_id",          &event_id, "event_id/I");
 
@@ -508,18 +482,12 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_p",           &r_track_p,         ("r_track_p[" + std::to_string(100000)+"]/F").c_str());
-  recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
-  recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
-  recoTrackInfo_tree -> Branch( "tr_z",           &tr_z,              "tr_z/D");
-  recoTrackInfo_tree -> Branch( "tr_dEdx",        &tr_dEdx,           "tr_dEdx/F");
-  recoTrackInfo_tree -> Branch( "tr_dQdx",        &tr_dQdx,           "tr_dQdx/F");
 
 
   // Set directories
   event_tree->SetDirectory(0);
   mcparticle_tree->SetDirectory(0);
   recotrack_tree->SetDirectory(0);
-  recoTrackInfo_tree -> SetDirectory( 0 );
 }
 
 void TrackID::MyAnalysis::endJob( )
