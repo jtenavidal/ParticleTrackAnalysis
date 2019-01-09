@@ -100,10 +100,10 @@ private:
   int rnu_hits, rdEdx_size, rdQdx_size ;
 
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
-  float rLength, rMomentum ;
+  float rLength ;
   std::vector< float > dEdx, dQdx ;
-  float r_dEdx[100000], r_dQdx[100000];
-  double r_track_x[100000], r_track_y[100000], r_track_z[100000] ;
+  float r_dEdx[100000], r_dQdx[100000], r_track_p[100000];
+  double r_track_x[100000], r_track_y[100000], r_track_z[100000];
   //Track example information to test future Track class. This is the information needed for the Track class. 
   // Saving it into a root file to work offline...
   double tr_x, tr_y, tr_z ; //info per hit
@@ -221,7 +221,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-    
+      
       if( pfparticle->IsPrimary() == 1 ){
 	r_pdg_primary = pfparticle->PdgCode() ;
 	r_nu_daughters = pfparticle->NumDaughters();
@@ -243,6 +243,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  
 	  // Loop over tracks per event
 	  for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
+      
 	    rVertex_x = track_f[j]->Vertex( ).X() ;
 	    rVertex_y = track_f[j]->Vertex( ).Y() ;
 	    rVertex_z = track_f[j]->Vertex( ).Z() ;
@@ -259,6 +260,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
 	    //Loop over PID associations 
 	    for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
+
 	      if( !pid_f[k] ) continue ;
 	      if( !pid_f[k]->PlaneID().isValid) continue ;
 	      if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
@@ -269,7 +271,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		if( !cal_f[n]->PlaneID().isValid) continue ;
 		if( cal_f[n]->PlaneID().Plane != 2 ) continue ;
 		// save information 
-		rnu_hits  = track_f[j]->LastValidPoint() ;
 		r_chi2_mu = pid_f[k]->Chi2Muon() ;
 		r_chi2_pi = pid_f[k]->Chi2Pion() ;
 		r_chi2_p  = pid_f[k]->Chi2Proton() ;
@@ -284,24 +285,28 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		for( int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l] = cal_f[n]->dEdx()[l];
 		for( int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
-	      }
-	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
-		r_track_x[l] = track_f[j]->TrajectoryPoint( l ).position.X();
-	        r_track_y[l] = track_f[j]->TrajectoryPoint( l ).position.Y();
-	        r_track_z[l] = track_f[j]->TrajectoryPoint( l ).position.Z();
-	      }
-	      if( event_id == 1 ) {
-		for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
-		  tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
-		  tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
-		  tr_z =  track_f[j]->TrajectoryPoint( t_hit ).position.Z();
-		  // also need time
-	//  rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
-	    	  // dEdx
-		  recoTrackInfo_tree -> Fill();
+	      
+		for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
+		  r_track_x[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.X();
+		  r_track_y[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Y();
+		  r_track_z[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Z();
+		  r_track_p[l+rnu_hits] = track_f[j]->MomentumAtPoint( l ) ; 
 		}
-	      }
- 
+		if( event_id == 1 ) {
+		  for ( unsigned int t_hit = 0 ; t_hit <  track_f[j]->LastValidPoint()+1; ++t_hit ){
+		    tr_x =  track_f[j]->TrajectoryPoint( t_hit ).position.X();
+		    tr_y =  track_f[j]->TrajectoryPoint( t_hit ).position.Y();
+		    tr_z =  track_f[j]->TrajectoryPoint( t_hit ).position.Z();
+		    
+		    // also need time
+		    //  rMomentum = track_f[j]->MomentumAtPoint( 0 ) ; // need to clarify which momentum is it.
+		    // dEdx
+		    recoTrackInfo_tree -> Fill();
+		  }
+		}
+		rnu_hits  += track_f[j]->LastValidPoint() + 1 ; // ?: +1 
+		
+	      } // closing calo loop
 	    }// close pip loop
 	  }// close loop reco track
 	}  // end if
@@ -417,8 +422,7 @@ void TrackID::MyAnalysis::beginJob( )
   rEnd_y = -999. ;
   rEnd_z = -999. ;
   rLength = -999. ;
-  rMomentum = -999. ;
-  rnu_hits  = -999 ;
+  rnu_hits  = 0 ;
   r_chi2_mu = -999. ;
   r_chi2_pi = -999. ;
   r_chi2_p  = -999. ;
@@ -488,7 +492,6 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "rEnd_y",              &rEnd_y,            "rEnd_y/D");
   recotrack_tree  -> Branch( "rEnd_z",              &rEnd_z,            "rEnd_z/D");
   recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
-  recotrack_tree  -> Branch( "rMomentum",           &rMomentum,         "rMomentum/F");
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
   recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         "r_chi2_mu/D");
   recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         "r_chi2_pi/D");
@@ -504,7 +507,7 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
-
+  recotrack_tree  -> Branch( "r_track_p",           &r_track_p,         ("r_track_p[" + std::to_string(100000)+"]/F").c_str());
   recoTrackInfo_tree -> Branch( "tr_x",           &tr_x,              "tr_x/D");
   recoTrackInfo_tree -> Branch( "tr_y",           &tr_y,              "tr_y/D");
   recoTrackInfo_tree -> Branch( "tr_z",           &tr_z,              "tr_z/D");
@@ -531,7 +534,7 @@ void TrackID::MyAnalysis::endJob( )
   file.Write();
   file.Close();
 
-  TFile fileTrack("output_track_ev35_mu.root", "RECREATE");
+  TFile fileTrack("output_track_ev2_pi_check.root", "RECREATE");
   recoTrackInfo_tree -> Write() ;
   fileTrack.Write();
   fileTrack.Close();
