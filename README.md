@@ -8,10 +8,9 @@ RooT file containging three trees,
 
 ## Information in each tree: 
 
-### Event Tree contains general information of the event regardless of its nature
+### Event Tree contains general information of the event regardless of its nature ( needed ?? )
 
 - [X] event id
-- [ ] time now
 - [ ] mother particle pdg code (particle beam , sanity check )
 - [ ] starting point
 - [ ] End point 
@@ -46,20 +45,22 @@ True hit level information
 - [X] Kinetic energy and missing energy 
 - [X] Hit information: number of hits, hit_tpc [],  hit_plane
 - [X] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
-- [ ] Keep hiearchy information: need to understand why primary tracks are mostly empty?
+- [X] Keep hiearchy information: number and pdg of particles stored
 - [ ] Need plots to further understand this: Chi2 plots?, dEdx, dQdx
   
  # To do List:
- - [ ] Access all information for MC particles
- - [ ] Access all information for RECO particles: PFParticles, Track, Hit information, also Calo information?
+ - [X] Access all information for MC particles
+ - [X] Access all information for RECO particles: PFParticles, Track, Hit information, also Calo information?
  - [ ] Add usefull features and functions for fitter 
- - [ ] Develop fitter itself
+ - [ ] IN DEVELOPEMENT -> Develop fitter itself
  - [ ] Check differences between muons and pions
  - [ ] Implement purity cuts
 
-# To consider:
- -  Save track information in tree?
-    -> Requires reading and programing all from scratch outside analyzer
- -  Analyze the track information in analyzer and save in tree number of kinks, DE kink, position? 
-    ->  more compact information 
-  ->  Requires running analyzer each time 
+### TrackFitter Class
+
+## Method 1: using local linearity
+- Calculates Pearson coefficient per hit regarding the surrounding hits within a specified window ( eg: taking 15 hits preceeding and after hit_i )
+-- r < 0.9 defined as a clear kinked. The algorithm works for simple cases
+-- Only finds clear kinks: if kinked track is close to the initial one, no deviation is found
+
+## Method 2: should consider direction of track 
