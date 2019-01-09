@@ -47,6 +47,17 @@ True hit level information
 - [X] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
 - [X] Keep hiearchy information: number and pdg of particles stored
 - [ ] Need plots to further understand this: Chi2 plots?, dEdx, dQdx
+
+
+# TrackFitter Class
+
+## Method 1: using local linearity
+- Calculates Pearson coefficient per hit regarding the surrounding hits within a specified window ( eg: taking 15 hits preceeding and after hit_i )
+- r < 0.9 defined as a clear kinked. The algorithm works for simple cases
+- Only finds clear kinks: if kinked track is close to the initial one, no deviation is found
+
+## Method 2: should consider direction of track 
+
   
  # To do List:
  - [X] Access all information for MC particles
@@ -55,12 +66,3 @@ True hit level information
  - [ ] IN DEVELOPEMENT -> Develop fitter itself
  - [ ] Check differences between muons and pions
  - [ ] Implement purity cuts
-
-### TrackFitter Class
-
-## Method 1: using local linearity
-- Calculates Pearson coefficient per hit regarding the surrounding hits within a specified window ( eg: taking 15 hits preceeding and after hit_i )
--- r < 0.9 defined as a clear kinked. The algorithm works for simple cases
--- Only finds clear kinks: if kinked track is close to the initial one, no deviation is found
-
-## Method 2: should consider direction of track 
