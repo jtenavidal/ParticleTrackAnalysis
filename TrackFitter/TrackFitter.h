@@ -20,6 +20,7 @@ typedef std::vector< double > Hit_level;
     */
     TrackFitter( const Track & p_track ); // reads from easier and simpler file
     TrackFitter( const std::string & track_file_path ) ; // reads all events from track_file_path
+    // -> Need to find a way to adapt the functions to this matrix!
     TrackFitter( const std::string & track_file_path, const unsigned int & event_id_track ) ; // reads only the event corresponding to event_id_track
 
     /**
@@ -28,8 +29,8 @@ typedef std::vector< double > Hit_level;
     unsigned int GetHits( ) ;
     Hit_level AccessVertex( ) ;
     Hit_level AccessEnd( ) ;
-//    std::vector< std::vector< float > > GetdEdx( ) ;
-//    std::vector< std::vector< float > > GetdQdx( ) ;
+    std::vector< float > GetdEdx( ) ;
+    std::vector< float > GetdQdx( ) ;
     Track GetTrack( ) ;
 
     /**
@@ -38,6 +39,7 @@ typedef std::vector< double > Hit_level;
     void SaveTrack( const std::string & path ) const ;
     void PrintHipotesis( const std::string & path ) ;
     void PrintdEdx( const std::string & path ) const ;
+    void PrintdQdx( const std::string & path ) const ;
     void PlotLinearity( const int & window, const std::string & path ) ;
 
     /**

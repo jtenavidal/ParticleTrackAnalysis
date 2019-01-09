@@ -26,7 +26,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
   // Should add more info ...
 }
 
-/* THIS CONSTRUCTOR WAS A TEST FOR A TEMPORARY TTREE : not removing it yet
+// THIS CONSTRUCTOR WAS A TEST FOR A TEMPORARY TTREE : not removing it yet
 TrackFitter::TrackFitter( const std::string & track_file_path ){
   TFile track_file( track_file_path.c_str() );
   TTree *recoTrack_tree   = (TTree*) track_file.Get("recoTrack_tree") ;
@@ -41,7 +41,7 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
 
   _hits = recoTrack_tree->GetEntries();
   Hit_level track_hit ;
-  for( unsigned int i = 0; i < _hits; ++i ){
+  for( int i = 0; i < _hits; ++i ){
     recoTrack_tree->GetEntry(i);
     track_hit.clear();
     track_hit.push_back( tr_x->GetLeaf("tr_x")->GetValue());
@@ -54,8 +54,14 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
   _vertex_position = _particle_track[0] ;// AccessVertex( p_track );
   _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
   // Should add more info ...
+  std::cout<< "saved !"<< _vertex_position[0] << std::endl;
+  std::cout<< "end "<< _end_position[0] << std::endl;
+  std::cout<< "hits "<< _hits << std::endl;
+
+
 }
-*/
+
+/*
  // THIS CONSTRUCTOR WORKS WITH THE OUTPUT TREE ( event, mc, reco )
 
  TrackFitter::TrackFitter( const std::string & track_file_path ){
@@ -148,7 +154,7 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    }
 
  }
-
+*/
 
  TrackFitter::TrackFitter( const std::string & track_file_path, const unsigned int & event_id_track ){
    TFile track_file( track_file_path.c_str() );
@@ -208,7 +214,6 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    recoparticle_tree->GetEntry( event_id_track -1 );
    _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue();
    _particle_track.clear();
-
    for( int j = 0; j < _hits; ++j ) {
      track_hit.clear();
      track_hit.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
@@ -223,6 +228,9 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    _vertex_position = _particle_track[0] ;// AccessVertex( p_track );
    _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
    // Should add more info ...
+   std::cout<< _vertex_position[0] << std::endl;
+   std::cout<< _end_position[0] << std::endl;
+   std::cout<< "hits "<< _hits << std::endl;
 
  }
 
@@ -244,14 +252,14 @@ Hit_level TrackFitter::AccessVertex( ) {
 Hit_level TrackFitter::AccessEnd( ) {
   return _end_position ;
 }
-/*
-std::vector< std::vector< float > > TrackFitter::GetdEdx( ){
+
+std::vector< float > TrackFitter::GetdEdx( ){
   return _reco_dEdx ;
 }
 
-std::vector< std::vector< float > > TrackFitter::GetdQdx( ){
+std::vector< float > TrackFitter::GetdQdx( ){
   return _reco_dQdx ;
-}*/
+}
 
 Track TrackFitter::GetTrack( ){
   return _particle_track ;
@@ -267,7 +275,7 @@ void TrackFitter::SaveTrack( std::string const & path ) const {
 
   TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_hits/10),
  _particle_track[0][0], _particle_track[_hits-1][0], int(_hits/10),
-_particle_track[0][1], _particle_track[_hits-1][1], int(_hits/10),
+_particle_track[0][1], _particle_track[_hits-1][1], int(_hits/10), // need to define number of bins as a function of _hits to avoid bad memory allocation
 _particle_track[0][2], _particle_track[_hits-1][2] );
 
   for( int i = 0; i < _hits; ++i ){
@@ -369,17 +377,29 @@ double TrackFitter::FitToLine( ){
   return residual_total/_hits; // returns mean value
 }
 
-
 void TrackFitter::PrintdEdx( const std::string & path ) const {
 
-  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", _reco_dEdx.size(), 0, _reco_dEdx.size() );
-  for (unsigned int i = 0 ; i < _reco_dEdx.size() ; ++i ){
+  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", _dEdx_size, 0, _dEdx_size );
+  for ( int i = 0 ; i < _dEdx_size ; ++i ){
     h_dEdx -> Fill ( i , _reco_dEdx[i] ) ;
   }
 
   TCanvas *c = new TCanvas() ;
   h_dEdx -> Draw() ;
   c->SaveAs( (path+"_dEdx.root").c_str() ) ;
+
+}
+
+void TrackFitter::PrintdQdx( const std::string & path ) const {
+
+  TH1F * h_dQdx = new TH1F( "h_dQdx", "dQdx", _dQdx_size, 0, _dQdx_size );
+  for ( int i = 0 ; i < _dQdx_size ; ++i ){
+    h_dQdx -> Fill ( i , _reco_dQdx[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_dQdx -> Draw() ;
+  c->SaveAs( (path+"_dQdx.root").c_str() ) ;
 
 }
 
@@ -392,7 +412,7 @@ std::vector< std::vector< double > > TrackFitter::Linearity( const int & window 
   cov = CovPosition( window ) ;
   dev = DevPosition( window ) ;
 
-  for( int i = 0; i < int(_hits); ++i ){
+  for( int i = 0; i < int( _hits ); ++i ){
     corrP_xy.push_back( sqrt(std::pow(cov[0][i]/(dev[0][i]*dev[1][i]),2)) ) ;
     corrP_xz.push_back( sqrt(std::pow(cov[1][i]/(dev[0][i]*dev[2][i]),2)) ) ;
     corrP_yz.push_back( sqrt(std::pow(cov[2][i]/(dev[2][i]*dev[1][i]),2)) ) ;
@@ -401,7 +421,6 @@ std::vector< std::vector< double > > TrackFitter::Linearity( const int & window 
   corrP.push_back( corrP_xy );
   corrP.push_back( corrP_xz );
   corrP.push_back( corrP_yz );
-
   return corrP; // corrP[x,y,z]
 }
 
