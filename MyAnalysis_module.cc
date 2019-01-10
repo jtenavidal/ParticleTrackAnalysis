@@ -277,8 +277,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_missenergy = pid_f[k]->MissingE();
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
 		
-		for( int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l+rdEdx_size] = cal_f[n]->dEdx()[l];
-		for( int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
+		for( unsigned int l = 0 ; l < (cal_f[n]->dEdx()).size() ; ++l ) r_dEdx[l+rdEdx_size] = cal_f[n]->dEdx()[l];
+		for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
 	      
 		for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
