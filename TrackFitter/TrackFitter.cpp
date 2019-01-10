@@ -26,42 +26,6 @@ TrackFitter::TrackFitter( const Track & p_track ){
   // Should add more info ...
 }
 
-// THIS CONSTRUCTOR WAS A TEST FOR A TEMPORARY TTREE : not removing it yet
-TrackFitter::TrackFitter( const std::string & track_file_path ){
-  TFile track_file( track_file_path.c_str() );
-  TTree *recoTrack_tree   = (TTree*) track_file.Get("recoTrack_tree") ;
-  // can add other trees later if needed
-
-  TBranch *tr_x    = recoTrack_tree->GetBranch("tr_x");
-  TBranch *tr_y    = recoTrack_tree->GetBranch("tr_y");
-  TBranch *tr_z    = recoTrack_tree->GetBranch("tr_z");
-  TBranch *tr_dEdx = recoTrack_tree->GetBranch("tr_dEdx");
-  TBranch *tr_dQdx = recoTrack_tree->GetBranch("tr_dQdx");
-  // add here other info if needed
-
-  _hits = recoTrack_tree->GetEntries();
-  Hit_level track_hit ;
-  for( int i = 0; i < _hits; ++i ){
-    recoTrack_tree->GetEntry(i);
-    track_hit.clear();
-    track_hit.push_back( tr_x->GetLeaf("tr_x")->GetValue());
-    track_hit.push_back( tr_y->GetLeaf("tr_y")->GetValue());
-    track_hit.push_back( tr_z->GetLeaf("tr_z")->GetValue());
-    _reco_dEdx.push_back( tr_dEdx->GetLeaf("tr_dEdx")->GetValue());
-    _reco_dQdx.push_back( tr_dQdx->GetLeaf("tr_dQdx")->GetValue());
-    _particle_track.push_back(track_hit);
-  }
-  _vertex_position = _particle_track[0] ;// AccessVertex( p_track );
-  _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
-  // Should add more info ...
-  std::cout<< "saved !"<< _vertex_position[0] << std::endl;
-  std::cout<< "end "<< _end_position[0] << std::endl;
-  std::cout<< "hits "<< _hits << std::endl;
-
-
-}
-
-/*
  // THIS CONSTRUCTOR WORKS WITH THE OUTPUT TREE ( event, mc, reco )
 
  TrackFitter::TrackFitter( const std::string & track_file_path ){
@@ -154,7 +118,7 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    }
 
  }
-*/
+
 
  TrackFitter::TrackFitter( const std::string & track_file_path, const unsigned int & event_id_track ){
    TFile track_file( track_file_path.c_str() );
@@ -195,6 +159,7 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    TBranch * Length = recoparticle_tree->GetBranch("rLength");
    TBranch * Momentum = recoparticle_tree->GetBranch("rMomentum");
    TBranch * rnu_hits = recoparticle_tree->GetBranch("rnu_hits");
+   TBranch * rnu_hits_size = recoparticle_tree->GetBranch("rnu_hits_size");
    TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
    TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
    TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
@@ -206,21 +171,31 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
    TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
    TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
+   TBranch * r_track_p = recoparticle_tree->GetBranch("r_track_p"); // should remove
+   TBranch * r_track_Q = recoparticle_tree->GetBranch("r_track_Q");
    TBranch * r_dEdx = recoparticle_tree->GetBranch("r_dEdx");
    TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
 
    Hit_level track_hit;
-
+   int hits_size ; // number of hits
    recoparticle_tree->GetEntry( event_id_track -1 );
-   _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue();
+   _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue(); // number of valid hits!
+   _hits_size = rnu_hits_size -> GetLeaf("rnu_hits_size") -> GetValue();
    _particle_track.clear();
+
    for( int j = 0; j < _hits; ++j ) {
      track_hit.clear();
      track_hit.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
      track_hit.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
      track_hit.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
+     track_hit.push_back( r_track_p->GetLeaf("r_track_p")->GetValue(j));
      _particle_track.push_back(track_hit);
    }
+
+    for( int j = 0 ; j < _hits_size; ++j ){
+      _track_Q.push_back( r_track_Q->GetLeaf("r_track_Q")->GetValue(j));
+    }
+    
     _dEdx_size = recoparticle_tree->GetLeaf("rdEdx_size")->GetValue( );
     _dQdx_size = recoparticle_tree->GetLeaf("rdQdx_size")->GetValue( );
     for( int j = 0; j < _dEdx_size; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
@@ -230,7 +205,6 @@ TrackFitter::TrackFitter( const std::string & track_file_path ){
    // Should add more info ...
    std::cout<< _vertex_position[0] << std::endl;
    std::cout<< _end_position[0] << std::endl;
-   std::cout<< "hits "<< _hits << std::endl;
 
  }
 
@@ -296,6 +270,19 @@ _particle_track[0][2], _particle_track[_hits-1][2] );
   c->Clear();
 }
 
+
+void TrackFitter::PrintMomentum( const std::string & path ) const {
+
+  TH1F * h_momentum = new TH1F( "h_momentum", "Momentum particle per hit ", int(_hits), 0, _hits ); // same problem with hits here
+  for ( int i = 0 ; i < _hits ; ++i ){
+    h_momentum -> Fill ( i , _particle_track[i][3] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_momentum -> Draw("hist") ;
+  c->SaveAs( (path+"_momentum.root").c_str() ) ;
+
+}
 
 Track TrackFitter::Straight( ) {
   Track track_hipotesis ;
@@ -379,7 +366,7 @@ double TrackFitter::FitToLine( ){
 
 void TrackFitter::PrintdEdx( const std::string & path ) const {
 
-  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", _dEdx_size, 0, _dEdx_size );
+  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", _dEdx_size, 0, _dEdx_size ); // same problem with hits here
   for ( int i = 0 ; i < _dEdx_size ; ++i ){
     h_dEdx -> Fill ( i , _reco_dEdx[i] ) ;
   }
@@ -591,3 +578,63 @@ void TrackFitter::PlotLinearity( const int & window, const std::string & path ) 
   c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+// THIS CONSTRUCTOR WAS A TEST FOR A TEMPORARY TTREE : not removing it yet
+TrackFitter::TrackFitter( const std::string & track_file_path ){
+  TFile track_file( track_file_path.c_str() );
+  TTree *recoTrack_tree   = (TTree*) track_file.Get("recoTrack_tree") ;
+  // can add other trees later if needed
+
+  TBranch *tr_x    = recoTrack_tree->GetBranch("tr_x");
+  TBranch *tr_y    = recoTrack_tree->GetBranch("tr_y");
+  TBranch *tr_z    = recoTrack_tree->GetBranch("tr_z");
+  TBranch *tr_dEdx = recoTrack_tree->GetBranch("tr_dEdx");
+  TBranch *tr_dQdx = recoTrack_tree->GetBranch("tr_dQdx");
+  // add here other info if needed
+
+  _hits = recoTrack_tree->GetEntries();
+  Hit_level track_hit ;
+  for( int i = 0; i < _hits; ++i ){
+    recoTrack_tree->GetEntry(i);
+    track_hit.clear();
+    track_hit.push_back( tr_x->GetLeaf("tr_x")->GetValue());
+    track_hit.push_back( tr_y->GetLeaf("tr_y")->GetValue());
+    track_hit.push_back( tr_z->GetLeaf("tr_z")->GetValue());
+    _reco_dEdx.push_back( tr_dEdx->GetLeaf("tr_dEdx")->GetValue());
+    _reco_dQdx.push_back( tr_dQdx->GetLeaf("tr_dQdx")->GetValue());
+    _particle_track.push_back(track_hit);
+  }
+  _vertex_position = _particle_track[0] ;// AccessVertex( p_track );
+  _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
+  // Should add more info ...
+  std::cout<< "saved !"<< _vertex_position[0] << std::endl;
+  std::cout<< "end "<< _end_position[0] << std::endl;
+  std::cout<< "hits "<< _hits << std::endl;
+
+
+}
+
+*/

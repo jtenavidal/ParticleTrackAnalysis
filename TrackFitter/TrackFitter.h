@@ -38,6 +38,7 @@ typedef std::vector< double > Hit_level;
     */
     void SaveTrack( const std::string & path ) const ;
     void PrintHipotesis( const std::string & path ) ;
+    void PrintMomentum( const std::string & path ) const ;
     void PrintdEdx( const std::string & path ) const ;
     void PrintdQdx( const std::string & path ) const ;
     void PlotLinearity( const int & window, const std::string & path ) ;
@@ -54,9 +55,9 @@ typedef std::vector< double > Hit_level;
   private :
 
   // Object information
-  int _hits, _dEdx_size, _dQdx_size ;
+  int _hits, _hits_size, _dEdx_size, _dQdx_size ;
   Hit_level _vertex_position, _end_position ;
-  std::vector< float > _reco_dEdx, _reco_dQdx ;
+  std::vector< float > _reco_dEdx, _reco_dQdx, _track_Q ;
   Track _particle_track ;
   // If loading all file
   std::vector< int > _event_hits, _event_dEdx_size, _event_dQdx_size ;
