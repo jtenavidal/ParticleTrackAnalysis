@@ -133,8 +133,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 {
   event_id = e.id().event();
   std::stringstream t_path, r_path ;
-  t_path << "Histograms/Truth/eid_"<<event_id<<"_truth_track" ;
-  r_path << "Histograms/Reco/eid_"<<event_id<<"_reco_track" ;
+  t_path << "Histograms/eid_"<<event_id<<"_truth_track" ;
+  r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
 
