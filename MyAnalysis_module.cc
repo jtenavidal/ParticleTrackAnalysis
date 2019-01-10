@@ -97,11 +97,11 @@ private:
   int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_n_daughters, r_photon_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
   double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
-  int rnu_hits, rdEdx_size, rdQdx_size ;
+  int rnu_hits, rnu_hits_size, rdEdx_size, rdQdx_size ;
 
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength ;
-  float r_dEdx[100000], r_dQdx[100000], r_track_p[100000];
+  float r_dEdx[100000], r_dQdx[100000], r_track_p[100000], r_track_Q[100000];
   double r_track_x[100000], r_track_y[100000], r_track_z[100000];
 
   // Functions
@@ -169,6 +169,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fpz = trueParticle.Pz() ;
 	  fpt = trueParticle.Pt() ;
 	  fp  = trueParticle.P() ;
+	  
 	  fNumDaughters = trueParticle.NumberDaughters() ;
 	  True_trajectory = trueParticle.Trajectory() ;
 	  fMCLength = True_trajectory.TotalLength() ;
@@ -213,6 +214,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_photon_daughters = 0; // should not find showers
   r_other_daughters = 0;
   rnu_hits = 0 ;
+  rnu_hits_size = 0 ;
   rdEdx_size = 0 ;
   rdQdx_size = 0 ;
 
@@ -276,7 +278,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_PIDA    = pid_f[k]->PIDA();
 		r_missenergy = pid_f[k]->MissingE();
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
-		
+
 		for( unsigned int l = 0 ; l < (cal_f[n]->dEdx()).size() ; ++l ) r_dEdx[l+rdEdx_size] = cal_f[n]->dEdx()[l];
 		for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
@@ -285,17 +287,17 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  r_track_x[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.X();
 		  r_track_y[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Y();
 		  r_track_z[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Z();
-		  r_track_p[l+rnu_hits] = track_f[j]->MomentumAtPoint( l ) ; 
+		  if( track_f[j] -> HasMomentum() ) {
+		    // MomentumAtPoint stores 1 if no Momentum found. It seems to never have it ??
+		    r_track_p[l+rnu_hits] = track_f[j]->MomentumAtPoint( l ) ; 
+		  } 
 		}
-
-		rnu_hits   += track_f[j]->LastValidPoint() + 1 ; // ?: +1 
-	        rdEdx_size += (cal_f[n]->dEdx()).size();
+		for( unsigned int l = 0 ; l < hit_f.size() ; ++l ) r_track_Q[l+rnu_hits_size] = hit_f[l] -> Integral() ;
+	       
+		rnu_hits   += track_f[j]->LastValidPoint() + 1 ; // ?: +1
+		rnu_hits_size += hit_f.size() ;
+		rdEdx_size += (cal_f[n]->dEdx()).size();
 		rdQdx_size += (cal_f[n]->dQdx()).size();
-
-		std::cout<< "htis size = "<< rnu_hits << " event = " << event_id << std::endl;
-		std::cout<< "dedx size = "<< rdEdx_size << " event = " << event_id << std::endl;
-		std::cout<< "rchi2_mu = "<< r_chi2_mu << " event = " << event_id << std::endl;
-		
 	      } // closing calo loop
 	    }// close pip loop
 	  }// close loop reco track
@@ -413,6 +415,7 @@ void TrackID::MyAnalysis::beginJob( )
   rEnd_z = -999. ;
   rLength = -999. ;
   rnu_hits  = 0 ;
+  rnu_hits_size = 0 ;
   r_chi2_mu = -999. ;
   r_chi2_pi = -999. ;
   r_chi2_p  = -999. ;
@@ -472,6 +475,7 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "rEnd_z",              &rEnd_z,            "rEnd_z/D");
   recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
+  recotrack_tree  -> Branch( "rnu_hits_size",       &rnu_hits_size,     "rnu_hits_size/I");
   recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         "r_chi2_mu/D");
   recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         "r_chi2_pi/D");
   recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          "r_chi2_p/D");
@@ -487,6 +491,7 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_p",           &r_track_p,         ("r_track_p[" + std::to_string(100000)+"]/F").c_str());
+  recotrack_tree  -> Branch( "r_track_Q",           &r_track_Q,         ("r_track_Q[" + std::to_string(100000)+"]/F").c_str());
 
 
   // Set directories
