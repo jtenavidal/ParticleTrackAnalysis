@@ -101,7 +101,6 @@ private:
 
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength ;
-  std::vector< float > dEdx, dQdx ;
   float r_dEdx[100000], r_dQdx[100000], r_track_p[100000];
   double r_track_x[100000], r_track_y[100000], r_track_z[100000];
 
@@ -214,6 +213,9 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_photon_daughters = 0; // should not find showers
   r_other_daughters = 0;
   rnu_hits = 0 ;
+  rdEdx_size = 0 ;
+  rdQdx_size = 0 ;
+
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
@@ -274,13 +276,9 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		r_PIDA    = pid_f[k]->PIDA();
 		r_missenergy = pid_f[k]->MissingE();
 		r_KineticEnergy = cal_f[n]->KineticEnergy();
-	        rdEdx_size = (cal_f[n]->dEdx()).size();
-		rdQdx_size = (cal_f[n]->dQdx()).size();
-		dEdx = cal_f[n]->dEdx();
-		dQdx = cal_f[n]->dQdx();
-
-		for( int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l] = cal_f[n]->dEdx()[l];
-		for( int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l] = cal_f[n]->dQdx()[l];
+		
+		for( int l = 0 ; l < rdEdx_size ; ++l ) r_dEdx[l+rdEdx_size] = cal_f[n]->dEdx()[l];
+		for( int l = 0 ; l < rdQdx_size ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
 		r_Range = cal_f[n]->Range();
 	      
 		for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
@@ -289,7 +287,14 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  r_track_z[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Z();
 		  r_track_p[l+rnu_hits] = track_f[j]->MomentumAtPoint( l ) ; 
 		}
-		rnu_hits  += track_f[j]->LastValidPoint() + 1 ; // ?: +1 
+
+		rnu_hits   += track_f[j]->LastValidPoint() + 1 ; // ?: +1 
+	        rdEdx_size += (cal_f[n]->dEdx()).size();
+		rdQdx_size += (cal_f[n]->dQdx()).size();
+
+		std::cout<< "htis size = "<< rnu_hits << " event = " << event_id << std::endl;
+		std::cout<< "dedx size = "<< rdEdx_size << " event = " << event_id << std::endl;
+		std::cout<< "rchi2_mu = "<< r_chi2_mu << " event = " << event_id << std::endl;
 		
 	      } // closing calo loop
 	    }// close pip loop
