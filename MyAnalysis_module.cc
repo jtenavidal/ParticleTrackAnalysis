@@ -232,38 +232,103 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
 
-    for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){
+    for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-      
+
       if( pfparticle->IsPrimary() == 1 ){
 	if( pfparticle->NumDaughters() > 0 ) {
 	  // Primary particle is now the first track :
 	  r_pdg_primary = particleMap[ pfparticle->Daughters()[0] ] -> PdgCode() ;
 	  r_nu_daughters = pfparticle->NumDaughters() - 1 ; // substracting the primary from daughters list
 
-	  for( int i = 1 ; i < pfparticle->NumDaughters() ; ++i ){ // looping over daughters 
+	  for( int j = 1 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters 
 
-	    if        ( particleMap[ pfparticle->Daughters()[i] ] -> PdgCode() == 13   ) { ++ r_mu_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[i] ] -> PdgCode() == 211  ) { ++ r_pi_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[i] ] -> PdgCode() == 11   ) { ++ r_e_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[i] ] -> PdgCode() == 2212 ) { ++ r_p_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[i] ] -> PdgCode() == 2112 ) { ++ r_n_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[i] ] -> PdgCode() == 22   ) { ++ r_photon_daughters ;
+	    if        ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 13   ) { ++ r_mu_daughters ;
+	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 211  ) { ++ r_pi_daughters ;
+	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 11   ) { ++ r_e_daughters ;
+	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 2212 ) { ++ r_p_daughters ;
+	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 2112 ) { ++ r_n_daughters ;
+	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 22   ) { ++ r_photon_daughters ;
 	    } else                                                                                { ++ r_other_daughters ; }
 
 	  }
-	}
 
+	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters 
+	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+	    std::cout<< "Even ID = " << event_id<< "    particle_id_f= " << part_id_f << std::endl;
+	    if ( findTracks.at( part_id_f ).size()!=0 ){
+	      std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
+	      art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
+	      art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
+	      art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
+
+	      // Loop over tracks per event
+	      for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
 	  
+		rVertex_x = track_f[n]->Vertex( ).X() ;
+		rVertex_y = track_f[n]->Vertex( ).Y() ;
+		rVertex_z = track_f[n]->Vertex( ).Z() ;
+		rEnd_x    = track_f[n]->End( ).X() ;
+		rEnd_y    = track_f[n]->End( ).Y() ;
+		rEnd_z    = track_f[n]->End( ).Z() ;
+		rLength   = track_f[n]->Length() ;
+		SaveRecoTrack( track_f[n], reco_path );
+		
+		// Get track based variables
+		std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
+		std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
+		std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[n]->ID());
+		
+		//Loop over PID associations 
+		for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
+		  
+		  if( !pid_f[k] ) continue ;
+		  if( !pid_f[k]->PlaneID().isValid) continue ;
+		  if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
+		  
+		  //Loop over calo information also in collection plane
+		  for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
+		    if( !cal_f[m] ) continue ;
+		    if( !cal_f[m]->PlaneID().isValid) continue ;
+		    if( cal_f[m]->PlaneID().Plane != 2 ) continue ;
+		    
+		    // save information 
+		    r_chi2_mu = pid_f[k]->Chi2Muon() ;
+		    r_chi2_pi = pid_f[k]->Chi2Pion() ;
+		    r_chi2_p  = pid_f[k]->Chi2Proton() ;
+		    r_PIDA    = pid_f[k]->PIDA();
+		    r_missenergy = pid_f[k]->MissingE();
+		    r_KineticEnergy = cal_f[m]->KineticEnergy();
+		    
+		    for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
+		    r_Range = cal_f[m]->Range();
+		    
+		    for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
+		      r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
+		      r_track_y[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
+		      r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
+		    }
+		    //		for( unsigned int l = 0 ; l < hit_f.size() ; ++l ) r_track_Q[l+rnu_hits_size] = hit_f[l] -> Integral() ;
+		    rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1
+		    rnu_hits_size += hit_f.size() ;
+		    rdQdx_size += (cal_f[m]->dQdx()).size();
+		  } //close calo
+		} //close pid
+	      } //close track  	  
+	    } // if find tracks 
+	  } //loop j particle daughter
+	} //if numdaugh>0
+      }//if primary 
+    } //pfparticleHandle
+  } //valid handle
 
-      } 
-
+      /* 
       if ( findTracks.at(i).size()!=0 ){
 	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(i);
 	art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
 	art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-      	
+	
 	// Loop over tracks per event
 	for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
 	  
@@ -275,15 +340,15 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  rEnd_z    = track_f[j]->End( ).Z() ;
 	  rLength   = track_f[j]->Length() ;
 	  SaveRecoTrack( track_f[j], reco_path );
-	  
+	    
 	  // Get track based variables
 	  std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
 	  std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
-	  std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[j]->ID());
-	  
-	  //Loop over PID associations 
-	  for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
-	      
+          std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[j]->ID());
+    
+          //Loop over PID associations 
+          for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
+            
 	    if( !pid_f[k] ) continue ;
 	    if( !pid_f[k]->PlaneID().isValid) continue ;
 	    if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
@@ -291,7 +356,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    //Loop over calo information also in collection plane
 	    for ( unsigned int n = 0 ; n < cal_f.size() ; ++n ) {
 	      if( !cal_f[n] ) continue ;
-	      if( !cal_f[n]->PlaneID().isValid) continue ;
+	      if( !cal_f[n]->PlaneID().isValid) continue ;  
 	      if( cal_f[n]->PlaneID().Plane != 2 ) continue ;
 	      
 	      // save information 
@@ -300,27 +365,27 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	      r_chi2_p  = pid_f[k]->Chi2Proton() ;
 	      r_PIDA    = pid_f[k]->PIDA();
 	      r_missenergy = pid_f[k]->MissingE();
-	      r_KineticEnergy = cal_f[n]->KineticEnergy();
+              r_KineticEnergy = cal_f[n]->KineticEnergy();
 	      
 	      for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
 	      r_Range = cal_f[n]->Range();
 
-/*	      if( !pfparticle->IsPrimary() ) {
+//	      if( !pfparticle->IsPrimary() ) {
 
-		std::cout << " *******daughter*********** " <<std::endl;
-		  if( pfparticle -> NumDaughters() > 0 ) {
-		    for( int n_daughter = 0 ; n_daughter < pfparticle->NumDaughters() ; ++n_daughter ) {
-		      r_dQdx_ID.push_back( float(pfparticle->Daughter( n_daughter ) + 1.) ); 
-		      for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx_ID.push_back( cal_f[n]->dQdx()[l] );
-		      r_dQdx_ID_all.push_back( r_dQdx_ID ) ; 
-		      }
-		//}
-		//  std::cout<< "rdQdx_ID+ " << r_dQdx_ID[0] << std::endl;  
-		//  std::cout<< "rdQdx_ID 1+ " << r_dQdx_ID[1] << std::endl;  
-		//  std::cout<< "rdQdx_ID all+ " << r_dQdx_ID_all[0][0] << std::endl;  
+//		std::cout << " *******daughter*********** " <<std::endl;
+//		  if( pfparticle -> NumDaughters() > 0 ) {
+//		    for( int n_daughter = 0 ; n_daughter < pfparticle->NumDaughters() ; ++n_daughter ) {
+//		      r_dQdx_ID.push_back( float(pfparticle->Daughter( n_daughter ) + 1.) ); 
+//		      for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx_ID.push_back( cal_f[n]->dQdx()[l] );
+//		      r_dQdx_ID_all.push_back( r_dQdx_ID ) ; 
+//		      }
+//		//}
+//		//  std::cout<< "rdQdx_ID+ " << r_dQdx_ID[0] << std::endl;  
+//		//  std::cout<< "rdQdx_ID 1+ " << r_dQdx_ID[1] << std::endl;  
+//		//  std::cout<< "rdQdx_ID all+ " << r_dQdx_ID_all[0][0] << std::endl;  
+//
+//	      } // primary is the neutrino for pandora neutrino
 
-	      } // primary is the neutrino for pandora neutrino
-*/
 	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
 		r_track_x[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.X();
 		r_track_y[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Y();
@@ -336,13 +401,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       }  // end if
     } // for
   } // if
-
+      */
   // FILL TREES
   event_tree      -> Fill();
   mcparticle_tree -> Fill();
   recotrack_tree  -> Fill();
   
-}
+} // event 
 
 
 // Functions
