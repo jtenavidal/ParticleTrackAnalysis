@@ -107,10 +107,6 @@ private:
   std::vector< std::vector< float >  > r_dQdx_ID_all ; 
   lar_pandora::PFParticleMap particleMap ; 
   
-  // Functions
-  void SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const ;
-  void SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const ;
-  std::vector< std::vector<double> > Straight(  art::Ptr<recob::Track> const & reco_track ) ;  
 };
 
 
@@ -187,7 +183,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  else                                       { ++fDaughter_other ; }
 	}
       }
-      SaveMCTrack( True_trajectory , truth_path ) ;
     }
   }
 
@@ -272,7 +267,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		rEnd_y    = track_f[n]->End( ).Y() ;
 		rEnd_z    = track_f[n]->End( ).Z() ;
 		rLength   = track_f[n]->Length() ;
-		SaveRecoTrack( track_f[n], reco_path );
 		
 		// Get track based variables
 		std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
@@ -322,86 +316,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     } //pfparticleHandle
   } //valid handle
 
-      /* 
-      if ( findTracks.at(i).size()!=0 ){
-	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(i);
-	art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
-	art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
-	art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-	
-	// Loop over tracks per event
-	for( unsigned int j = 0 ; j < track_f.size() ; ++j ){
-	  
-	  rVertex_x = track_f[j]->Vertex( ).X() ;
-	  rVertex_y = track_f[j]->Vertex( ).Y() ;
-	  rVertex_z = track_f[j]->Vertex( ).Z() ;
-	  rEnd_x    = track_f[j]->End( ).X() ;
-	  rEnd_y    = track_f[j]->End( ).Y() ;
-	  rEnd_z    = track_f[j]->End( ).Z() ;
-	  rLength   = track_f[j]->Length() ;
-	  SaveRecoTrack( track_f[j], reco_path );
-	    
-	  // Get track based variables
-	  std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[j]->ID()); 
-	  std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[j]->ID());
-          std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[j]->ID());
-    
-          //Loop over PID associations 
-          for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
-            
-	    if( !pid_f[k] ) continue ;
-	    if( !pid_f[k]->PlaneID().isValid) continue ;
-	    if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
-
-	    //Loop over calo information also in collection plane
-	    for ( unsigned int n = 0 ; n < cal_f.size() ; ++n ) {
-	      if( !cal_f[n] ) continue ;
-	      if( !cal_f[n]->PlaneID().isValid) continue ;  
-	      if( cal_f[n]->PlaneID().Plane != 2 ) continue ;
-	      
-	      // save information 
-	      r_chi2_mu = pid_f[k]->Chi2Muon() ;
-	      r_chi2_pi = pid_f[k]->Chi2Pion() ;
-	      r_chi2_p  = pid_f[k]->Chi2Proton() ;
-	      r_PIDA    = pid_f[k]->PIDA();
-	      r_missenergy = pid_f[k]->MissingE();
-              r_KineticEnergy = cal_f[n]->KineticEnergy();
-	      
-	      for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
-	      r_Range = cal_f[n]->Range();
-
-//	      if( !pfparticle->IsPrimary() ) {
-
-//		std::cout << " *******daughter*********** " <<std::endl;
-//		  if( pfparticle -> NumDaughters() > 0 ) {
-//		    for( int n_daughter = 0 ; n_daughter < pfparticle->NumDaughters() ; ++n_daughter ) {
-//		      r_dQdx_ID.push_back( float(pfparticle->Daughter( n_daughter ) + 1.) ); 
-//		      for( unsigned int l = 0 ; l < (cal_f[n]->dQdx()).size() ; ++l ) r_dQdx_ID.push_back( cal_f[n]->dQdx()[l] );
-//		      r_dQdx_ID_all.push_back( r_dQdx_ID ) ; 
-//		      }
-//		//}
-//		//  std::cout<< "rdQdx_ID+ " << r_dQdx_ID[0] << std::endl;  
-//		//  std::cout<< "rdQdx_ID 1+ " << r_dQdx_ID[1] << std::endl;  
-//		//  std::cout<< "rdQdx_ID all+ " << r_dQdx_ID_all[0][0] << std::endl;  
-//
-//	      } // primary is the neutrino for pandora neutrino
-
-	      for( unsigned int l = 0 ; l < track_f[j]->LastValidPoint()+1 ; ++l ) {
-		r_track_x[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.X();
-		r_track_y[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Y();
-		r_track_z[l+rnu_hits] = track_f[j]->TrajectoryPoint( l ).position.Z();
-	      }
-	      //		for( unsigned int l = 0 ; l < hit_f.size() ; ++l ) r_track_Q[l+rnu_hits_size] = hit_f[l] -> Integral() ;
-	      rnu_hits   += track_f[j]->LastValidPoint() + 1 ; // ?: +1
-	      rnu_hits_size += hit_f.size() ;
-	      rdQdx_size += (cal_f[n]->dQdx()).size();
-	    } // closing calo loop
-	  }// close pip loop
-	}// close loop reco track
-      }  // end if
-    } // for
-  } // if
-      */
   // FILL TREES
   event_tree      -> Fill();
   mcparticle_tree -> Fill();
@@ -410,52 +324,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 } // event 
 
 
-// Functions
-
-void TrackID::MyAnalysis::SaveMCTrack( simb::MCTrajectory const & mc_track, std::string const & path ) const {
-
-  // This should be a function called Print : need to understand what it is printing exactly. Obviously a track, but is it the primary? 
-  
-  TH3D *h_track = new TH3D("h_track", " Particle Track ", mc_track.size(), mc_track.X(0), mc_track.X(mc_track.size()), mc_track.size(), mc_track.Y(0), mc_track.Y(mc_track.size()), mc_track.size(), mc_track.Z(0), mc_track.Z(mc_track.size()));
-  
-  for( unsigned int i = 0; i < mc_track.size(); ++i ){
-    h_track-> Fill(mc_track.X(i), mc_track.Y(i), mc_track.Z(i), mc_track.E(i));
-  }
-  gStyle->SetPalette(55);
-  gStyle->SetNumberContours(250);
-  
-  TCanvas *c = new TCanvas();
-  h_track->SetLineColor(2);
-  h_track->GetXaxis()->SetTitle("X");
-  h_track->GetYaxis()->SetTitle("Y");
-  h_track->GetXaxis()->SetTitle("Z");
-  h_track->Draw("hist");
-  h_track->Draw("BOX2Z");
-  c->SaveAs((path+".root").c_str());
-  c->Clear();
-}
-
-void TrackID::MyAnalysis::SaveRecoTrack( art::Ptr<recob::Track> const & reco_track, std::string const & path ) const {
-  
-  TH3D *h_recotrack = new TH3D("h_recotrack", "Reco Particle Track ", int(reco_track->CountValidPoints()/10), reco_track->Vertex().X(), reco_track->End().X(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Y(), reco_track->End().Y(), int(reco_track->CountValidPoints()/10), reco_track->Vertex().Z(), reco_track->End().Z() );
-  
-  for ( unsigned int t_hit = 0 ; t_hit < reco_track->LastValidPoint()+1; ++t_hit ){
-    h_recotrack -> Fill( reco_track->TrajectoryPoint( t_hit ).position.X(), reco_track->TrajectoryPoint( t_hit ).position.Y(), reco_track->TrajectoryPoint( t_hit ).position.Z(), reco_track->MomentumAtPoint( t_hit ));
-  }
-  
-  gStyle->SetPalette(55);
-  gStyle->SetNumberContours(250);
-	    
-  TCanvas *c2 = new TCanvas();
-  h_recotrack->SetLineColor(2);
-  h_recotrack->GetXaxis()->SetTitle("X");
-  h_recotrack->GetYaxis()->SetTitle("Y");
-  h_recotrack->GetXaxis()->SetTitle("Z");
-  h_recotrack->Draw("hist");
-  h_recotrack->Draw("BOX2Z");
-  c2->SaveAs( (path+".root").c_str() );
-  c2->Clear();
-}
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 {
