@@ -358,16 +358,15 @@ std::vector< double > TrackFitter::MeanData( const int & window, const std::vect
 
   for( int i = 0; i < int(data.size()); ++i ){
     muI_data = 0. ;
-
     if ( i - window < 0 ) {
       starting_hit = 0 ;
       end_hit = i + window ;
-    } else if ( i + window >= int(_hits)) {
+    } else if ( i + window >= int(data.size())) {
       starting_hit = i - window ;
-      end_hit = _hits ;
-    } else if ( i - window < 0  && i + window >= int(_hits)) {
+      end_hit = data.size() ;
+    } else if ( i - window < 0  && i + window >= int(data.size())) {
       starting_hit = 0 ;
-      end_hit = _hits ;
+      end_hit = data.size() ;
     } else {
       starting_hit = i - window ;
       end_hit = i + window ;
@@ -392,12 +391,12 @@ std::vector< double > TrackFitter::DevData( const int & window, const std::vecto
     if ( i - window < 0 ) {
       starting_hit = 0 ;
       end_hit = i + window ;
-    } else if ( i + window >= int(_hits)) {
+    } else if ( i + window >= int(data.size())) {
       starting_hit = i - window ;
-      end_hit = _hits ;
-    } else if ( i - window < 0  && i + window >= int(_hits)) {
+      end_hit = data.size() ;
+    } else if ( i - window < 0  && i + window >= int(data.size())) {
       starting_hit = 0 ;
-      end_hit = _hits ;
+      end_hit = data.size() ;
     } else {
       starting_hit = i - window ;
       end_hit = i + window ;
@@ -426,12 +425,12 @@ std::vector< double > TrackFitter::CovData( const int & window, const std::vecto
       if ( i - window < 0 ) {
         starting_hit = 0 ;
         end_hit = i + window ;
-      } else if ( i + window >= int(_hits)) {
+      } else if ( i + window >= int(Data_1.size())) {
         starting_hit = i - window ;
-        end_hit = _hits ;
-      } else if ( i - window < 0  && i + window >= int(_hits)) {
+        end_hit = Data_1.size() ;
+      } else if ( i - window < 0  && i + window >= int(Data_1.size())) {
         starting_hit = 0 ;
-        end_hit = _hits ;
+        end_hit = Data_1.size() ;
       } else {
         starting_hit = i - window ;
         end_hit = i + window ;
@@ -538,4 +537,51 @@ void TrackFitter::PlotLinearityTrack( const int & window, const std::string & pa
   legend->Draw();
   c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
 
+}
+
+
+std::vector< TVector3 > TrackFitter::MeanDirectionData( const int & window ){
+  // this will only be applied to the track information (x,y,z)
+  unsigned int starting_hit , end_hit;
+  TVector3 directionI ;
+  std::vector< TVector3 > mean_direction ;
+  for( int i = 0; i < int(_hits); ++i ){
+    if ( i - window < 0 ) {
+      starting_hit = 0 ;
+      end_hit = i + window ;
+    } else if ( i + window >= int(_hits)) {
+      starting_hit = i - window ;
+      end_hit = _hits - 1 ;
+    } else if ( i - window < 0  && i + window >= int(_hits)) {
+      starting_hit = 0 ;
+      end_hit = _hits - 1 ;
+    } else {
+      starting_hit = i - window ;
+      end_hit = i + window ;
+    }
+    directionI.SetX( (_particle_track[0][end_hit]-_particle_track[0][starting_hit])/(end_hit-starting_hit) );
+    directionI.SetY( (_particle_track[1][end_hit]-_particle_track[1][starting_hit])/(end_hit-starting_hit) );
+    directionI.SetZ( (_particle_track[2][end_hit]-_particle_track[2][starting_hit])/(end_hit-starting_hit) );
+    mean_direction.push_back( directionI );
+  }
+  return mean_direction;
+}
+
+
+std::vector< double > TrackFitter::AngleTrackDistribution( const int & window ) {
+  // this will only be applied to the track information (x,y,z)
+  unsigned int starting_hit , end_hit;
+  std::vector< double > angle_distribution ;
+  std::vector< TVector3 > mean_direction = MeanDirectionData( window ) ;
+  TVector3 test1(1, 1, 0);
+  TVector3 test2(1, -1, 0);
+  for( int i = 0; i < int(_hits) - 1 ; ++i ){
+
+  if( mean_direction[i].Angle(mean_direction[i+1]) > 1 ) {
+        std::cout<< "i = "<< i << " angle : " << (180/TMath::Pi())*mean_direction[i].Angle(mean_direction[i+1]) << std::endl;
+  }
+    angle_distribution.push_back( mean_direction[i].Angle(mean_direction[i+1]) ) ;
+  }
+  //std::cout<< " angle test = " << (180/TMath::Pi())*test1.Angle(test2)<<std::endl;
+  return angle_distribution;
 }

@@ -6,6 +6,7 @@
 #include "TFile.h"
 #include "TLeaf.h"
 #include "TBranch.h"
+#include "TVector3.h"
 
 // Typedef for the map
 typedef std::vector< std::vector<double> > Track;
@@ -45,7 +46,8 @@ typedef std::vector< double > Hit_level;
     * Functions to guess about the geometry of the track
     */
     double FitToLine( ) ;
-
+    std::vector< TVector3 > MeanDirectionData( const int & window ) ;
+    std::vector< double > AngleTrackDistribution( const int & window ) ;
   private :
 
   // Object information
