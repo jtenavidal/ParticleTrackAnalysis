@@ -213,6 +213,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     lar_pandora::LArPandoraHelper::BuildPFParticleMap( pfplist, particleMap );
   }
 
+  rLength = 0 ;
   r_mu_daughters = 0;
   r_pi_daughters = 0;
   r_e_daughters = 0;
@@ -263,14 +264,17 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
 	      // Loop over tracks per event
 	      for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-		std::cout<< " n = " << n << std::endl;
-		rVertex_x = track_f[n]->Vertex( ).X() ;
-		rVertex_y = track_f[n]->Vertex( ).Y() ;
-		rVertex_z = track_f[n]->Vertex( ).Z() ;
-		rEnd_x    = track_f[n]->End( ).X() ;
-		rEnd_y    = track_f[n]->End( ).Y() ;
-		rEnd_z    = track_f[n]->End( ).Z() ;
-		rLength   = track_f[n]->Length() ;
+	        if( j == 0 ) { // save for first particle 
+		  rVertex_x = track_f[n]->Vertex( ).X() ;
+		  rVertex_y = track_f[n]->Vertex( ).Y() ;
+		  rVertex_z = track_f[n]->Vertex( ).Z() ;
+		}
+		if( j == pfparticle->NumDaughters() - 1 ){
+		  rEnd_x    = track_f[n]->End( ).X() ;
+		  rEnd_y    = track_f[n]->End( ).Y() ;
+		  rEnd_z    = track_f[n]->End( ).Z() ;
+		}
+		rLength   += track_f[n]->Length() ;
 		
 		// Get track based variables
 		std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
