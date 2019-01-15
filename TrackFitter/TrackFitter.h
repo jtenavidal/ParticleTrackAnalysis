@@ -38,13 +38,13 @@ typedef std::vector< double > Hit_level;
     void SaveTrack( const std::string & path ) const ;
     void PrintHipotesis( const std::string & path ) ;
     void PrintdQdx( const std::string & path ) const ;
-    void PlotLinearity( const int & window, const std::string & path ) ;
+    void PlotLinearityTrack( const int & window, const std::string & path ) ;
+    void PlotLinearityData( const int & window, const std::string & path );//, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) ;
 
     /**
     * Functions to guess about the geometry of the track
     */
     double FitToLine( ) ;
-    std::vector< std::vector< double > > Linearity( const int & window ) ;
 
   private :
 
@@ -67,13 +67,11 @@ typedef std::vector< double > Hit_level;
   /**
   * Functions to guess about the geometry of the track
   */
-  std::vector< std::vector< double > > MeanPosition( const int & window ) ;
-  std::vector< std::vector< double > > DevPosition( const int & window ) ;
-  std::vector< std::vector< double > > CovPosition( const int & window ) ;
 
   std::vector< double > MeanData( const int & window, const std::vector< double > & data ) ;
   std::vector< double > DevData( const int & window, const std::vector< double > & dat ) ;
-  std::vector< double > CovData( const int & window, const std::vector< std::vector<double> > & Data_2 ) ;
+  std::vector< double > CovData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
+  std::vector< double > LinearityData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
 
   }; // Event
 

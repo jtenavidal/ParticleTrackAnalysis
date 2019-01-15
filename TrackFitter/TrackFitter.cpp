@@ -78,10 +78,13 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
    TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
 
-   Hit_level track_hit;
+   Hit_level track_hit_x, track_hit_y, track_hit_z;
 
    for( unsigned int i = 0; i < recoparticle_tree->GetEntries(); ++i ){
      _particle_track.clear();
+     track_hit_x.clear();
+     track_hit_y.clear();
+     track_hit_z.clear();
      _reco_dQdx.clear();
 
      recoparticle_tree->GetEntry(i);
@@ -89,12 +92,14 @@ TrackFitter::TrackFitter( const Track & p_track ){
      _event_hits.push_back( _hits ) ;
 
      for( int j = 0; j < _hits; ++j ) {
-       track_hit.clear();
-       track_hit.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
-       track_hit.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
-       track_hit.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
-       _particle_track.push_back(track_hit);
+       track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
+       track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
+       track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
      }
+     _particle_track.push_back(track_hit_x);
+     _particle_track.push_back(track_hit_y);
+     _particle_track.push_back(track_hit_z);
+
      _event_tracks.push_back( _particle_track ) ;
 
      _dQdx_size = recoparticle_tree->GetLeaf("rdQdx_size")->GetValue() ;
@@ -103,8 +108,9 @@ TrackFitter::TrackFitter( const Track & p_track ){
      for( int j = 0; j < _dQdx_size; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
      _event_reco_dQdx.push_back( _reco_dQdx ) ;
 
-     _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
-     _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
+     // HAVE TO FIX THIS:
+    // _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
+    // _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
      // Should add more info ...
 
    }
@@ -186,12 +192,11 @@ TrackFitter::TrackFitter( const Track & p_track ){
     _dQdx_size = recoparticle_tree->GetLeaf("rdQdx_size")->GetValue( );
     for( int j = 0; j < _dQdx_size; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
     _vertex_position.push_back( _particle_track[0][0] ) ;// AccessVertex( p_track );
-    _vertex_position.push_back( _particle_track[1][0] ) ;// AccessVertex( p_track );
-    _vertex_position.push_back( _particle_track[2][0] ) ;// AccessVertex( p_track );
-    _end_position.push_back( _particle_track[0][_hits-1] );//AccessEnd( p_track );
-    _end_position.push_back( _particle_track[1][_hits-1] );//AccessEnd( p_track );
-    _end_position.push_back( _particle_track[2][_hits-1] );//AccessEnd( p_track );
-   // Should add more info ...
+    _vertex_position.push_back( _particle_track[1][0] ) ;
+    _vertex_position.push_back( _particle_track[2][0] ) ;
+    _end_position.push_back( _particle_track[0][_hits-1] );
+    _end_position.push_back( _particle_track[1][_hits-1] );
+    _end_position.push_back( _particle_track[2][_hits-1] );
 
  }
 
@@ -344,203 +349,8 @@ void TrackFitter::PrintdQdx( const std::string & path ) const {
 
 }
 
-std::vector< std::vector< double > > TrackFitter::Linearity( const int & window ){
-  // It calculates the linearity from Pearson correlation coefficient (corrP)
-  unsigned int starting_hit , end_hit;
-  std::vector< double > corrP_xy, corrP_xz, corrP_yz;
-  std::vector<  std::vector< double > > corrP ;//[xy, xz, yz]
-  std::vector< std::vector< double > > cov, dev ;
-  cov = CovPosition( window ) ;
-  dev = DevPosition( window ) ;
 
-  for( int i = 0; i < int( _hits ); ++i ){
-    corrP_xy.push_back( sqrt(std::pow(cov[0][i]/(dev[0][i]*dev[1][i]),2)) ) ;
-    corrP_xz.push_back( sqrt(std::pow(cov[1][i]/(dev[0][i]*dev[2][i]),2)) ) ;
-    corrP_yz.push_back( sqrt(std::pow(cov[2][i]/(dev[2][i]*dev[1][i]),2)) ) ;
-  }
-
-  corrP.push_back( corrP_xy );
-  corrP.push_back( corrP_xz );
-  corrP.push_back( corrP_yz );
-  return corrP; // corrP[x,y,z]
-}
-
-std::vector< std::vector< double > > TrackFitter::MeanPosition( const int & window ){
-  unsigned int starting_hit , end_hit;
-  double muI_x, muI_y, muI_z;
-  std::vector< double > mu_x, mu_y, mu_z ;
-  std::vector< std::vector< double > > mu ;
-
-  for( int i = 0; i < int(_hits); ++i ){
-    muI_x = 0. ;
-    muI_y = 0. ;
-    muI_z = 0. ;
-    if ( i - window < 0 ) {
-      starting_hit = 0 ;
-      end_hit = i + window ;
-    } else if ( i + window >= int(_hits)) {
-      starting_hit = i - window ;
-      end_hit = _hits ;
-    } else if ( i - window < 0  && i + window >= int(_hits)) {
-      starting_hit = 0 ;
-      end_hit = _hits ;
-    } else {
-      starting_hit = i - window ;
-      end_hit = i + window ;
-    }
-
-    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
-      muI_x += _particle_track[0][j];
-      muI_y += _particle_track[1][j];
-      muI_z += _particle_track[2][j];
-    }
-    mu_x.push_back( muI_x/( end_hit - starting_hit ) );
-    mu_y.push_back( muI_y/( end_hit - starting_hit ) );
-    mu_z.push_back( muI_z/( end_hit - starting_hit ) );
-  }
-  mu.push_back( mu_x );
-  mu.push_back( mu_y );
-  mu.push_back( mu_z );
-  return mu;
-}
-
-
-
-std::vector< std::vector< double > > TrackFitter::DevPosition( const int & window ){
-  unsigned int starting_hit , end_hit;
-  double devI_x, devI_y, devI_z;
-  std::vector< double > dev_x, dev_y, dev_z ;
-  std::vector< std::vector< double > > dev, mean ;
-  mean = MeanPosition( window ) ;
-
-  for( int i = 0; i < int(_hits); ++i ){
-    devI_x = 0. ;
-    devI_y = 0. ;
-    devI_z = 0. ;
-    if ( i - window < 0 ) {
-      starting_hit = 0 ;
-      end_hit = i + window ;
-    } else if ( i + window >= int(_hits)) {
-      starting_hit = i - window ;
-      end_hit = _hits ;
-    } else if ( i - window < 0  && i + window >= int(_hits)) {
-      starting_hit = 0 ;
-      end_hit = _hits ;
-    } else {
-      starting_hit = i - window ;
-      end_hit = i + window ;
-    }
-    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
-      devI_x += std::pow( _particle_track[0][j]-mean[0][i] ,2);
-      devI_y += std::pow( _particle_track[1][j]-mean[1][i] ,2);
-      devI_z += std::pow( _particle_track[2][j]-mean[2][i] ,2);
-    }
-    dev_x.push_back( std::sqrt( devI_x/( end_hit - starting_hit -1 ) ) );
-    dev_y.push_back( std::sqrt( devI_y/( end_hit - starting_hit -1 ) ) );
-    dev_z.push_back( std::sqrt( devI_z/( end_hit - starting_hit -1 ) ) );
-  }
-
-  dev.push_back( dev_x );
-  dev.push_back( dev_y );
-  dev.push_back( dev_z );
-  return dev; // dev[x,y,z]
-}
-
-
-std::vector< std::vector< double > > TrackFitter::CovPosition( const int & window ){
-  unsigned int starting_hit , end_hit;
-  double covI_xy, covI_xz, covI_yz;
-  std::vector< double > cov_xy, cov_xz, cov_yz ;
-  std::vector< std::vector< double > > cov, mean ;
-  mean = MeanPosition( window ) ;
-  for( int i = 0; i < int(_hits); ++i ){
-
-    covI_xy = 0. ;
-    covI_xz = 0. ;
-    covI_yz = 0. ;
-
-    if ( i - window < 0 ) {
-      starting_hit = 0 ;
-      end_hit = i + window ;
-    } else if ( i + window >= int(_hits)) {
-      starting_hit = i - window ;
-      end_hit = _hits ;
-    } else if ( i - window < 0  && i + window >= int(_hits)) {
-      starting_hit = 0 ;
-      end_hit = _hits ;
-    } else {
-      starting_hit = i - window ;
-      end_hit = i + window ;
-    }
-
-    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
-      covI_xy += (_particle_track[0][j]-mean[0][i])*(_particle_track[1][j]-mean[1][i]) ;
-      covI_xz += (_particle_track[0][j]-mean[0][i])*(_particle_track[2][j]-mean[2][i]) ;
-      covI_yz += (_particle_track[2][j]-mean[2][i])*(_particle_track[1][j]-mean[1][i]) ;
-    }
-
-    cov_xy.push_back( covI_xy/( end_hit - starting_hit -1 ) );
-    cov_xz.push_back( covI_xz/( end_hit - starting_hit -1 ) );
-    cov_yz.push_back( covI_yz/( end_hit - starting_hit -1 ) );
-  }
-
-  cov.push_back( cov_xy );
-  cov.push_back( cov_xz );
-  cov.push_back( cov_yz );
-  return cov; // cov[xy,xz,yz]
-}
-
-
-void TrackFitter::PlotLinearity( const int & window, const std::string & path ) {
-  std::vector< std::vector< double > > corrP = Linearity( window ) ;
-  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP[0].size(), 0,  corrP[0].size() );
-  TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP[0].size(), 0,  corrP[0].size() );
-  TH1F * h_LinearityXZ = new TH1F( "h_LinearityXZ", "Linearity", corrP[1].size(), 0,  corrP[1].size() );
-  TH1F * h_LinearityYZ = new TH1F( "h_LinearityYZ", "Linearity", corrP[2].size(), 0,  corrP[2].size() );
-  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
-
-  gStyle->SetOptStat(0);
-  h_Linearity->SetLineColor(46);
-  h_Linearity->SetLineWidth(2);
-  h_Linearity->SetLineStyle(1);
-  h_Linearity->GetYaxis()->SetRangeUser(0,1);
-  legend->AddEntry( h_Linearity , "r", "l") ;
-  gStyle->SetOptStat(0);
-  h_LinearityXY->SetLineColor(2);
-  h_LinearityXY->SetLineStyle(6);
-//  h_LinearityXY->GetYaxis()->SetRangeUser(0,1);
-  legend->AddEntry( h_LinearityXY , "r_{XY}", "l") ;
-  h_LinearityXZ->SetLineColor(3);
-  h_LinearityXZ->SetLineStyle(2);
-  legend->AddEntry( h_LinearityXZ , "r_{XZ}", "l") ;
-  h_LinearityYZ->SetLineColor(4);
-  h_LinearityYZ->SetLineStyle(3);
-  legend->AddEntry( h_LinearityYZ , "r_{YZ}", "l") ;
-
-  for (unsigned int i = 0 ; i < corrP[0].size() ; ++i ){
-    h_LinearityXY -> Fill ( i, corrP[0][i] ) ;
-  }
-  for (unsigned int i = 0 ; i < corrP[0].size() ; ++i ){
-    h_Linearity -> Fill ( i, corrP[0][i]*corrP[1][i]*corrP[2][i] ) ;
-  }
-  for (unsigned int i = 0 ; i < corrP[1].size() ; ++i ){
-    h_LinearityXZ -> Fill ( i, corrP[1][i] ) ;
-  }
-  for (unsigned int i = 0 ; i < corrP[2].size() ; ++i ){
-    h_LinearityYZ -> Fill ( i, corrP[2][i] ) ;
-  }
-
-  TCanvas *c = new TCanvas() ;
-  h_Linearity -> Draw("HIST L") ;
-  h_LinearityXY -> Draw("HIST L SAME") ;
-  h_LinearityXZ -> Draw("HIST L SAME") ;
-  h_LinearityYZ -> Draw("HIST L SAME") ;
-  legend->Draw();
-  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
-
-}
-
-
+// STATISTICS GENERAL FUNCTIONS
 std::vector< double > TrackFitter::MeanData( const int & window, const std::vector<double> & data ){
   unsigned int starting_hit , end_hit;
   double muI_data;
@@ -570,8 +380,6 @@ std::vector< double > TrackFitter::MeanData( const int & window, const std::vect
   }
   return mu_data;
 }
-
-
 
 std::vector< double > TrackFitter::DevData( const int & window, const std::vector<double> & data ){
   unsigned int starting_hit , end_hit;
@@ -604,16 +412,15 @@ std::vector< double > TrackFitter::DevData( const int & window, const std::vecto
   return dev_data;
 }
 
-
-std::vector< double > TrackFitter::CovData( const int & window, const std::vector< std::vector<double> > & Data_2 ){
+std::vector< double > TrackFitter::CovData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
   unsigned int starting_hit , end_hit;
   double covI_12 ; // 1 - variable 1, 2 - second variable
   std::vector< double > cov_12 , mean1, mean2;
-  mean1 = MeanData( window , Data_2[0]) ; //variable 1
-  mean2 = MeanData( window , Data_2[1]) ; //variable 2
+  mean1 = MeanData( window , Data_1 ) ; //variable 1
+  mean2 = MeanData( window , Data_2 ) ; //variable 2
 
-  if( Data_2[0].size() == Data_2[1].size() ) {
-    for( int i = 0; i < int(Data_2[0].size()); ++i ) {
+  if( Data_1.size() == Data_2.size() ) {
+    for( int i = 0; i < int(Data_1.size()); ++i ) {
 
       covI_12 = 0. ;
       if ( i - window < 0 ) {
@@ -631,66 +438,104 @@ std::vector< double > TrackFitter::CovData( const int & window, const std::vecto
       }
 
       for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
-        covI_12 += ( Data_2[0][j]-mean1[i])*( Data_2[1][j]-mean2[i]) ;
+        covI_12 += ( Data_1[j]-mean1[i])*( Data_2[j]-mean2[i]) ;
       }
 
       cov_12.push_back( covI_12/( end_hit - starting_hit -1 ) );
     }
   }
 
-  return cov_12; // cov[xy,xz,yz]
+  return cov_12;
 }
 
+std::vector< double > TrackFitter::LinearityData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
+  // It calculates the linearity from Pearson correlation coefficient (corrP)
+  unsigned int starting_hit , end_hit;
+  std::vector< double > corrP_12, cov_12, dev1, dev2 ;
+  cov_12 = CovData( window, Data_1, Data_2 ) ;
+  dev1 = DevData( window, Data_1 ) ;
+  dev2 = DevData( window, Data_2 ) ;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-// THIS CONSTRUCTOR WAS A TEST FOR A TEMPORARY TTREE : not removing it yet
-TrackFitter::TrackFitter( const std::string & track_file_path ){
-  TFile track_file( track_file_path.c_str() );
-  TTree *recoTrack_tree   = (TTree*) track_file.Get("recoTrack_tree") ;
-  // can add other trees later if needed
-
-  TBranch *tr_x    = recoTrack_tree->GetBranch("tr_x");
-  TBranch *tr_y    = recoTrack_tree->GetBranch("tr_y");
-  TBranch *tr_z    = recoTrack_tree->GetBranch("tr_z");
-  TBranch *tr_dEdx = recoTrack_tree->GetBranch("tr_dEdx");
-  TBranch *tr_dQdx = recoTrack_tree->GetBranch("tr_dQdx");
-  // add here other info if needed
-
-  _hits = recoTrack_tree->GetEntries();
-  Hit_level track_hit ;
-  for( int i = 0; i < _hits; ++i ){
-    recoTrack_tree->GetEntry(i);
-    track_hit.clear();
-    track_hit.push_back( tr_x->GetLeaf("tr_x")->GetValue());
-    track_hit.push_back( tr_y->GetLeaf("tr_y")->GetValue());
-    track_hit.push_back( tr_z->GetLeaf("tr_z")->GetValue());
-    _reco_dEdx.push_back( tr_dEdx->GetLeaf("tr_dEdx")->GetValue());
-    _reco_dQdx.push_back( tr_dQdx->GetLeaf("tr_dQdx")->GetValue());
-    _particle_track.push_back(track_hit);
+  if ( Data_1.size() == Data_2.size()) {
+    for( int i = 0; i < int( Data_1.size() ); ++i ){
+      corrP_12.push_back( sqrt(std::pow(cov_12[i]/(dev1[i]*dev2[i]),2)) ) ;
+    }
   }
-  _vertex_position = _particle_track[0] ;// AccessVertex( p_track );
-  _end_position = _particle_track[_hits-1] ;//AccessEnd( p_track );
-  // Should add more info ...
-  std::cout<< "saved !"<< _vertex_position[0] << std::endl;
-  std::cout<< "end "<< _end_position[0] << std::endl;
-  std::cout<< "hits "<< _hits << std::endl;
+  return corrP_12;
+}
 
+void TrackFitter::PlotLinearityData( const int & window, const std::string & path ) {//}, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) {
+  std::vector< double > corrP = LinearityData( window, _particle_track[0], _particle_track[1] );//Data_1, Data_2) ;
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP.size(), 0,  corrP.size() );
+  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
+
+  gStyle->SetOptStat(0);
+  h_Linearity->SetLineColor(46);
+  h_Linearity->SetLineWidth(2);
+  h_Linearity->SetLineStyle(1);
+  h_Linearity->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_Linearity , "r", "l") ;
+  gStyle->SetOptStat(0);
+
+  for (unsigned int i = 0 ; i < corrP.size() ; ++i ){
+    h_Linearity -> Fill ( i, corrP[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_Linearity -> Draw("HIST L") ;
+  legend->Draw();
+  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
 
 }
 
-*/
+void TrackFitter::PlotLinearityTrack( const int & window, const std::string & path ) {
+  std::vector< double > corrP_XY = LinearityData( window, _particle_track[0], _particle_track[1] ) ;
+  std::vector< double > corrP_XZ = LinearityData( window, _particle_track[0], _particle_track[2] ) ;
+  std::vector< double > corrP_YZ = LinearityData( window, _particle_track[2], _particle_track[1] ) ;
+
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
+  TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
+  TH1F * h_LinearityXZ = new TH1F( "h_LinearityXZ", "Linearity", corrP_XZ.size(), 0,  corrP_XZ.size() );
+  TH1F * h_LinearityYZ = new TH1F( "h_LinearityYZ", "Linearity", corrP_YZ.size(), 0,  corrP_YZ.size() );
+  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
+
+  gStyle->SetOptStat(0);
+  h_Linearity->SetLineColor(46);
+  h_Linearity->SetLineWidth(2);
+  h_Linearity->SetLineStyle(1);
+  h_Linearity->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_Linearity , "r", "l") ;
+  gStyle->SetOptStat(0);
+  h_LinearityXY->SetLineColor(2);
+  h_LinearityXY->SetLineStyle(6);
+//  h_LinearityXY->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_LinearityXY , "r_{XY}", "l") ;
+  h_LinearityXZ->SetLineColor(3);
+  h_LinearityXZ->SetLineStyle(2);
+  legend->AddEntry( h_LinearityXZ , "r_{XZ}", "l") ;
+  h_LinearityYZ->SetLineColor(4);
+  h_LinearityYZ->SetLineStyle(3);
+  legend->AddEntry( h_LinearityYZ , "r_{YZ}", "l") ;
+
+  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
+    h_LinearityXY -> Fill ( i, corrP_XY[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
+    h_Linearity -> Fill ( i, corrP_XZ[i]*corrP_XY[i]*corrP_YZ[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_XZ.size() ; ++i ){
+    h_LinearityXZ -> Fill ( i, corrP_XZ[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_YZ.size() ; ++i ){
+    h_LinearityYZ -> Fill ( i, corrP_YZ[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_Linearity -> Draw("HIST L") ;
+  h_LinearityXY -> Draw("HIST L SAME") ;
+  h_LinearityXZ -> Draw("HIST L SAME") ;
+  h_LinearityYZ -> Draw("HIST L SAME") ;
+  legend->Draw();
+  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
+
+}
