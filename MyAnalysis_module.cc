@@ -230,7 +230,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
 
+      //      std::cout<< "testing EVENT ID = "<< event_id << " Testing pparticle id " << pfparticle->Self() << "loop i = " << i <<std::endl;
+
       if( pfparticle->IsPrimary() == 1 ){
+	//std::cout<< " daughter 0 " << pfparticle->Daughters()[0] << std::endl;
 	if( pfparticle->NumDaughters() > 0 ) {
 	  // Primary particle is now the first track :
 	  r_pdg_primary = particleMap[ pfparticle->Daughters()[0] ] -> PdgCode() ;
@@ -244,13 +247,14 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 2212 ) { ++ r_p_daughters ;
 	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 2112 ) { ++ r_n_daughters ;
 	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 22   ) { ++ r_photon_daughters ;
-	    } else                                                                                { ++ r_other_daughters ; }
+	    } else                                                                       { ++ r_other_daughters ; }
 
 	  }
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-	    std::cout<< "Even ID = " << event_id<< "    particle_id_f= " << part_id_f << std::endl;
+	    //  std::cout<< "Even ID = " << event_id<< "    particle_id_f= " << part_id_f  <<std::endl;
+
 	    if ( findTracks.at( part_id_f ).size()!=0 ){
 	      std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
 	      art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
@@ -259,7 +263,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
 	      // Loop over tracks per event
 	      for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-	  
+		std::cout<< " n = " << n << std::endl;
 		rVertex_x = track_f[n]->Vertex( ).X() ;
 		rVertex_y = track_f[n]->Vertex( ).Y() ;
 		rVertex_z = track_f[n]->Vertex( ).Z() ;
@@ -293,6 +297,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		    r_PIDA    = pid_f[k]->PIDA();
 		    r_missenergy = pid_f[k]->MissingE();
 		    r_KineticEnergy = cal_f[m]->KineticEnergy();
+		    //		    std::cout<< "time hit 0 = " << hit_f[0]->PeakTime() << std::endl;
 		    
 		    for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[n]->dQdx()[l];
 		    r_Range = cal_f[m]->Range();
@@ -303,8 +308,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		      r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
 		    }
 		    //		for( unsigned int l = 0 ; l < hit_f.size() ; ++l ) r_track_Q[l+rnu_hits_size] = hit_f[l] -> Integral() ;
-		    rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1
-		    rnu_hits_size += hit_f.size() ;
+		    rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
+		    rnu_hits_size += hit_f.size() ; // total hits
 		    rdQdx_size += (cal_f[m]->dQdx()).size();
 		  } //close calo
 		} //close pid
