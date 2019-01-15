@@ -29,7 +29,6 @@ typedef std::vector< double > Hit_level;
     unsigned int GetHits( ) ;
     Hit_level AccessVertex( ) ;
     Hit_level AccessEnd( ) ;
-    std::vector< float > GetdEdx( ) ;
     std::vector< float > GetdQdx( ) ;
     Track GetTrack( ) ;
 
@@ -38,8 +37,6 @@ typedef std::vector< double > Hit_level;
     */
     void SaveTrack( const std::string & path ) const ;
     void PrintHipotesis( const std::string & path ) ;
-    void PrintMomentum( const std::string & path ) const ;
-    void PrintdEdx( const std::string & path ) const ;
     void PrintdQdx( const std::string & path ) const ;
     void PlotLinearity( const int & window, const std::string & path ) ;
 
@@ -48,26 +45,35 @@ typedef std::vector< double > Hit_level;
     */
     double FitToLine( ) ;
     std::vector< std::vector< double > > Linearity( const int & window ) ;
-    std::vector< std::vector< double > > MeanPosition( const int & window ) ;
-    std::vector< std::vector< double > > DevPosition( const int & window ) ;
-    std::vector< std::vector< double > > CovPosition( const int & window ) ;
 
   private :
 
   // Object information
-  int _hits, _hits_size, _dEdx_size, _dQdx_size ;
+  int _hits, _hits_size, _dQdx_size ;
   Hit_level _vertex_position, _end_position ;
-  std::vector< float > _reco_dEdx, _reco_dQdx, _track_Q ;
+  std::vector< float > _reco_dQdx ;
   Track _particle_track ;
   // If loading all file
-  std::vector< int > _event_hits, _event_dEdx_size, _event_dQdx_size ;
+  std::vector< int > _event_hits, _event_dQdx_size ;
   std::vector< std::vector<double> > _event_vertex, _event_end ;
-  std::vector< std::vector< float > > _event_reco_dEdx, _event_reco_dQdx ;
+  std::vector< std::vector< float > > _event_reco_dQdx ;
   std::vector< Track > _event_tracks;  // maps event and track
   /**
   * Functions to guess about the geometry of the track
   */
   Track Straight( ) ;
+
+
+  /**
+  * Functions to guess about the geometry of the track
+  */
+  std::vector< std::vector< double > > MeanPosition( const int & window ) ;
+  std::vector< std::vector< double > > DevPosition( const int & window ) ;
+  std::vector< std::vector< double > > CovPosition( const int & window ) ;
+
+  std::vector< double > MeanData( const int & window, const std::vector< double > & data ) ;
+  std::vector< double > DevData( const int & window, const std::vector< double > & dat ) ;
+  std::vector< double > CovData( const int & window, const std::vector< std::vector<double> > & Data_2 ) ;
 
   }; // Event
 
