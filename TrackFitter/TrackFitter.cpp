@@ -59,11 +59,6 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
    TBranch * pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
    TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
-   TBranch * mu_daughters = recoparticle_tree->GetBranch("r_mu_daughters");
-   TBranch * pi_daughters = recoparticle_tree->GetBranch("r_pi_daughters");
-   TBranch * e_daughters = recoparticle_tree->GetBranch("r_e_daughters");
-   TBranch * p_daughters = recoparticle_tree->GetBranch("r_p_daughters");
-   TBranch * other_daughters = recoparticle_tree->GetBranch("r_other_daughters");
    TBranch * Length = recoparticle_tree->GetBranch("rLength");
    TBranch * nu_hits = recoparticle_tree->GetBranch("rnu_hits");
    TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
@@ -72,19 +67,20 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
    TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
    TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
-   TBranch * rdQdx_size = recoparticle_tree->GetBranch("rdQdx_size");
    TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
    TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
    TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
+   TBranch * r_track_dQdx = recoparticle_tree->GetBranch("r_track_dQdx");
    TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
 
-   Hit_level track_hit_x, track_hit_y, track_hit_z;
+   Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dQdx;
 
    for( unsigned int i = 0; i < recoparticle_tree->GetEntries(); ++i ){
      _particle_track.clear();
      track_hit_x.clear();
      track_hit_y.clear();
      track_hit_z.clear();
+     track_hit_dQdx.clear();
      _reco_dQdx.clear();
 
      recoparticle_tree->GetEntry(i);
@@ -95,17 +91,16 @@ TrackFitter::TrackFitter( const Track & p_track ){
        track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
        track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
        track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
+       track_hit_dQdx.push_back( r_track_dQdx->GetLeaf("r_track_dQdx")->GetValue(j));
      }
      _particle_track.push_back(track_hit_x);
      _particle_track.push_back(track_hit_y);
      _particle_track.push_back(track_hit_z);
+     _particle_track.push_back(track_hit_dQdx);
 
      _event_tracks.push_back( _particle_track ) ;
 
-     _dQdx_size = recoparticle_tree->GetLeaf("rdQdx_size")->GetValue() ;
-     _event_dQdx_size.push_back( _dQdx_size );
-
-     for( int j = 0; j < _dQdx_size; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
+     for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
      _event_reco_dQdx.push_back( _reco_dQdx ) ;
 
      // HAVE TO FIX THIS:
@@ -149,48 +144,42 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
    TBranch * pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
    TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
-   TBranch * mu_daughters = recoparticle_tree->GetBranch("r_mu_daughters");
-   TBranch * pi_daughters = recoparticle_tree->GetBranch("r_pi_daughters");
-   TBranch * e_daughters = recoparticle_tree->GetBranch("r_e_daughters");
-   TBranch * p_daughters = recoparticle_tree->GetBranch("r_p_daughters");
-   TBranch * other_daughters = recoparticle_tree->GetBranch("r_other_daughters");
    TBranch * Length = recoparticle_tree->GetBranch("rLength");
    TBranch * rnu_hits = recoparticle_tree->GetBranch("rnu_hits");
-   TBranch * rnu_hits_size = recoparticle_tree->GetBranch("rnu_hits_size");
    TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
    TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
    TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
    TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
    TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
    TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
-   TBranch * rdQdx_size = recoparticle_tree->GetBranch("rdQdx_size");
    TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
    TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
    TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
+   TBranch * r_track_dQdx = recoparticle_tree->GetBranch("r_track_dQdx");
    TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
 
-   Hit_level track_hit_x, track_hit_y, track_hit_z;
-   int hits_size ; // number of hits
+   Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dQdx;
    recoparticle_tree->GetEntry( event_id_track -1 );
    _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue(); // number of valid hits!
-   _hits_size = recoparticle_tree->GetLeaf("rnu_hits_size")-> GetValue();
    _particle_track.clear();
    track_hit_x.clear();
    track_hit_y.clear();
    track_hit_z.clear();
+   track_hit_dQdx.clear();
 
    for( int j = 0; j < _hits; ++j ) {
      track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
      track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
      track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
+     track_hit_dQdx.push_back( r_track_dQdx->GetLeaf("r_track_dQdx")->GetValue(j));
    }
 
    _particle_track.push_back(track_hit_x);
    _particle_track.push_back(track_hit_y);
    _particle_track.push_back(track_hit_z);
+   _particle_track.push_back(track_hit_dQdx);
 
-    _dQdx_size = recoparticle_tree->GetLeaf("rdQdx_size")->GetValue( );
-    for( int j = 0; j < _dQdx_size; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
+    for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
     _vertex_position.push_back( _particle_track[0][0] ) ;// AccessVertex( p_track );
     _vertex_position.push_back( _particle_track[1][0] ) ;
     _vertex_position.push_back( _particle_track[2][0] ) ;
@@ -241,7 +230,7 @@ _particle_track[1][0], _particle_track[1][_hits-1], int(_hits/10), // need to de
 _particle_track[2][0], _particle_track[2][_hits-1] );
 
   for( int i = 0; i < _hits; ++i ){
-    h_track-> Fill(_particle_track[0][i], _particle_track[1][i], _particle_track[2][i]);  }
+    h_track-> Fill(_particle_track[0][i], _particle_track[1][i], _particle_track[2][i], _particle_track[3][i]);  }
 
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
@@ -249,7 +238,7 @@ _particle_track[2][0], _particle_track[2][_hits-1] );
   h_track->SetLineColor(2);
   h_track->GetXaxis()->SetTitle("X");
   h_track->GetYaxis()->SetTitle("Y");
-  h_track->GetXaxis()->SetTitle("Z");
+  h_track->GetZaxis()->SetTitle("Z");
   h_track->Draw("hist");
   h_track->Draw("BOX2Z");
   c->SaveAs((path+".root").c_str());
@@ -296,7 +285,7 @@ void TrackFitter::PrintHipotesis( const std::string & path ) {
   h_track->SetLineColor(2);
   h_track->GetXaxis()->SetTitle("X");
   h_track->GetYaxis()->SetTitle("Y");
-  h_track->GetXaxis()->SetTitle("Z");
+  h_track->GetZaxis()->SetTitle("Z");
   h_track->Draw("hist");
   h_track->Draw("BOX2Z");
 
@@ -338,9 +327,9 @@ double TrackFitter::FitToLine( ){
 
 void TrackFitter::PrintdQdx( const std::string & path ) const {
 
-  TH1F * h_dQdx = new TH1F( "h_dQdx", "dQdx", _dQdx_size, 0, _dQdx_size );
-  for ( int i = 0 ; i < _dQdx_size ; ++i ){
-    h_dQdx -> Fill ( i , _reco_dQdx[i] ) ;
+  TH1F * h_dQdx = new TH1F( "h_dQdx", "dQdx", int(_hits), 0, _hits );
+  for ( int i = 0 ; i < _hits ; ++i ){
+    h_dQdx -> Fill ( i ,  _particle_track[3][i] );//_reco_dQdx[i] ) ;//
   }
 
   TCanvas *c = new TCanvas() ;
@@ -574,7 +563,7 @@ std::vector< double > TrackFitter::AngleTrackDistribution( const int & window ) 
   std::vector< double > angle_distribution ;
   std::vector< TVector3 > mean_direction = MeanDirectionData( window ) ;
   TVector3 test1(1, 1, 0);
-  TVector3 test2(1, -1, 0);
+  TVector3 test2(-1, -1, 0);
   for( int i = 0; i < int(_hits) - 1 ; ++i ){
 
   if( mean_direction[i].Angle(mean_direction[i+1]) > 1 ) {
@@ -582,6 +571,6 @@ std::vector< double > TrackFitter::AngleTrackDistribution( const int & window ) 
   }
     angle_distribution.push_back( mean_direction[i].Angle(mean_direction[i+1]) ) ;
   }
-  //std::cout<< " angle test = " << (180/TMath::Pi())*test1.Angle(test2)<<std::endl;
+  std::cout<< " angle test = " << (180/TMath::Pi())*test1.Angle(test2)<<std::endl;
   return angle_distribution;
 }

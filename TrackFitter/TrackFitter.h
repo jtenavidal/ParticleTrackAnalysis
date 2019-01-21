@@ -51,12 +51,12 @@ typedef std::vector< double > Hit_level;
   private :
 
   // Object information
-  int _hits, _hits_size, _dQdx_size ;
+  int _hits ;
   Hit_level _vertex_position, _end_position ;
   std::vector< float > _reco_dQdx ;
   Track _particle_track ;
   // If loading all file
-  std::vector< int > _event_hits, _event_dQdx_size ;
+  std::vector< int > _event_hits ;
   std::vector< std::vector<double> > _event_vertex, _event_end ;
   std::vector< std::vector< float > > _event_reco_dQdx ;
   std::vector< Track > _event_tracks;  // maps event and track
