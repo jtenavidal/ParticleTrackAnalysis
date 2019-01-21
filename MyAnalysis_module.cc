@@ -94,10 +94,9 @@ private:
 
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
-  int r_mu_daughters, r_pi_daughters, r_e_daughters, r_p_daughters, r_n_daughters, r_photon_daughters, r_other_daughters;
   recob::TrackTrajectory primary_trajectory ;
   double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
-  int rnu_hits, rnu_hits_size, rdQdx_size ;
+  int rnu_hits, rdQdx_size ;
 
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength ;
@@ -214,16 +213,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   }
 
   rLength = 0 ;
-  // This reco PID is not good. Should remove soon from analyzer.
-  r_mu_daughters = 0;
-  r_pi_daughters = 0;
-  r_e_daughters = 0;
-  r_p_daughters = 0;
-  r_n_daughters = 0; // expecting non reco 
-  r_photon_daughters = 0; // should not find showers
-  r_other_daughters = 0;
   rnu_hits = 0 ;
-  rnu_hits_size = 0 ;
   rdQdx_size = 0 ;
   r_dQdx_ID.clear() ; // clean individual one
 
@@ -237,31 +227,19 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  // Primary particle is now the first track :
 	  r_pdg_primary = particleMap[ pfparticle->Daughters()[0] ] -> PdgCode() ;
 	  r_nu_daughters = pfparticle->NumDaughters() - 1 ; // substracting the primary from daughters list
-
-	  for( int j = 1 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters 
-	    // should remove soon
-	    if        ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 13   ) { ++ r_mu_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 211  ) { ++ r_pi_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 11   ) { ++ r_e_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 2212 ) { ++ r_p_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 2112 ) { ++ r_n_daughters ;
-	    } else if ( particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() == 22   ) { ++ r_photon_daughters ;
-	    } else                                                                       { ++ r_other_daughters ; }
-
-	  }
-
+	
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-
+	    
 	    if ( findTracks.at( part_id_f ).size()!=0 ){
 	      std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
 	      art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	      art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
 	      art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-
+	      
 	      // Loop over tracks per event
 	      for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-	        if( j == 0 ) { // save for first particle : TRUE VERTEX 
+		if( j == 0 ) { // save for first particle : TRUE VERTEX 
 		  rVertex_x = track_f[n]->Vertex( ).X() ;
 		  rVertex_y = track_f[n]->Vertex( ).Y() ;
 		  rVertex_z = track_f[n]->Vertex( ).Z() ;
@@ -279,12 +257,12 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[n]->ID());
 		
 		//Loop over PID associations 
- 		for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
+		for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
 		  
 		  if( !pid_f[k] ) continue ;
 		  if( !pid_f[k]->PlaneID().isValid) continue ;
 		  if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
-
+		  
 		  //Loop over calo information also in collection plane
 		  for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
 		    if( !cal_f[m] ) continue ;
@@ -303,12 +281,11 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 			r_track_y[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
 			r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
 		      }
-		    rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
-		    rnu_hits_size += hit_f.size() ; // total hits
-
+		      rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
+		      
 		    }// just collection plane 
 		    // calo information is stored in all planes:
-
+		    
 		    for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[m]->dQdx()[l];
 		    for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
 		      for( int t = 0 ; t < rnu_hits ; ++t ){
@@ -317,7 +294,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 			}
 		      }
 		    }
-
+		    
 		    r_Range = cal_f[m]->Range();
 		    rdQdx_size += (cal_f[m]->dQdx()).size();
 		  } //close calo
@@ -329,7 +306,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       }//if primary 
     } //pfparticleHandle
   } //valid handle
-
+  
   // FILL TREES
   event_tree      -> Fill();
   mcparticle_tree -> Fill();
@@ -379,13 +356,6 @@ void TrackID::MyAnalysis::beginJob( )
   // reco information
   r_pdg_primary   = 0 ;
   r_nu_daughters  = 0 ;
-  r_mu_daughters = 0 ;
-  r_pi_daughters = 0 ;
-  r_e_daughters = 0 ;
-  r_p_daughters = 0 ;
-  r_n_daughters = 0 ;
-  r_photon_daughters = 0 ;
-  r_other_daughters = 0 ;
   rVertex_x = -999. ;
   rVertex_y = -999. ;
   rVertex_z = -999. ;
@@ -394,7 +364,6 @@ void TrackID::MyAnalysis::beginJob( )
   rEnd_z = -999. ;
   rLength = -999. ;
   rnu_hits  = 0 ;
-  rnu_hits_size = 0 ;
   r_chi2_mu = -999. ;
   r_chi2_pi = -999. ;
   r_chi2_p  = -999. ;
@@ -441,13 +410,6 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
   recotrack_tree  -> Branch( "r_pdg_primary",       &r_pdg_primary,     "pdg_primary/I");
   recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "nu_daughters/I");
-  recotrack_tree  -> Branch( "r_mu_daughters",      &r_mu_daughters,    "mu_daughters/I");
-  recotrack_tree  -> Branch( "r_pi_daughters",      &r_pi_daughters,    "pi_daughters/I");
-  recotrack_tree  -> Branch( "r_e_daughters",       &r_e_daughters,     "e_daughters/I");
-  recotrack_tree  -> Branch( "r_p_daughters",       &r_p_daughters,     "p_daughters/I");
-  recotrack_tree  -> Branch( "r_n_daughters",       &r_n_daughters,     "n_daughters/I");
-  recotrack_tree  -> Branch( "r_photon_daughters",  &r_photon_daughters,"photon_daughters/I");
-  recotrack_tree  -> Branch( "r_other_daughters",   &r_other_daughters, "others_daughters/I");
   recotrack_tree  -> Branch( "rVertex_x",           &rVertex_x,         "rVertex_x/D");
   recotrack_tree  -> Branch( "rVertex_y",           &rVertex_y,         "rVertex_y/D");
   recotrack_tree  -> Branch( "rVertex_z",           &rVertex_z,         "rVertex_z/D");
@@ -456,7 +418,6 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "rEnd_z",              &rEnd_z,            "rEnd_z/D");
   recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
-  recotrack_tree  -> Branch( "rnu_hits_size",       &rnu_hits_size,     "rnu_hits_size/I");
   recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         "r_chi2_mu/D");
   recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         "r_chi2_pi/D");
   recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          "r_chi2_p/D");
@@ -464,7 +425,6 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      "r_missenergy/D");
   recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   "r_KineticEnergy/D");
   recotrack_tree  -> Branch( "r_Range",             &r_Range,           "r_Range/D");
-  recotrack_tree  -> Branch( "rdQdx_size",          &rdQdx_size,        "rdQdx_size/I");
   recotrack_tree  -> Branch( "r_dQdx",              &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/F").c_str());
   recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
