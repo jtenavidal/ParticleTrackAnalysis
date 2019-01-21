@@ -102,7 +102,7 @@ private:
   double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
   float rLength ;
   float r_dQdx[100000]; // r_track_Q[100000];
-  double r_track_x[100000], r_track_y[100000], r_track_z[100000];
+  double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dQdx[100000];
   std::vector< float > r_dQdx_ID, r_dQdx_total ; // to save it ordered!
   std::vector< std::vector< float >  > r_dQdx_ID_all ; 
   lar_pandora::PFParticleMap particleMap ; 
@@ -284,7 +284,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  if( !pid_f[k] ) continue ;
 		  if( !pid_f[k]->PlaneID().isValid) continue ;
 		  if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
-		  
+
 		  //Loop over calo information also in collection plane
 		  for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
 		    if( !cal_f[m] ) continue ;
@@ -310,6 +310,14 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		    // calo information is stored in all planes:
 
 		    for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[m]->dQdx()[l];
+		    for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
+		      for( int t = 0 ; t < rnu_hits ; ++t ){
+			if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
+			  r_track_dQdx[t] = cal_f[m]->dQdx()[l] ; 
+			}
+		      }
+		    }
+
 		    r_Range = cal_f[m]->Range();
 		    rdQdx_size += (cal_f[m]->dQdx()).size();
 		  } //close calo
@@ -461,8 +469,7 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
-  //  recotrack_tree  -> Branch( "r_track_Q",           &r_track_Q,         ("r_track_Q[" + std::to_string(100000)+"]/F").c_str());
-
+  recotrack_tree  -> Branch( "r_track_dQdx",        &r_track_dQdx,     ("r_track_dQdx[" + std::to_string(100000)+"]/D").c_str());
 
   // Set directories
   event_tree->SetDirectory(0);
