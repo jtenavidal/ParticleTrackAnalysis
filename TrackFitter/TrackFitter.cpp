@@ -74,6 +74,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
 
    Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dQdx;
+   std::vector< double > chi2_mu, chi2_pi, chi2_p, pida ;
 
    for( unsigned int i = 0; i < recoparticle_tree->GetEntries(); ++i ){
      _particle_track.clear();
@@ -105,20 +106,20 @@ TrackFitter::TrackFitter( const Track & p_track ){
        for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
        _event_reco_dQdx.push_back( _reco_dQdx ) ;
 
-       // _event_Tlenght.push_back( MC_Lenght->GetLeaf("fMC_Lenght")->GetValue() ) ;
-       _TPDG_Code_Primary.push_back( PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
-       _Tnu_mu.push_back( Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
-       _Tnu_pi.push_back( Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
-       _Tnu_p.push_back( Daughter_p->GetLeaf("fDaughter_p")->GetValue() ) ;
-       _Tnu_e.push_back( Daughter_e->GetLeaf("fDaughter_e")->GetValue() ) ;
-       _Tnu_n.push_back( Daughter_n->GetLeaf("fDaughter_n")->GetValue() );
-       _Tnu_photon.push_back( Daughter_photon->GetLeaf("fDaughter_photon")->GetValue() );
-       _Tnu_others.push_back( Daughter_other->GetLeaf("fDaughter_other")->GetValue() );
-
-     // HAVE TO FIX THIS:
-    // _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
-    // _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
-     // Should add more info ...
+       for( int j = 0; j < nu_daughters->GetLeaf("r_nu_daughters")->GetValue() + 1 ; ++j){ // loop over all particles from track
+         chi2_mu.push_back( r_chi2_mu->GetLeaf("r_chi2_mu")->GetValue(j));
+         chi2_pi.push_back( r_chi2_pi->GetLeaf("r_chi2_pi")->GetValue(j));
+         chi2_p.push_back ( r_chi2_p ->GetLeaf("r_chi2_p")->GetValue(j));
+         pida.push_back   ( r_PIDA   ->GetLeaf("r_PIDA")->GetValue(j));
+       }
+       _event_chi2_mu.push_back(chi2_mu);
+       _event_chi2_pi.push_back(chi2_pi);
+       _event_chi2_p.push_back(chi2_p);
+       _event_PIDA.push_back(pida);
+       // HAVE TO FIX THIS:
+       // _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
+       // _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
+       // Should add more info ...
    } else {
      // seting to zero for empty events
      track_hit_x.push_back ( 0 ) ;
@@ -143,6 +144,30 @@ TrackFitter::TrackFitter( const Track & p_track ){
 
    }
  }
+
+ _TPDG_Code_Primary.clear();
+ _Tnu_mu.clear();
+ _Tnu_pi.clear();
+ _Tnu_p.clear();
+ _Tnu_e.clear();
+ _Tnu_n.clear();
+ _Tnu_photon.clear();
+ _Tnu_others.clear();
+ _nu_daughters.clear();
+
+ for( unsigned int i = 0; i < mcparticle_tree->GetEntries(); ++i ){
+   mcparticle_tree->GetEntry(i);
+   //_event_TLenght.push_back( MC_Lenght->GetLeaf("fMCLength")->GetValue() ) ; // still breaks
+   _TPDG_Code_Primary.push_back( PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
+   _Tnu_mu.push_back( Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
+   _Tnu_pi.push_back( Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
+   _Tnu_p.push_back( Daughter_p->GetLeaf("fDaughter_p")->GetValue() ) ;
+   _Tnu_e.push_back( Daughter_e->GetLeaf("fDaughter_e")->GetValue() ) ;
+   _Tnu_n.push_back( Daughter_n->GetLeaf("fDaughter_n")->GetValue() );
+   _Tnu_photon.push_back( Daughter_photon->GetLeaf("fDaughter_photon")->GetValue() );
+   _Tnu_others.push_back( Daughter_other->GetLeaf("fDaughter_other")->GetValue() );
+  }
+
 }
 
 
@@ -172,6 +197,12 @@ Track TrackFitter::GetTrack( const unsigned int & event_id_track ){
   return _event_tracks[event_id_track-1] ;
 }
 
+void TrackFitter::TruthParticles( unsigned int & event_id_track ){
+  if ( event_id_track == 0 ) event_id_track = 1 ;
+  std::cout<< "Primary particle PDG = " << _TPDG_Code_Primary[ event_id_track-1 ] << std::endl;
+  std::cout<< "#mu = " << _Tnu_mu[event_id_track-1] << " #pi = " << _Tnu_pi[event_id_track-1] << " #p = " << _Tnu_p[event_id_track-1] << " #e = " << _Tnu_e[event_id_track-1]<< " #photon = " << _Tnu_photon[event_id_track-1] << " #others = " << _Tnu_others[event_id_track-1]<< std::endl;
+}
+
 
 /**
 * FUNCTIONS
@@ -199,7 +230,7 @@ _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event
   h_track->Draw("hist");
   h_track->Draw("BOX2Z");
   c->SaveAs((path+".root").c_str());
-  c->Clear();
+//  c->Clear();
 }
 
 void TrackFitter::PrintdQdx( const std::string & path , const unsigned int & event_id_track ) const {
@@ -405,42 +436,42 @@ std::vector< double > TrackFitter::LinearityData( const int & window, const std:
   return corrP_12;
 }
 
-std::vector< TVector3 > TrackFitter::MeanDirectionData( const int & window ){
+std::vector< TVector3 > TrackFitter::MeanDirectionData( const int & window , const unsigned int & event_id_track ){
   // this will only be applied to the track information (x,y,z)
   unsigned int starting_hit , end_hit;
   TVector3 directionI ;
   std::vector< TVector3 > mean_direction ;
-  for( int i = 0; i < int(_hits); ++i ){
+  for( int i = 0; i < int(_event_hits[event_id_track-1]); ++i ){
     if ( i - window < 0 ) {
       starting_hit = 0 ;
       end_hit = i + window ;
-    } else if ( i + window >= int(_hits)) {
+    } else if ( i + window >= int(_event_hits[event_id_track-1])) {
       starting_hit = i - window ;
       end_hit = _hits - 1 ;
-    } else if ( i - window < 0  && i + window >= int(_hits)) {
+    } else if ( i - window < 0  && i + window >= int(_event_hits[event_id_track-1])) {
       starting_hit = 0 ;
-      end_hit = _hits - 1 ;
+      end_hit = _event_hits[event_id_track-1] - 1 ;
     } else {
       starting_hit = i - window ;
       end_hit = i + window ;
     }
-    directionI.SetX( (_particle_track[0][end_hit]-_particle_track[0][starting_hit])/(end_hit-starting_hit) );
-    directionI.SetY( (_particle_track[1][end_hit]-_particle_track[1][starting_hit])/(end_hit-starting_hit) );
-    directionI.SetZ( (_particle_track[2][end_hit]-_particle_track[2][starting_hit])/(end_hit-starting_hit) );
+    directionI.SetX( (_event_tracks[event_id_track-1][0][end_hit]-_event_tracks[event_id_track-1][0][starting_hit])/(end_hit-starting_hit) );
+    directionI.SetY( (_event_tracks[event_id_track-1][1][end_hit]-_event_tracks[event_id_track-1][1][starting_hit])/(end_hit-starting_hit) );
+    directionI.SetZ( (_event_tracks[event_id_track-1][2][end_hit]-_event_tracks[event_id_track-1][2][starting_hit])/(end_hit-starting_hit) );
     mean_direction.push_back( directionI );
   }
   return mean_direction;
 }
 
 
-std::vector< double > TrackFitter::AngleTrackDistribution( const int & window ) {
+std::vector< double > TrackFitter::AngleTrackDistribution( const int & window , const unsigned int & event_id_track ) {
   // this will only be applied to the track information (x,y,z)
   unsigned int starting_hit , end_hit;
   std::vector< double > angle_distribution ;
-  std::vector< TVector3 > mean_direction = MeanDirectionData( window ) ;
+  std::vector< TVector3 > mean_direction = MeanDirectionData( window , event_id_track ) ;
   TVector3 test1(1, 1, 0);
   TVector3 test2(-1, -1, 0);
-  for( int i = 0; i < int(_hits) - 1 ; ++i ){
+  for( int i = 0; i < int(_event_hits[event_id_track-1]) - 1 ; ++i ){
 
   if( mean_direction[i].Angle(mean_direction[i+1]) > 1 ) {
         std::cout<< "i = "<< i << " angle : " << (180/TMath::Pi())*mean_direction[i].Angle(mean_direction[i+1]) << std::endl;
@@ -451,6 +482,56 @@ std::vector< double > TrackFitter::AngleTrackDistribution( const int & window ) 
   return angle_distribution;
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+// Truth information functions :                                             //
+///////////////////////////////////////////////////////////////////////////////
+void TrackFitter::SaveStatisticsTrueEvent( const std::string & path ) {
+/**
+  * -> Badruns muons and pions
+  * -> Muons with Michel e
+  * -> Muons no Michel e
+  * -> Breakdown muons and other particles
+  * -> particle and number of kinks
+  * -> Lenght primary particle
+  * -> Ratio lenght primary / 1-daughter
+  */
+
+  TH1D *h_mu_stat = new TH1D("h_mu_stat", " Muon Statistics: particle hiearchy ", 3, 0, 2 );
+  for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
+    if( _TPDG_Code_Primary[j] != 13 ) continue ;
+    if( _Tnu_e[j] == 0 ) h_mu_stat->Fill(0) ;
+    if( _Tnu_e[j] == 1 ) h_mu_stat->Fill(1) ;
+    if( _Tnu_e[j] > 1 ) h_mu_stat->Fill(2) ;
+  }
+
+  TCanvas *c = new TCanvas();
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+  h_mu_stat->SetLineColor(2);
+  h_mu_stat->GetXaxis()->SetTitle("Number daughter electrons");
+  h_mu_stat->GetYaxis()->SetTitle("%");
+  h_mu_stat->Scale(1/h_mu_stat->GetEntries());
+  h_mu_stat->Draw("hist");
+  c->SaveAs((path+".root").c_str());
+  c->Clear();
+/* HISTOGRAM WIHT NUMBER DAUGHTERS FOR PION> ADD ON TOP BREAKDOWN . FIX TTREE 
+  TH1D *h_pi_stat = new TH1D("h_pi_stat", " Pion Statistics: Number of Daughters ", 3, 0, 2 );
+  for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
+    std::cout<< _TPDG_Code_Primary[j] << std::endl;
+    //if( _TPDG_Code_Primary[j] != 211 ) continue ;
+    if( _Tnu_e[j] == 0 ) h_mu_stat->Fill(0) ;
+    if( _Tnu_e[j] == 1 ) h_mu_stat->Fill(1) ;
+    if( _Tnu_e[j] > 1 ) h_mu_stat->Fill(2) ;
+  }
+  h_pi_stat->GetXaxis()->SetTitle("Number daughters");
+  h_pi_stat->GetYaxis()->SetTitle("%");
+  h_pi_stat->Scale(1/h_mu_stat->GetEntries());
+  h_pi_stat->Draw("hist");
+  c->SaveAs((path+".root").c_str());
+  c->Clear(); */
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // OTHER FUNCTIONS OF MAYBE INTEREST                                         //
