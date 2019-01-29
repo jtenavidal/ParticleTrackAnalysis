@@ -98,7 +98,8 @@ private:
   double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
   int rnu_hits, rdQdx_size ;
 
-  double r_chi2_mu, r_chi2_pi, r_chi2_p, r_PIDA, r_missenergy, r_KineticEnergy, r_Range ;
+  double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
+  double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
   float rLength ;
   float r_dQdx[100000]; // r_track_Q[100000];
   double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dQdx[100000];
@@ -269,12 +270,12 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		    if( !cal_f[m]->PlaneID().isValid) continue ;
 		    if( cal_f[m]->PlaneID().Plane == 2 ) {	    
 		      // save information 
-		      r_chi2_mu = pid_f[k]->Chi2Muon() ;
-		      r_chi2_pi = pid_f[k]->Chi2Pion() ;
-		      r_chi2_p  = pid_f[k]->Chi2Proton() ;
-		      r_PIDA    = pid_f[k]->PIDA();
-		      r_missenergy = pid_f[k]->MissingE();
-		      r_KineticEnergy = cal_f[m]->KineticEnergy();
+		      r_chi2_mu[j] = pid_f[k]->Chi2Muon() ;
+		      r_chi2_pi[j] = pid_f[k]->Chi2Pion() ;
+		      r_chi2_p[j]  = pid_f[k]->Chi2Proton() ;
+		      r_PIDA[j]    = pid_f[k]->PIDA();
+		      r_missenergy[j] = pid_f[k]->MissingE();
+		      r_KineticEnergy[j] = cal_f[m]->KineticEnergy();
 		      
 		      for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
 			r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
@@ -295,7 +296,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		      }
 		    }
 		    
-		    r_Range = cal_f[m]->Range();
+		    r_Range[j] = cal_f[m]->Range();
 		    rdQdx_size += (cal_f[m]->dQdx()).size();
 		  } //close calo
 		} //close pid
@@ -364,15 +365,6 @@ void TrackID::MyAnalysis::beginJob( )
   rEnd_z = -999. ;
   rLength = -999. ;
   rnu_hits  = 0 ;
-  r_chi2_mu = -999. ;
-  r_chi2_pi = -999. ;
-  r_chi2_p  = -999. ;
-  r_PIDA    = -999. ;
-  r_missenergy = -999. ;
-  r_KineticEnergy = -999. ;
-  r_Range = -999. ;
-  r_dQdx_ID_all.clear();
-  r_dQdx_total.clear();
   
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
@@ -402,7 +394,7 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "fDaughter_n",             &fDaughter_n,         "fDaughter_n/I");
   mcparticle_tree -> Branch( "fDaughter_photon",        &fDaughter_photon,    "fDaughter_photon/I");
   mcparticle_tree -> Branch( "fDaughter_other",         &fDaughter_other,     "fDaughter_other/I");
-  mcparticle_tree -> Branch( "fMC_Length",              &fMCLength,           "fLength/D");
+  mcparticle_tree -> Branch( "fMC_Length",              &fMCLength,           "fMCLength/D");
 
  /**
      RECONSTRUCTED PARTICLE TREE BRANCHES :
@@ -418,18 +410,18 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "rEnd_z",              &rEnd_z,            "rEnd_z/D");
   recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
-  recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         "r_chi2_mu/D");
-  recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         "r_chi2_pi/D");
-  recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          "r_chi2_p/D");
-  recotrack_tree  -> Branch( "r_PIDA",              &r_PIDA,            "r_PIDA/D");
-  recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      "r_missenergy/D");
-  recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   "r_KineticEnergy/D");
-  recotrack_tree  -> Branch( "r_Range",             &r_Range,           "r_Range/D");
+  recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         ("r_chi2_mu[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         ("r_chi2_pi[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          ("r_chi2_p[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_PIDA",              &r_PIDA,            ("r_PIDA[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      ("r_missenergy[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   ("r_KineticEnergy[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_Range",             &r_Range,           ("r_Range[" + std::to_string(10)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_dQdx",              &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/F").c_str());
   recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_dQdx",        &r_track_dQdx,     ("r_track_dQdx[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_dQdx",        &r_track_dQdx,      ("r_track_dQdx[" + std::to_string(100000)+"]/D").c_str());
 
   // Set directories
   event_tree->SetDirectory(0);
