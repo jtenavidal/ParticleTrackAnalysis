@@ -36,7 +36,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
    // MC Tree
    TTree * mcparticle_tree   = (TTree*) track_file.Get("mcparticle_tree") ;
    TBranch * mc_event_id = mcparticle_tree->GetBranch("event_id");
-   TBranch * Track_ID = mcparticle_tree->GetBranch("fTrack_ID");
+   TBranch * Track_ID = mcparticle_tree->GetBranch("fTrack_id");
    TBranch * trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
    TBranch * PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
    TBranch * Mass = mcparticle_tree->GetBranch("fMass");
@@ -57,10 +57,10 @@ TrackFitter::TrackFitter( const Track & p_track ){
    // RECO Tree
    TTree * recoparticle_tree   = (TTree*) track_file.Get("recoparticle_tree") ;
    TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
-   TBranch * pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
+   TBranch * r_pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
    TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
    TBranch * Length = recoparticle_tree->GetBranch("rLength");
-   TBranch * nu_hits = recoparticle_tree->GetBranch("rnu_hits");
+   TBranch * rnu_hits = recoparticle_tree->GetBranch("rnu_hits");
    TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
    TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
    TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
@@ -84,110 +84,66 @@ TrackFitter::TrackFitter( const Track & p_track ){
      _reco_dQdx.clear();
 
      recoparticle_tree->GetEntry(i);
-     _hits = nu_hits->GetLeaf("rnu_hits")->GetValue() ;
+     _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue() ;
      _event_hits.push_back( _hits ) ;
 
-     for( int j = 0; j < _hits; ++j ) {
-       track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
-       track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
-       track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
-       track_hit_dQdx.push_back( r_track_dQdx->GetLeaf("r_track_dQdx")->GetValue(j));
-     }
-     _particle_track.push_back(track_hit_x);
-     _particle_track.push_back(track_hit_y);
-     _particle_track.push_back(track_hit_z);
-     _particle_track.push_back(track_hit_dQdx);
+     if ( _hits != 0 ) {
+       _event_RLenght.push_back( Length->GetLeaf("rLength")->GetValue() );
+       for( int j = 0; j < _hits; ++j ) {
+         track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
+         track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
+         track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
+         track_hit_dQdx.push_back( r_track_dQdx->GetLeaf("r_track_dQdx")->GetValue(j));
+       }
+       _particle_track.push_back(track_hit_x);
+       _particle_track.push_back(track_hit_y);
+       _particle_track.push_back(track_hit_z);
+       _particle_track.push_back(track_hit_dQdx);
 
-     _event_tracks.push_back( _particle_track ) ;
+       _event_tracks.push_back( _particle_track ) ;
 
-     for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
-     _event_reco_dQdx.push_back( _reco_dQdx ) ;
+       for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
+       _event_reco_dQdx.push_back( _reco_dQdx ) ;
+
+       // _event_Tlenght.push_back( MC_Lenght->GetLeaf("fMC_Lenght")->GetValue() ) ;
+       _TPDG_Code_Primary.push_back( PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
+       _Tnu_mu.push_back( Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
+       _Tnu_pi.push_back( Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
+       _Tnu_p.push_back( Daughter_p->GetLeaf("fDaughter_p")->GetValue() ) ;
+       _Tnu_e.push_back( Daughter_e->GetLeaf("fDaughter_e")->GetValue() ) ;
+       _Tnu_n.push_back( Daughter_n->GetLeaf("fDaughter_n")->GetValue() );
+       _Tnu_photon.push_back( Daughter_photon->GetLeaf("fDaughter_photon")->GetValue() );
+       _Tnu_others.push_back( Daughter_other->GetLeaf("fDaughter_other")->GetValue() );
 
      // HAVE TO FIX THIS:
     // _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
     // _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
      // Should add more info ...
+   } else {
+     // seting to zero for empty events
+     track_hit_x.push_back ( 0 ) ;
+     track_hit_y.push_back ( 0 ) ;
+     track_hit_z.push_back ( 0 ) ;
+     track_hit_dQdx.push_back( 0 ) ;
+     _particle_track.push_back(track_hit_x) ;
+     _particle_track.push_back(track_hit_y) ;
+     _particle_track.push_back(track_hit_z) ;
+     _particle_track.push_back(track_hit_dQdx) ;
+     _reco_dQdx.push_back( 0 ) ;
+     _TPDG_Code_Primary.push_back( 0 ) ;
+     _Tnu_mu.push_back( 0 ) ;
+     _Tnu_pi.push_back( 0 ) ;
+     _Tnu_p.push_back( 0 ) ;
+     _Tnu_e.push_back( 0 ) ;
+     _Tnu_n.push_back( 0 );
+     _Tnu_photon.push_back( 0 );
+     _Tnu_others.push_back( 0 );
+     _event_tracks.push_back( _particle_track ) ;
+     _event_reco_dQdx.push_back( _reco_dQdx ) ;
 
    }
-
  }
-
-
- TrackFitter::TrackFitter( const std::string & track_file_path, const unsigned int & event_id_track ){
-   TFile track_file( track_file_path.c_str() );
-   // Event Tree
-   TTree * event_tree   = (TTree*) track_file.Get("event_tree") ;
-   TBranch * event_id = event_tree->GetBranch("event_id");
-   // MC Tree
-   TTree * mcparticle_tree   = (TTree*) track_file.Get("mcparticle_tree") ;
-   TBranch * mc_event_id = mcparticle_tree->GetBranch("event_id");
-   TBranch * Track_ID = mcparticle_tree->GetBranch("fTrack_ID");
-   TBranch * trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
-   TBranch * PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
-   TBranch * Mass = mcparticle_tree->GetBranch("fMass");
-   TBranch * Px = mcparticle_tree->GetBranch("fpx");
-   TBranch * Py = mcparticle_tree->GetBranch("fpy");
-   TBranch * Pz = mcparticle_tree->GetBranch("fpz");
-   TBranch * Pt = mcparticle_tree->GetBranch("fpt");
-   TBranch * P = mcparticle_tree->GetBranch("fp");
-   TBranch * Num_Daughters = mcparticle_tree->GetBranch("fNum_Daughters");
-   TBranch * Daughter_mu = mcparticle_tree->GetBranch("fDaughter_mu");
-   TBranch * Daughter_pi = mcparticle_tree->GetBranch("fDaughter_pi");
-   TBranch * Daughter_e = mcparticle_tree->GetBranch("fDaughter_e");
-   TBranch * Daughter_p = mcparticle_tree->GetBranch("fDaughter_p");
-   TBranch * Daughter_n = mcparticle_tree->GetBranch("fDaughter_n");
-   TBranch * Daughter_photon = mcparticle_tree->GetBranch("fDaughter_photon");
-   TBranch * Daughter_other = mcparticle_tree->GetBranch("fDaughter_other");
-   TBranch * MC_Lenght= mcparticle_tree->GetBranch("fMC_Lenght");
-   // RECO Tree
-   TTree * recoparticle_tree   = (TTree*) track_file.Get("recoparticle_tree") ;
-   TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
-   TBranch * pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
-   TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
-   TBranch * Length = recoparticle_tree->GetBranch("rLength");
-   TBranch * rnu_hits = recoparticle_tree->GetBranch("rnu_hits");
-   TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
-   TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
-   TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
-   TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
-   TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
-   TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
-   TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
-   TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
-   TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
-   TBranch * r_track_dQdx = recoparticle_tree->GetBranch("r_track_dQdx");
-   TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
-
-   Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dQdx;
-   recoparticle_tree->GetEntry( event_id_track -1 );
-   _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue(); // number of valid hits!
-   _particle_track.clear();
-   track_hit_x.clear();
-   track_hit_y.clear();
-   track_hit_z.clear();
-   track_hit_dQdx.clear();
-
-   for( int j = 0; j < _hits; ++j ) {
-     track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
-     track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
-     track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
-     track_hit_dQdx.push_back( r_track_dQdx->GetLeaf("r_track_dQdx")->GetValue(j));
-   }
-
-   _particle_track.push_back(track_hit_x);
-   _particle_track.push_back(track_hit_y);
-   _particle_track.push_back(track_hit_z);
-   _particle_track.push_back(track_hit_dQdx);
-
-    for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
-    _vertex_position.push_back( _particle_track[0][0] ) ;// AccessVertex( p_track );
-    _vertex_position.push_back( _particle_track[1][0] ) ;
-    _vertex_position.push_back( _particle_track[2][0] ) ;
-    _end_position.push_back( _particle_track[0][_hits-1] );
-    _end_position.push_back( _particle_track[1][_hits-1] );
-    _end_position.push_back( _particle_track[2][_hits-1] );
-
- }
+}
 
 
 //*/
@@ -196,25 +152,26 @@ TrackFitter::TrackFitter( const Track & p_track ){
 * 1 - Get Properties
 */
 
-unsigned int TrackFitter::GetHits( ){
-  return _hits ;
+unsigned int TrackFitter::GetHits( const unsigned int & event_id_track ){
+  return _event_hits[event_id_track-1] ;
 }
 
-Hit_level TrackFitter::AccessVertex( ) {
-  return _vertex_position ;
+Hit_level TrackFitter::AccessVertex( const unsigned int & event_id_track ) {
+  return _event_tracks[event_id_track-1][0] ;
 }
 
-Hit_level TrackFitter::AccessEnd( ) {
-  return _end_position ;
+Hit_level TrackFitter::AccessEnd( const unsigned int & event_id_track ) {
+  return _event_tracks[event_id_track-1][_event_hits[event_id_track]-1] ;
 }
 
-std::vector< float > TrackFitter::GetdQdx( ){
-  return _reco_dQdx ;
+std::vector< double > TrackFitter::GetdQdx( const unsigned int & event_id_track ){
+  return _event_tracks[event_id_track-1][3];
 }
 
-Track TrackFitter::GetTrack( ){
-  return _particle_track ;
+Track TrackFitter::GetTrack( const unsigned int & event_id_track ){
+  return _event_tracks[event_id_track-1] ;
 }
+
 
 /**
 * FUNCTIONS
@@ -222,15 +179,15 @@ Track TrackFitter::GetTrack( ){
 * 2 - To check or save information
 */
 
-void TrackFitter::SaveTrack( std::string const & path ) const {
+void TrackFitter::SaveTrack( std::string const & path , const unsigned int & event_id_track ) const {
 
-  TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_hits/10),
- _particle_track[0][0], _particle_track[0][_hits-1], int(_hits/10),
-_particle_track[1][0], _particle_track[1][_hits-1], int(_hits/10), // need to define number of bins as a function of _hits to avoid bad memory allocation
-_particle_track[2][0], _particle_track[2][_hits-1] );
+  TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_event_hits[event_id_track-1]/10),
+ _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
+_event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10), // need to define number of bins as a function of _hits to avoid bad memory allocation
+_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
 
-  for( int i = 0; i < _hits; ++i ){
-    h_track-> Fill(_particle_track[0][i], _particle_track[1][i], _particle_track[2][i], _particle_track[3][i]);  }
+  for( int i = 0; i < _event_hits[event_id_track-1]; ++i ){
+    h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i], _event_tracks[event_id_track-1][3][i]);  }
 
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
@@ -245,99 +202,95 @@ _particle_track[2][0], _particle_track[2][_hits-1] );
   c->Clear();
 }
 
+void TrackFitter::PrintdQdx( const std::string & path , const unsigned int & event_id_track ) const {
 
-Track TrackFitter::Straight( ) {
-  Track track_hipotesis ;
-  Hit_level v ;
-  double distx, disty, distz ;
-
-  track_hipotesis.reserve(_hits-1);
-  distx = ( _end_position[0] - _vertex_position[0] )/ (_hits-1);
-  disty = ( _end_position[1] - _vertex_position[1] )/ (_hits-1);
-  distz = ( _end_position[2] - _vertex_position[2] )/ (_hits-1);
-
-  for ( int i = 0 ; i < _hits ; ++i ){
-    v.clear();
-    v.push_back( _vertex_position[0]+i*distx );
-    v.push_back( _vertex_position[1]+i*disty );
-    v.push_back( _vertex_position[2]+i*distz );
-    track_hipotesis.push_back(v);
-  }
-  return track_hipotesis ;
-}
-
-
-void TrackFitter::PrintHipotesis( const std::string & path ) {
-  Track track_hipotesis = Straight ( ) ;
-
-  TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_hits/10),
-   _particle_track[0][0], _particle_track[0][_hits-1], int(_hits/10),
-  _particle_track[1][0], _particle_track[1][_hits-1], int(_hits/10),
-  _particle_track[2][0], _particle_track[2][_hits-1] );
-
-  for( int i = 0; i < _hits; ++i ){
-    h_track-> Fill(_particle_track[0][i], _particle_track[1][i], _particle_track[2][i]);
-  }
-
-  TCanvas *c = new TCanvas();
-  gStyle->SetPalette(55);
-  gStyle->SetNumberContours(250);
-  h_track->SetLineColor(2);
-  h_track->GetXaxis()->SetTitle("X");
-  h_track->GetYaxis()->SetTitle("Y");
-  h_track->GetZaxis()->SetTitle("Z");
-  h_track->Draw("hist");
-  h_track->Draw("BOX2Z");
-
-  TH3D *h_hipotesis = new TH3D("h_hipotesis", "Reco hipotesis", int(_hits/10), _vertex_position[0], _end_position[0], int(_hits/10), _vertex_position[1], _end_position[1], int(_hits/10), _vertex_position[2], _end_position[2]);
-
-  for ( unsigned int t_hit = 0 ; t_hit < track_hipotesis.size(); ++t_hit ){
-      h_hipotesis -> Fill( track_hipotesis[t_hit][0], track_hipotesis[t_hit][1], track_hipotesis[t_hit][2]);
-  }
-
-  h_hipotesis->Draw("hist SAME ");
-  c->SaveAs( (path+"_hipotesis.root").c_str() ) ;
-  c->Clear();
-}
-
-double TrackFitter::FitToLine( ){
-  /*
-   * This function calculates the distance btw the hipotesis track and the reconstructed points, and returns the
-   * cummulative distance.
-   */
-
-  TVector3 vertex( _vertex_position[0], _vertex_position[1], _vertex_position[2]);
-  TVector3 direction, vertex_P ;
-  std::vector< double > residual ;
-  double residual_total = 0 ;
-  direction.SetX(( _end_position[0] - _vertex_position[0])/ (_hits-1));
-  direction.SetY(( _end_position[1] - _vertex_position[1])/ (_hits-1));
-  direction.SetZ(( _end_position[2] - _vertex_position[2])/ (_hits-1));
-
-  for( int i = 0; i < _hits; ++i ){
-    vertex_P.SetX( _particle_track[0][i] - _vertex_position[0] );
-    vertex_P.SetY( _particle_track[1][i] - _vertex_position[1] );
-    vertex_P.SetZ( _particle_track[2][i] - _vertex_position[2] );
-    residual.push_back((vertex_P.Cross( direction )).Mag()/direction.Mag()); // use this to find possible kinked trakcs: angle btw them?
-    residual_total += residual[i] ;
-  }
-
-  return residual_total/_hits; // returns mean value
-}
-
-void TrackFitter::PrintdQdx( const std::string & path ) const {
-
-  TH1F * h_dQdx = new TH1F( "h_dQdx", "dQdx", int(_hits), 0, _hits );
-  for ( int i = 0 ; i < _hits ; ++i ){
-    h_dQdx -> Fill ( i ,  _particle_track[3][i] );//_reco_dQdx[i] ) ;//
+  TH1F * h_dQdx = new TH1F( "h_dQdx", "dQdx", int(_event_hits[event_id_track-1]), 0, _event_hits[event_id_track-1] );
+  for ( int i = 0 ; i < _event_hits[event_id_track-1] ; ++i ){
+    h_dQdx -> Fill ( i ,  _event_tracks[event_id_track-1][3][i] );//_reco_dQdx[i] ) ;//
   }
 
   TCanvas *c = new TCanvas() ;
-  h_dQdx -> Draw() ;
+  h_dQdx -> Draw("hist") ;
   c->SaveAs( (path+"_dQdx.root").c_str() ) ;
 
 }
 
+
+void TrackFitter::PlotLinearityData( const int & window, const std::string & path , const unsigned int & event_id_track ) {//}, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) {
+  std::vector< double > corrP = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] );//Data_1, Data_2) ;
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP.size(), 0,  corrP.size() );
+  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
+
+  gStyle->SetOptStat(0);
+  h_Linearity->SetLineColor(46);
+  h_Linearity->SetLineWidth(2);
+  h_Linearity->SetLineStyle(1);
+  h_Linearity->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_Linearity , "r", "l") ;
+  gStyle->SetOptStat(0);
+
+  for (unsigned int i = 0 ; i < corrP.size() ; ++i ){
+    h_Linearity -> Fill ( i, corrP[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_Linearity -> Draw("HIST L") ;
+  legend->Draw();
+  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
+
+}
+
+void TrackFitter::PlotLinearityTrack( const int & window, const std::string & path , const unsigned int & event_id_track ) {
+  std::vector< double > corrP_XY = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] ) ;
+  std::vector< double > corrP_XZ = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][2] ) ;
+  std::vector< double > corrP_YZ = LinearityData( window, _event_tracks[event_id_track-1][2], _event_tracks[event_id_track-1][1] ) ;
+
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
+  TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
+  TH1F * h_LinearityXZ = new TH1F( "h_LinearityXZ", "Linearity", corrP_XZ.size(), 0,  corrP_XZ.size() );
+  TH1F * h_LinearityYZ = new TH1F( "h_LinearityYZ", "Linearity", corrP_YZ.size(), 0,  corrP_YZ.size() );
+  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
+
+  gStyle->SetOptStat(0);
+  h_Linearity->SetLineColor(46);
+  h_Linearity->SetLineWidth(2);
+  h_Linearity->SetLineStyle(1);
+  h_Linearity->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_Linearity , "r", "l") ;
+  gStyle->SetOptStat(0);
+  h_LinearityXY->SetLineColor(2);
+  h_LinearityXY->SetLineStyle(6);
+//  h_LinearityXY->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_LinearityXY , "r_{XY}", "l") ;
+  h_LinearityXZ->SetLineColor(3);
+  h_LinearityXZ->SetLineStyle(2);
+  legend->AddEntry( h_LinearityXZ , "r_{XZ}", "l") ;
+  h_LinearityYZ->SetLineColor(4);
+  h_LinearityYZ->SetLineStyle(3);
+  legend->AddEntry( h_LinearityYZ , "r_{YZ}", "l") ;
+
+  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
+    h_LinearityXY -> Fill ( i, corrP_XY[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
+    h_Linearity -> Fill ( i, corrP_XZ[i]*corrP_XY[i]*corrP_YZ[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_XZ.size() ; ++i ){
+    h_LinearityXZ -> Fill ( i, corrP_XZ[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_YZ.size() ; ++i ){
+    h_LinearityYZ -> Fill ( i, corrP_YZ[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_Linearity -> Draw("HIST L") ;
+  h_LinearityXY -> Draw("HIST L SAME") ;
+  h_LinearityXZ -> Draw("HIST L SAME") ;
+  h_LinearityYZ -> Draw("HIST L SAME") ;
+  legend->Draw();
+  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
+
+}
 
 // STATISTICS GENERAL FUNCTIONS
 std::vector< double > TrackFitter::MeanData( const int & window, const std::vector<double> & data ){
@@ -452,83 +405,6 @@ std::vector< double > TrackFitter::LinearityData( const int & window, const std:
   return corrP_12;
 }
 
-void TrackFitter::PlotLinearityData( const int & window, const std::string & path ) {//}, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) {
-  std::vector< double > corrP = LinearityData( window, _particle_track[0], _particle_track[1] );//Data_1, Data_2) ;
-  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP.size(), 0,  corrP.size() );
-  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
-
-  gStyle->SetOptStat(0);
-  h_Linearity->SetLineColor(46);
-  h_Linearity->SetLineWidth(2);
-  h_Linearity->SetLineStyle(1);
-  h_Linearity->GetYaxis()->SetRangeUser(0,1);
-  legend->AddEntry( h_Linearity , "r", "l") ;
-  gStyle->SetOptStat(0);
-
-  for (unsigned int i = 0 ; i < corrP.size() ; ++i ){
-    h_Linearity -> Fill ( i, corrP[i] ) ;
-  }
-
-  TCanvas *c = new TCanvas() ;
-  h_Linearity -> Draw("HIST L") ;
-  legend->Draw();
-  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
-
-}
-
-void TrackFitter::PlotLinearityTrack( const int & window, const std::string & path ) {
-  std::vector< double > corrP_XY = LinearityData( window, _particle_track[0], _particle_track[1] ) ;
-  std::vector< double > corrP_XZ = LinearityData( window, _particle_track[0], _particle_track[2] ) ;
-  std::vector< double > corrP_YZ = LinearityData( window, _particle_track[2], _particle_track[1] ) ;
-
-  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
-  TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
-  TH1F * h_LinearityXZ = new TH1F( "h_LinearityXZ", "Linearity", corrP_XZ.size(), 0,  corrP_XZ.size() );
-  TH1F * h_LinearityYZ = new TH1F( "h_LinearityYZ", "Linearity", corrP_YZ.size(), 0,  corrP_YZ.size() );
-  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
-
-  gStyle->SetOptStat(0);
-  h_Linearity->SetLineColor(46);
-  h_Linearity->SetLineWidth(2);
-  h_Linearity->SetLineStyle(1);
-  h_Linearity->GetYaxis()->SetRangeUser(0,1);
-  legend->AddEntry( h_Linearity , "r", "l") ;
-  gStyle->SetOptStat(0);
-  h_LinearityXY->SetLineColor(2);
-  h_LinearityXY->SetLineStyle(6);
-//  h_LinearityXY->GetYaxis()->SetRangeUser(0,1);
-  legend->AddEntry( h_LinearityXY , "r_{XY}", "l") ;
-  h_LinearityXZ->SetLineColor(3);
-  h_LinearityXZ->SetLineStyle(2);
-  legend->AddEntry( h_LinearityXZ , "r_{XZ}", "l") ;
-  h_LinearityYZ->SetLineColor(4);
-  h_LinearityYZ->SetLineStyle(3);
-  legend->AddEntry( h_LinearityYZ , "r_{YZ}", "l") ;
-
-  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
-    h_LinearityXY -> Fill ( i, corrP_XY[i] ) ;
-  }
-  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
-    h_Linearity -> Fill ( i, corrP_XZ[i]*corrP_XY[i]*corrP_YZ[i] ) ;
-  }
-  for (unsigned int i = 0 ; i < corrP_XZ.size() ; ++i ){
-    h_LinearityXZ -> Fill ( i, corrP_XZ[i] ) ;
-  }
-  for (unsigned int i = 0 ; i < corrP_YZ.size() ; ++i ){
-    h_LinearityYZ -> Fill ( i, corrP_YZ[i] ) ;
-  }
-
-  TCanvas *c = new TCanvas() ;
-  h_Linearity -> Draw("HIST L") ;
-  h_LinearityXY -> Draw("HIST L SAME") ;
-  h_LinearityXZ -> Draw("HIST L SAME") ;
-  h_LinearityYZ -> Draw("HIST L SAME") ;
-  legend->Draw();
-  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
-
-}
-
-
 std::vector< TVector3 > TrackFitter::MeanDirectionData( const int & window ){
   // this will only be applied to the track information (x,y,z)
   unsigned int starting_hit , end_hit;
@@ -574,3 +450,89 @@ std::vector< double > TrackFitter::AngleTrackDistribution( const int & window ) 
   std::cout<< " angle test = " << (180/TMath::Pi())*test1.Angle(test2)<<std::endl;
   return angle_distribution;
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+// OTHER FUNCTIONS OF MAYBE INTEREST                                         //
+///////////////////////////////////////////////////////////////////////////////
+
+
+Track TrackFitter::Straight( const unsigned int & event_id_track ) {
+  Track track_hipotesis ;
+  Hit_level v ;
+  double distx, disty, distz ;
+
+  track_hipotesis.reserve(_hits-1);
+  distx = ( _event_tracks[event_id_track-1][_event_hits[event_id_track]-1][0] - _event_tracks[event_id_track-1][0][0] )/ (_hits-1);
+  disty = ( _event_tracks[event_id_track-1][_event_hits[event_id_track]-1][1] - _event_tracks[event_id_track-1][0][1] )/ (_hits-1);
+  distz = ( _event_tracks[event_id_track-1][_event_hits[event_id_track]-1][2] - _event_tracks[event_id_track-1][0][2] )/ (_hits-1);
+
+  for ( int i = 0 ; i < _event_hits[event_id_track-1] ; ++i ){
+    v.clear();
+    v.push_back( _event_tracks[event_id_track-1][0] [0]+i*distx );
+    v.push_back( _event_tracks[event_id_track-1][0] [1]+i*disty );
+    v.push_back( _event_tracks[event_id_track-1][0] [2]+i*distz );
+    track_hipotesis.push_back(v);
+  }
+  return track_hipotesis ;
+}
+
+/*
+void TrackFitter::PrintHipotesis( const std::string & path , const unsigned int & event_id_track ) {
+  Track track_hipotesis = Straight ( ) ;
+
+  TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_event_hits[event_id_track-1]/10),
+   _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
+  _event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
+  _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
+
+  for( int i = 0; i < _event_hits[event_id_track-1]; ++i ){
+    h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i]);
+  }
+
+  TCanvas *c = new TCanvas();
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+  h_track->SetLineColor(2);
+  h_track->GetXaxis()->SetTitle("X");
+  h_track->GetYaxis()->SetTitle("Y");
+  h_track->GetZaxis()->SetTitle("Z");
+  h_track->Draw("hist");
+  h_track->Draw("BOX2Z");
+// meed to fix from here
+  TH3D *h_hipotesis = new TH3D("h_hipotesis", "Reco hipotesis", int(_event_hits[event_id_track-1]/10), _event_tracks[event_id_track-1][0][0], _end_position[0], int(_hits/10), _event_tracks[event_id_track-1][0][1], _end_position[1], int(_hits/10), _vertex_position[2], _end_position[2]);
+
+  for ( unsigned int t_hit = 0 ; t_hit < track_hipotesis.size(); ++t_hit ){
+      h_hipotesis -> Fill( track_hipotesis[t_hit][0], track_hipotesis[t_hit][1], track_hipotesis[t_hit][2]);
+  }
+
+  h_hipotesis->Draw("hist SAME ");
+  c->SaveAs( (path+"_hipotesis.root").c_str() ) ;
+  c->Clear();
+}
+
+double TrackFitter::FitToLine( ){
+
+  // This function calculates the distance btw the hipotesis track and the reconstructed points, and returns the
+  // cummulative distance.
+
+
+  TVector3 vertex( _vertex_position[0], _vertex_position[1], _vertex_position[2]);
+  TVector3 direction, vertex_P ;
+  std::vector< double > residual ;
+  double residual_total = 0 ;
+  direction.SetX(( _end_position[0] - _vertex_position[0])/ (_hits-1));
+  direction.SetY(( _end_position[1] - _vertex_position[1])/ (_hits-1));
+  direction.SetZ(( _end_position[2] - _vertex_position[2])/ (_hits-1));
+
+  for( int i = 0; i < _hits; ++i ){
+    vertex_P.SetX( _event_tracks[event_id_track-1][0][i] - _vertex_position[0] );
+    vertex_P.SetY( _event_tracks[event_id_track-1][1][i] - _vertex_position[1] );
+    vertex_P.SetZ( _event_tracks[event_id_track-1][2][i] - _vertex_position[2] );
+    residual.push_back((vertex_P.Cross( direction )).Mag()/direction.Mag()); // use this to find possible kinked trakcs: angle btw them?
+    residual_total += residual[i] ;
+  }
+
+  return residual_total/_hits; // returns mean value
+}
+*/
