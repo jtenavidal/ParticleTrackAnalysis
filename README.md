@@ -11,12 +11,6 @@ RooT file containging three trees,
 ### Event Tree contains general information of the event regardless of its nature ( needed ?? )
 
 - [X] event id
-- [ ] mother particle pdg code (particle beam , sanity check )
-- [ ] starting point
-- [ ] End point 
-- [ ] number of particles (including daughter particles) per type 
-- [ ] number of tracks
-- [ ] number of showers 
 
 ### MC Particle tree contains information at the truth level
 - [X] ID
@@ -26,10 +20,16 @@ RooT file containging three trees,
 - [ ] direction -> Can have a TLorenzVector
 - [X] Energy 
 - [ ] Process
+- [X] mother particle pdg code (particle beam , sanity check )
+- [X] starting point
+- [X] End point 
+- [X] number of particles (including daughter particles) per type 
+- [ ] number of tracks
+- [ ] number of showers 
 
 Keep hiearchy information : possible at this level?
 - [X] NumberDaughters() {int type}
-- [ ] Daughter( ) {int type}
+- [X] Daughter( ) {int type}
 
 True hit level information
 - [X] simb::MCTrajectory Trajectory -> Positioning and energy available
@@ -46,7 +46,7 @@ True hit level information
 - [X] Hit information: number of hits, hit_tpc [],  hit_plane
 - [X] Precise hit information: 3D track reconstructed ( position, time and calorimetry ): TrajectoryPoint( i )
 - [X] Keep hiearchy information: number and pdg of particles stored
-- [ ] Need plots to further understand this: Chi2 plots?, dEdx, dQdx
+- [X] Need plots to further understand this: Chi2, dQdx
 
 
 # TrackFitter Class
