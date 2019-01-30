@@ -386,7 +386,7 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "fpz",                     &fpz,                 "fpz/F");
   mcparticle_tree -> Branch( "fpt",                     &fpt,                 "fpt/F");
   mcparticle_tree -> Branch( "fp",                      &fp,                  "fp/F");
-  mcparticle_tree -> Branch( "fNum_Daughters",          &fNumDaughters,       "fnum_d/I");
+  mcparticle_tree -> Branch( "fNum_Daughters",          &fNumDaughters,       "fNumDaughters/I");
   mcparticle_tree -> Branch( "fDaughter_mu",            &fDaughter_mu,        "fDaughter_mu/I");
   mcparticle_tree -> Branch( "fDaughter_pi",            &fDaughter_pi,        "fDaughter_pi/I");
   mcparticle_tree -> Branch( "fDaughter_e",             &fDaughter_e,         "fDaughter_e/I");
