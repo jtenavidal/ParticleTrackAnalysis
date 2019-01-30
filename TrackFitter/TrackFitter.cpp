@@ -3,6 +3,7 @@
 #include <string>
 #include "TH1.h"
 #include "TH3D.h"
+#include "THStack.h"
 #include "TCanvas.h"
 #include "TLegend.h"
 #include "TLatex.h"
@@ -45,7 +46,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * Pz = mcparticle_tree->GetBranch("fpz");
    TBranch * Pt = mcparticle_tree->GetBranch("fpt");
    TBranch * P = mcparticle_tree->GetBranch("fp");
-   TBranch * Num_Daughters = mcparticle_tree->GetBranch("fNum_Daughters");
+   TBranch * Num_Daughters = mcparticle_tree->GetBranch("fNumDaughters");
    TBranch * Daughter_mu = mcparticle_tree->GetBranch("fDaughter_mu");
    TBranch * Daughter_pi = mcparticle_tree->GetBranch("fDaughter_pi");
    TBranch * Daughter_e = mcparticle_tree->GetBranch("fDaughter_e");
@@ -105,7 +106,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
 
        for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
        _event_reco_dQdx.push_back( _reco_dQdx ) ;
-
+       _rnu_daughters.push_back( nu_daughters->GetLeaf("r_nu_daughters")->GetValue() ) ;
        for( int j = 0; j < nu_daughters->GetLeaf("r_nu_daughters")->GetValue() + 1 ; ++j){ // loop over all particles from track
          chi2_mu.push_back( r_chi2_mu->GetLeaf("r_chi2_mu")->GetValue(j));
          chi2_pi.push_back( r_chi2_pi->GetLeaf("r_chi2_pi")->GetValue(j));
@@ -153,11 +154,12 @@ TrackFitter::TrackFitter( const Track & p_track ){
  _Tnu_n.clear();
  _Tnu_photon.clear();
  _Tnu_others.clear();
- _nu_daughters.clear();
+ _Tnu_daughters.clear();
 
  for( unsigned int i = 0; i < mcparticle_tree->GetEntries(); ++i ){
    mcparticle_tree->GetEntry(i);
    //_event_TLenght.push_back( MC_Lenght->GetLeaf("fMCLength")->GetValue() ) ; // still breaks
+   _Tnu_daughters.push_back(Num_Daughters->GetLeaf("fNumDaughters")->GetValue());
    _TPDG_Code_Primary.push_back( PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
    _Tnu_mu.push_back( Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
    _Tnu_pi.push_back( Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
@@ -210,12 +212,21 @@ void TrackFitter::TruthParticles( unsigned int & event_id_track ){
 * 2 - To check or save information
 */
 
-void TrackFitter::SaveTrack( std::string const & path , const unsigned int & event_id_track ) const {
-
+void TrackFitter::SaveTrack( std::string const & path , const unsigned int & event_id_track ) {
+  std::vector< std::vector< double > > min_Linearity_position = FindMinimumLinearityPosition( 15, event_id_track ) ;
   TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_event_hits[event_id_track-1]/10),
  _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
 _event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10), // need to define number of bins as a function of _hits to avoid bad memory allocation
 _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
+
+//  TH3D *h_track_kink = (TH3D * ) h_track ->Clone();
+//  h_track_kink->SetName("h_track_kink") ;
+  TH3D *h_track_kink = new TH3D("h_track_kink", " Particle Track Kink position", int(_event_hits[event_id_track-1]/10),
+_event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
+_event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
+_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
+
+  TLegend *leg = new TLegend(0.9,0.7,0.48,0.9);
 
   for( int i = 0; i < _event_hits[event_id_track-1]; ++i ){
     h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i], _event_tracks[event_id_track-1][3][i]);  }
@@ -227,8 +238,22 @@ _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event
   h_track->GetXaxis()->SetTitle("X");
   h_track->GetYaxis()->SetTitle("Y");
   h_track->GetZaxis()->SetTitle("Z");
-  h_track->Draw("hist");
+  leg->AddEntry( h_track, " Track 3D trajectory ");
+  //h_track->Draw("hist");
   h_track->Draw("BOX2Z");
+
+  if( min_Linearity_position.size() > 0 ) { // can remove
+    for( unsigned int i = 0 ; i < min_Linearity_position.size() ; ++i ) {
+      h_track_kink -> Fill( min_Linearity_position[i][0], min_Linearity_position[i][1], min_Linearity_position[i][2] ) ;
+    }
+    h_track_kink->SetLineColor(3) ;
+    h_track_kink->SetFillColor(kRed);
+    h_track_kink->SetFillStyle(3004);
+    h_track_kink->Draw("BOX same") ;
+    leg->AddEntry(h_track_kink, "Identified kink/s position" );
+  }
+
+  leg->Draw();
   c->SaveAs((path+".root").c_str());
 //  c->Clear();
 }
@@ -482,6 +507,35 @@ std::vector< double > TrackFitter::AngleTrackDistribution( const int & window , 
   return angle_distribution;
 }
 
+std::vector< std::vector< double > > TrackFitter::FindMinimumLinearityPosition( const int & window, const unsigned int & event_id_track ){
+    std::vector< std::vector< double > > min_Linearity_position ;
+    std::vector< double > position ;
+    std::vector< double > corrP_XY = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] ) ;
+    std::vector< double > corrP_XZ = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][2] ) ;
+    std::vector< double > corrP_YZ = LinearityData( window, _event_tracks[event_id_track-1][2], _event_tracks[event_id_track-1][1] ) ;
+    std::vector< double > corrP ;
+    double linearity_min = 2 ;
+    unsigned int min_hit = 0 ;
+
+    for( unsigned int i = 0 ; i < corrP_XY.size() ; ++i ) {
+        corrP.push_back(corrP_XY[i]*corrP_XZ[i]*corrP_YZ[i] ) ;
+        if( corrP[i] < linearity_min ) {
+          linearity_min = corrP[i] ;
+          min_hit = i ;
+        }
+        if( linearity_min < 0.9 && i == min_hit + int( window / 2 ) && corrP[i] > 0.9 ) {
+          // reseting : looking for other minima
+          position.push_back( _event_tracks[event_id_track-1][0][min_hit] ) ;
+          position.push_back( _event_tracks[event_id_track-1][1][min_hit] ) ;
+          position.push_back( _event_tracks[event_id_track-1][2][min_hit] ) ;
+          min_Linearity_position.push_back( position ) ;
+          position.clear();
+          linearity_min = 2 ;
+        }
+    }
+    return min_Linearity_position;
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Truth information functions :                                             //
@@ -496,40 +550,161 @@ void TrackFitter::SaveStatisticsTrueEvent( const std::string & path ) {
   * -> Lenght primary particle
   * -> Ratio lenght primary / 1-daughter
   */
-
-  TH1D *h_mu_stat = new TH1D("h_mu_stat", " Muon Statistics: particle hiearchy ", 3, 0, 2 );
-  for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
-    if( _TPDG_Code_Primary[j] != 13 ) continue ;
-    if( _Tnu_e[j] == 0 ) h_mu_stat->Fill(0) ;
-    if( _Tnu_e[j] == 1 ) h_mu_stat->Fill(1) ;
-    if( _Tnu_e[j] > 1 ) h_mu_stat->Fill(2) ;
-  }
-
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
   gStyle->SetNumberContours(250);
-  h_mu_stat->SetLineColor(2);
-  h_mu_stat->GetXaxis()->SetTitle("Number daughter electrons");
-  h_mu_stat->GetYaxis()->SetTitle("%");
-  h_mu_stat->Scale(1/h_mu_stat->GetEntries());
-  h_mu_stat->Draw("hist");
-  c->SaveAs((path+".root").c_str());
-  c->Clear();
-/* HISTOGRAM WIHT NUMBER DAUGHTERS FOR PION> ADD ON TOP BREAKDOWN . FIX TTREE 
-  TH1D *h_pi_stat = new TH1D("h_pi_stat", " Pion Statistics: Number of Daughters ", 3, 0, 2 );
-  for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
-    std::cout<< _TPDG_Code_Primary[j] << std::endl;
-    //if( _TPDG_Code_Primary[j] != 211 ) continue ;
-    if( _Tnu_e[j] == 0 ) h_mu_stat->Fill(0) ;
-    if( _Tnu_e[j] == 1 ) h_mu_stat->Fill(1) ;
-    if( _Tnu_e[j] > 1 ) h_mu_stat->Fill(2) ;
+  TLegend *leg = new TLegend(0.9,0.7,0.48,0.9);
+  THStack * h_mu_stats = new THStack( "h_mu_stats", "Muon Statistics" ) ;
+  TH1D *h_mu_rdaughter = new TH1D("h_mu_rdaughter", " Muon Statistics: reconstructed daughters ", 3, 0, 2 );
+  TH1D *h_mu_charged = new TH1D("h_mu_charged", " Muon Statistics: Number of total charged daughters ", 3, 0, 2 );
+  TH1D *h_mu_charged_e = new TH1D("h_mu_charged_e", " Muon Statistics: Number of total e daughters ", 3, 0, 2 );
+  TH1D *h_mu_charged_mu = new TH1D("h_mu_charged_mu", " Muon Statistics: Number of total mu daughters ", 3, 0, 2 );
+  TH1D *h_mu_charged_pi = new TH1D("h_mu_charged_pi", " Muon Statistics: Number of total pi daughters ", 3, 0, 2 );
+  TH1D *h_mu_charged_p = new TH1D("h_mu_charged_p", " Muon Statistics: Number of total p daughters ", 3, 0, 2 );
+
+  for( unsigned int j = 0 ; j < _rnu_daughters.size() ; ++j ){
+    if( _TPDG_Code_Primary[j] != 13 ) continue ;
+    if( _rnu_daughters[j] == 0 ) h_mu_rdaughter->Fill(0) ;
+    if( _rnu_daughters[j] == 1 ) h_mu_rdaughter->Fill(1) ;
+    if( _rnu_daughters[j] > 1 ) h_mu_rdaughter->Fill(2) ; // needs breakdown to understand
   }
-  h_pi_stat->GetXaxis()->SetTitle("Number daughters");
-  h_pi_stat->GetYaxis()->SetTitle("%");
-  h_pi_stat->Scale(1/h_mu_stat->GetEntries());
-  h_pi_stat->Draw("hist");
-  c->SaveAs((path+".root").c_str());
-  c->Clear(); */
+
+  for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
+    if ( _TPDG_Code_Primary[j] != 13 ) continue ;
+    if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 0  & _Tnu_p[j] == 0  ) { h_mu_charged->Fill(0) ;
+    } else if ( _Tnu_pi[j] == 1  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 0  & _Tnu_p[j] == 0  ) { h_mu_charged->Fill(1) ; h_mu_charged_pi->Fill(1) ;
+    } else if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 1  & _Tnu_e[j] == 0  & _Tnu_p[j] == 0  ) { h_mu_charged->Fill(1) ; h_mu_charged_mu->Fill(1) ;
+    } else if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 1  & _Tnu_p[j] == 0  ) { h_mu_charged->Fill(1) ; h_mu_charged_e->Fill(1) ;
+    } else if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 0  & _Tnu_p[j] == 1  ) { h_mu_charged->Fill(1) ; h_mu_charged_p->Fill(1) ;
+    } else { h_mu_charged->Fill(2) ; }
+  }
+
+  h_mu_charged_mu->SetFillColor(kRed);
+  h_mu_charged_pi->SetFillColor(kBlue);
+  h_mu_charged_e->SetFillColor(kGreen);
+  h_mu_charged_p->SetFillColor(kYellow);
+  h_mu_charged_mu->SetFillStyle(3004);
+  h_mu_charged_pi->SetFillStyle(3004);
+  h_mu_charged_e->SetFillStyle(3004);
+  h_mu_charged_p->SetFillStyle(3004);
+  leg->AddEntry(h_mu_charged_mu, "True muon daughters ") ;
+  leg->AddEntry(h_mu_charged_pi, "True pion daughters ") ;
+  leg->AddEntry(h_mu_charged_e, "True electron daughters ") ;
+  leg->AddEntry(h_mu_charged_p, "True proton daughters ") ;
+  h_mu_charged_mu->Scale(1/h_mu_charged->GetEntries());
+  h_mu_charged_pi->Scale(1/h_mu_charged->GetEntries());
+  h_mu_charged_e->Scale(1/h_mu_charged->GetEntries());
+  h_mu_charged_p->Scale(1/h_mu_charged->GetEntries());
+  h_mu_stats->Add(h_mu_charged_mu) ;
+  h_mu_stats->Add(h_mu_charged_pi) ;
+  h_mu_stats->Add(h_mu_charged_e) ;
+  h_mu_stats->Add(h_mu_charged_p) ;
+  h_mu_stats->Draw("hist") ;
+  /////////////////////////////////////////////////////////////////////////////
+  h_mu_rdaughter->SetLineColor(kPink);
+  h_mu_rdaughter->SetLineWidth(2);
+  h_mu_rdaughter->SetFillStyle(3003);
+  h_mu_rdaughter->SetFillColor(kPink);
+  h_mu_rdaughter->GetXaxis()->SetTitle("Number reconstructed particles");
+  h_mu_rdaughter->GetYaxis()->SetTitle("%");
+  h_mu_rdaughter->Scale(1/h_mu_rdaughter->GetEntries());
+  h_mu_rdaughter->GetYaxis()->SetRangeUser(0.,1.);
+  leg->AddEntry(h_mu_rdaughter, "Reconstructed secondary tracks ") ;
+  h_mu_rdaughter->Draw("hist SAME");
+
+  leg->Draw();
+  c->SaveAs((path+"_muon_daughters_study.root").c_str());
+  leg->Clear();
+  c->Clear();
+
+  /*c->Clear();
+
+  TH1D *h_mu_Tdaughter = new TH1D("h_mu_Tdaughter", " Muon Statistics: true daughters ", 3, 0, 2 );
+  for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
+    if( _TPDG_Code_Primary[j] != 13 ) continue ;
+    if( _Tnu_daughters[j] == 0 ) h_mu_Tdaughter->Fill(0) ;
+    if( _Tnu_daughters[j] == 1 ) h_mu_Tdaughter->Fill(1) ;
+    if( _Tnu_daughters[j] > 1 ) h_mu_Tdaughter->Fill(2) ; // needs breakdown to understand
+  }
+
+  h_mu_Tdaughter->SetLineColor(2);
+  h_mu_Tdaughter->GetXaxis()->SetTitle("Number daughter electrons");
+  h_mu_Tdaughter->GetYaxis()->SetTitle("%");
+//  h_mu_Tdaughter->Scale(1/h_mu_Tdaughter->GetEntries());
+  h_mu_Tdaughter->Draw("hist");
+  c->SaveAs((path+"_muon_rdaughter.root").c_str());
+  //  c->Clear();
+
+*/
+  // Histogram length second track
+
+// HISTOGRAM WIHT NUMBER DAUGHTERS FOR PION> ADD ON TOP BREAKDOWN . FIX TTREE
+THStack * h_pi_stats = new THStack( "h_pi_stats", "Muon Statistics" ) ;
+TH1D *h_pi_rdaughter = new TH1D("h_pi_rdaughter", " Muon Statistics: reconstructed daughters ", 3, 0, 2 );
+TH1D *h_pi_charged = new TH1D("h_pi_charged", " Muon Statistics: Number of total charged daughters ", 3, 0, 2 );
+TH1D *h_pi_charged_e = new TH1D("h_pi_charged_e", " Muon Statistics: Number of total e daughters ", 3, 0, 2 );
+TH1D *h_pi_charged_mu = new TH1D("h_pi_charged_mu", " Muon Statistics: Number of total mu daughters ", 3, 0, 2 );
+TH1D *h_pi_charged_pi = new TH1D("h_pi_charged_pi", " Muon Statistics: Number of total pi daughters ", 3, 0, 2 );
+TH1D *h_pi_charged_p = new TH1D("h_pi_charged_p", " Muon Statistics: Number of total p daughters ", 3, 0, 2 );
+
+for( unsigned int j = 0 ; j < _rnu_daughters.size() ; ++j ){
+  if( _TPDG_Code_Primary[j] != 211 ) continue ;
+  if( _rnu_daughters[j] == 0 ) h_pi_rdaughter->Fill(0) ;
+  if( _rnu_daughters[j] == 1 ) h_pi_rdaughter->Fill(1) ;
+  if( _rnu_daughters[j] > 1 ) h_pi_rdaughter->Fill(2) ; // needs breakdown to understand
+}
+
+for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
+  if ( _TPDG_Code_Primary[j] != 211 ) continue ;
+  if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 0  & _Tnu_p[j] == 0  ) { h_pi_charged->Fill(0) ; std::cout<< "CUU" << std::endl;
+  } else if ( _Tnu_pi[j] == 1  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 0  & _Tnu_p[j] == 0  ) { h_pi_charged->Fill(1) ; h_pi_charged_pi->Fill(1) ;
+  } else if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 1  & _Tnu_e[j] == 0  & _Tnu_p[j] == 0  ) { h_pi_charged->Fill(1) ; h_pi_charged_mu->Fill(1) ;
+  } else if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 1  & _Tnu_p[j] == 0  ) { h_pi_charged->Fill(1) ; h_pi_charged_e->Fill(1) ;
+  } else if ( _Tnu_pi[j] == 0  & _Tnu_mu[j] == 0  & _Tnu_e[j] == 0  & _Tnu_p[j] == 1  ) { h_pi_charged->Fill(1) ; h_pi_charged_p->Fill(1) ;
+  } else { h_pi_charged->Fill(2) ; }
+}
+///////////////////////////////////////////////////////////////////////////////
+h_pi_charged->SetLineColor(1);
+leg->AddEntry(h_pi_stats, "Total charged particles") ;
+h_pi_charged->Draw("hist SAME") ;
+/////////////////////////////////////////////////////////////////////////////
+h_pi_charged_mu->SetFillColor(kRed);
+h_pi_charged_pi->SetFillColor(kBlue);
+h_pi_charged_e->SetFillColor(kGreen);
+h_pi_charged_p->SetFillColor(kYellow);
+h_pi_charged_mu->SetFillStyle(3004);
+h_pi_charged_pi->SetFillStyle(3004);
+h_pi_charged_e->SetFillStyle(3004);
+h_pi_charged_p->SetFillStyle(3004);
+leg->AddEntry(h_pi_charged_mu, "True muon daughters ") ;
+leg->AddEntry(h_pi_charged_pi, "True pion daughters ") ;
+leg->AddEntry(h_pi_charged_e, "True electron daughters ") ;
+leg->AddEntry(h_pi_charged_p, "True proton daughters ") ;
+//h_pi_charged_mu->Scale(1/h_pi_charged->GetEntries());
+//  h_pi_charged_pi->Scale(1/h_pi_charged->GetEntries());
+//h_pi_charged_e->Scale(1/h_pi_charged->GetEntries());
+//h_pi_charged_p->Scale(1/h_pi_charged->GetEntries());
+h_pi_stats->Add(h_pi_charged_mu) ;
+h_pi_stats->Add(h_pi_charged_pi) ;
+h_pi_stats->Add(h_pi_charged_e) ;
+h_pi_stats->Add(h_pi_charged_p) ;
+h_pi_stats->Draw("hist SAME") ;
+/////////////////////////////////////////////////////////////////////////////
+h_pi_rdaughter->SetLineColor(kPink);
+h_pi_rdaughter->SetLineWidth(2);
+h_pi_rdaughter->SetFillStyle(3003);
+h_pi_rdaughter->SetFillColor(kPink);
+h_pi_rdaughter->GetXaxis()->SetTitle("Number reconstructed particles");
+h_pi_rdaughter->GetYaxis()->SetTitle("%");
+//h_pi_rdaughter->Scale(1/h_pi_rdaughter->GetEntries());
+//h_pi_rdaughter->GetYaxis()->SetRangeUser(0.,1.);
+leg->AddEntry(h_pi_rdaughter, "Reconstructed secondary tracks ") ;
+h_pi_rdaughter->Draw("hist SAME");
+leg->Draw();
+c->SaveAs((path+"_pion_daughters_study.root").c_str());
+//c->Clear();
+
+
 
 }
 

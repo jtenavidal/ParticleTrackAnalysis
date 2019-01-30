@@ -36,7 +36,7 @@ typedef std::vector< double > Hit_level;
     /**
     * Functions to check and save information
     */
-    void SaveTrack( const std::string & path , const unsigned int & event_id_track ) const ;
+    void SaveTrack( const std::string & path , const unsigned int & event_id_track ) ;
     void PrintdQdx( const std::string & path , const unsigned int & event_id_track ) const ;
     void SaveTrack( const std::string & path ) const ;
     //void PrintHipotesis( const std::string & path , const unsigned int & event_id_track ) const ) ;
@@ -49,11 +49,12 @@ typedef std::vector< double > Hit_level;
     //double FitToLine( ) ;
     std::vector< TVector3 > MeanDirectionData( const int & window , const unsigned int & event_id_track) ;
     std::vector< double > AngleTrackDistribution( const int & window , const unsigned int & event_id_track) ;
+    std::vector< std::vector< double > > FindMinimumLinearityPosition( const int & window, const unsigned int & event_id_track );
 
   private :
   // Object Truth information
   std::vector< double > _event_TLenght ;
-  std::vector< int > _nu_daughters, _TPDG_Code_Primary, _Tnu_mu, _Tnu_pi, _Tnu_p, _Tnu_e, _Tnu_n, _Tnu_photon, _Tnu_others ; // truth information pdg hiearchy
+  std::vector< int > _Tnu_daughters, _TPDG_Code_Primary, _Tnu_mu, _Tnu_pi, _Tnu_p, _Tnu_e, _Tnu_n, _Tnu_photon, _Tnu_others ; // truth information pdg hiearchy
 
   // Object RECO information
   int _hits ;
@@ -62,7 +63,7 @@ typedef std::vector< double > Hit_level;
   std::vector< float > _reco_dQdx ;
   Track _particle_track ;
   // If loading all file
-  std::vector< int > _event_hits ;
+  std::vector< int > _event_hits, _rnu_daughters ;
   std::vector< std::vector<double> > _event_vertex, _event_end, _event_chi2_mu, _event_chi2_pi, _event_chi2_p, _event_PIDA  ;
   std::vector< std::vector< float > > _event_reco_dQdx ;
   std::vector< Track > _event_tracks;  // maps event and track

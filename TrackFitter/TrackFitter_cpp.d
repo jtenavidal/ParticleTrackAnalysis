@@ -94,6 +94,7 @@
 ./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/TH3D.h
 ./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/TH3.h
 ./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/TAtt3D.h
+./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/THStack.h
 ./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/TCanvas.h
 ./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/TPad.h
 ./TrackFitter_cpp.so: /home/jtenavidal/root-6.14.04/obj/include/TVirtualPad.h
