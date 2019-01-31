@@ -132,8 +132,6 @@ TrackID::MyAnalysis::MyAnalysis(fhicl::ParameterSet const & p)
 void TrackID::MyAnalysis::analyze(art::Event const & e)
 {
   event_id = e.id().event();
-  std::cout<< " EVENT ID  = " << event_id << std:: endl;
-  std::cout << " -------------------------------------------------------------------- " << std::endl;
   std::stringstream t_path, r_path ;
   t_path << "Histograms/eid_"<<event_id<<"_truth_track" ;
   r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
@@ -226,26 +224,20 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_dQdx_ID.clear() ; // clean individual one
 
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
-    std::cout << " Pfparticle handle size = " << pfParticleHandle->size() << std::endl;
-    std::cout << " *******************************************************" << std::endl;
     
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-      std::cout<< "Particle Self ID = " << pfparticle -> Self() << " Particle PDG code = " << pfparticle -> PdgCode() << "  Number of daughters = " << pfparticle->NumDaughters() << std::endl; 
 
       if( pfparticle->IsPrimary() == 1 ) { //found primary particle and starting point 
 	if( pfparticle->NumDaughters() > 0 ) {
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-	    
-	    std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
-	    
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
+
 	    if( pfparticle->NumDaughters() > 0 ) {
 	      for( int j2 = 0 ; j2 < pfparticle->NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
 		
 		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
-		  std::cout<< "Particle " << particleMap[ pfparticle->Daughters()[j2] ] -> Self() << " HAS DAUGHTER with ID " << particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] << std::endl;
 		  int id_2daughter = particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] ;
 		  StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter ) ; 
 		}
@@ -272,12 +264,12 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
 	art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-	
+	std::cout<< " hits - " << rnu_hits << std::endl;
+
 	// Loop over tracks per event
 	for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
 	  
 	  rLength   += track_f[n]->Length() ;
-	  std::cout<< " part_id_f = " << part_id_f<< std::endl;
 	  // Get track based variables
 	  std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
 	  std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
@@ -330,17 +322,17 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
       } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
-	std::cout<< " shower size  " << showerHandle->size() << std::endl;
+
 	for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
 	  std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
 	  std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
-	  std::cout<< "shower hits - " << hit_sh_f.size() << std::endl ;
-	  std::cout<< "shower space points- " << spacepoint_f.size() << std::endl ; 
-	  for( unsigned int w = 0 ; w < spacepoint_f.size() ; ++w ) {
-	    std::cout<< "shower space point X - " << spacepoint_f[w]->XYZ()[0] << std::endl ; 
-	  }
-	  std::cout<< " shower begining x = " << shower_f->ShowerStart()[0] << " shower ID = " << shower_f->ID() << std::endl;
+	  for( unsigned int l = 0 ; l < spacepoint_f.size(); ++l ) {
+	      r_track_x[l+rnu_hits] = spacepoint_f[l]->XYZ()[0] ;
+	      r_track_y[l+rnu_hits] = spacepoint_f[l]->XYZ()[1] ;
+	      r_track_z[l+rnu_hits] = spacepoint_f[l]->XYZ()[2] ;
+	    }
+	    rnu_hits   += spacepoint_f.size() + 1 ; // ?: +1 // valid hits
 	}	
       } // track vs shower
 }
