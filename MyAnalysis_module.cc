@@ -72,7 +72,8 @@ public:
   void reconfigure(fhicl::ParameterSet const & p);
   void beginJob() override;
   void endJob() override;
-  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, art::Ptr< recob::PFParticle > & pfparticle , lar_pandora::PFParticleMap & particleMap ) ;
+  //  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, art::Ptr< recob::PFParticle > & pfparticle , lar_pandora::PFParticleMap & particleMap ) ;
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
 
 private:
 
@@ -236,182 +237,33 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       std::cout<< "Particle Self ID = " << pfparticle -> Self() << " Particle PDG code = " << pfparticle -> PdgCode() << "  Number of daughters = " << pfparticle->NumDaughters() << std::endl; 
 
       if( pfparticle->IsPrimary() == 1 ) { //found primary particle and starting point 
-	StoreInformation( e, trackHandle, showerHandle, findTracks, pfparticle , particleMap ) ;
-	
+	if( pfparticle->NumDaughters() > 0 ) {
+	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
+	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+	    
+	    std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
+	    
+	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
+	    if( pfparticle->NumDaughters() > 0 ) {
+	      for( int j2 = 0 ; j2 < pfparticle->NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
+		
+		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) std::cout<< "Particle " << particleMap[ pfparticle->Daughters()[j2] ] -> Self() << " HAS DAUGHTER with ID " << particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] << std::endl;
+	      }
+	    }
+	  }
+	}
 	/*
 	if( pfparticle->NumDaughters() > 0 ) {
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 
 	    std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
-
-	    // Save track info
-	    if ( findTracks.at( part_id_f ).size()!=0 ){
-	      std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
-	      art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
-	      art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
-	      art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-	      
-	      // Loop over tracks per event
-	      for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-
-		if( j == 0 ) { // save for first particle : TRUE VERTEX 
-		  rVertex_x = track_f[n]->Vertex( ).X() ;
-		  rVertex_y = track_f[n]->Vertex( ).Y() ;
-		  rVertex_z = track_f[n]->Vertex( ).Z() ;
-		}
-		if( j == pfparticle->NumDaughters() - 1 ){ // TRUE END 
-		  rEnd_x    = track_f[n]->End( ).X() ;
-		  rEnd_y    = track_f[n]->End( ).Y() ;
-		  rEnd_z    = track_f[n]->End( ).Z() ;
-		}
-		rLength   += track_f[n]->Length() ;
-		
-		// Get track based variables
-		std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
-		std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
-		std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[n]->ID());
-		
-		//Loop over PID associations 
-		for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
-		  
-		  if( !pid_f[k] ) continue ;
-		  if( !pid_f[k]->PlaneID().isValid) continue ;
-		  if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
-		  
-		  //Loop over calo information also in collection plane
-		  for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
-		    if( !cal_f[m] ) continue ;
-		    if( !cal_f[m]->PlaneID().isValid) continue ;
-		    if( cal_f[m]->PlaneID().Plane == 2 ) {	    
-		      // save information 
-		      r_chi2_mu[j] = pid_f[k]->Chi2Muon() ;
-		      r_chi2_pi[j] = pid_f[k]->Chi2Pion() ;
-		      r_chi2_p[j]  = pid_f[k]->Chi2Proton() ;
-		      r_PIDA[j]    = pid_f[k]->PIDA();
-		      r_missenergy[j] = pid_f[k]->MissingE();
-		      r_KineticEnergy[j] = cal_f[m]->KineticEnergy();
-		      
-		      for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
-			r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
-			r_track_y[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
-			r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
-		      }
-		      rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
-		    }// just collection plane 
-
-		    // calo information is stored in all planes:
-		    
-		    for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[m]->dQdx()[l];
-		    for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
-		      for( int t = 0 ; t < rnu_hits ; ++t ){
-			if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
-			  r_track_dQdx[t] = cal_f[m]->dQdx()[l] ; 
-			}
-		      }
-		    }
-		    
-		    r_Range[j] = cal_f[m]->Range();
-		    rdQdx_size += (cal_f[m]->dQdx()).size();
-		  } //close calo
-		} //close pid
-	      } //close track  	  
-	    } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
-	      std::cout<< " shower size  " << showerHandle->size() << std::endl;
-	      for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
-		art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
-		std::cout<< " shower begining x = " << shower_f->ShowerStart()[0] << " shower ID = " << shower_f->ID() << std::endl;
-	      }
-
-	    }
-	    // check if other particles exist
+	    // check if other particles exist 
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) {
 	      std::cout<< "Particle " << particleMap[ pfparticle->Daughters()[j] ] -> Self() << " HAS DAUGHTER with ID " << particleMap[ pfparticle->Daughters()[j] ]->Daughters()[0] << std::endl;
+
+// ---- SHOULD CALL AGAIN FUNCTION IF SO for this particle 
 	      //////////////////////////////////////////////////
-	      for( int j2 = 0 ; j2 < pfparticle->NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
-		part_id_f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[0] ;
-	       
-		// Save track info
-		if ( findTracks.at( part_id_f ).size()!=0 ){
-		  std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
-		  art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
-		  art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
-		  art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-		  
-		  // Loop over tracks per event
-		  for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-		    
-		    if( j2 == 0 ) { // save for first particle : TRUE VERTEX 
-		      rVertex_x = track_f[n]->Vertex( ).X() ;
-		      rVertex_y = track_f[n]->Vertex( ).Y() ;
-		      rVertex_z = track_f[n]->Vertex( ).Z() ;
-		    }
-		    if( j2 == pfparticle->NumDaughters() - 1 ){ // TRUE END 
-		      rEnd_x    = track_f[n]->End( ).X() ;
-		      rEnd_y    = track_f[n]->End( ).Y() ;
-		      rEnd_z    = track_f[n]->End( ).Z() ;
-		    }
-		    rLength   += track_f[n]->Length() ;
-		    
-		    // Get track based variables
-		    std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
-		    std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
-		    std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[n]->ID());
-		    
-		    //Loop over PID associations 
-		    for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
-		      
-		      if( !pid_f[k] ) continue ;
-		      if( !pid_f[k]->PlaneID().isValid) continue ;
-		      if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
-		      
-		      //Loop over calo information also in collection plane
-		      for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
-			if( !cal_f[m] ) continue ;
-			if( !cal_f[m]->PlaneID().isValid) continue ;
-			if( cal_f[m]->PlaneID().Plane == 2 ) {	    
-			  // save information 
-			  r_chi2_mu[j] = pid_f[k]->Chi2Muon() ;
-			  r_chi2_pi[j] = pid_f[k]->Chi2Pion() ;
-			  r_chi2_p[j]  = pid_f[k]->Chi2Proton() ;
-			  r_PIDA[j]    = pid_f[k]->PIDA();
-			  r_missenergy[j] = pid_f[k]->MissingE();
-			  r_KineticEnergy[j] = cal_f[m]->KineticEnergy();
-			  
-			  for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
-			    r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
-			    r_track_y[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
-			    r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
-			  }
-			  rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
-			}// just collection plane 
-			
-			// calo information is stored in all planes:
-			
-			for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[m]->dQdx()[l];
-			for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
-			  for( int t = 0 ; t < rnu_hits ; ++t ){
-			    if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
-			      r_track_dQdx[t] = cal_f[m]->dQdx()[l] ; 
-			    }
-			  }
-			}
-			
-			r_Range[j] = cal_f[m]->Range();
-			rdQdx_size += (cal_f[m]->dQdx()).size();
-		      } //close calo
-		    } //close pid
-		  } //close track  	  
-		} else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
-		  std::cout<< " shower size  " << showerHandle->size() << std::endl;
-		  for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
-		    art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
-		    std::cout<< " shower begining x = " << shower_f->ShowerStart()[0] << " shower ID = " << shower_f->ID() << std::endl;
-		  }
-		  
-		}
- 
-	  } //loop j2 particle daughter
 
 	      /////////////////////////////////////////////////
 	    } // if daughter has daughter ...
@@ -428,12 +280,14 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   
 } // event 
 
-void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, art::Ptr< recob::PFParticle > & pfparticle , lar_pandora::PFParticleMap & particleMap ) {
-  if( pfparticle->NumDaughters() > 0 ) {
-    for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
-      int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
+  
+  //void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, art::Ptr< recob::PFParticle > & pfparticle , lar_pandora::PFParticleMap & particleMap ) {
+  // if( pfparticle->NumDaughters() > 0 ) {
+  //  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
+  //    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
       
-      std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
+  //    std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
       
       // Save track info
       if ( findTracks.at( part_id_f ).size()!=0 ){
@@ -445,7 +299,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	// Loop over tracks per event
 	for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
 	  
-	  if( j == 0 ) { // save for first particle : TRUE VERTEX 
+	  /*	  if( j == 0 ) { // save for first particle : TRUE VERTEX 
 	    rVertex_x = track_f[n]->Vertex( ).X() ;
 	    rVertex_y = track_f[n]->Vertex( ).Y() ;
 	    rVertex_z = track_f[n]->Vertex( ).Z() ;
@@ -454,9 +308,9 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    rEnd_x    = track_f[n]->End( ).X() ;
 	    rEnd_y    = track_f[n]->End( ).Y() ;
 	    rEnd_z    = track_f[n]->End( ).Z() ;
-	  }
+	    }*/ // NOT NEEDED -> will remove 
 	  rLength   += track_f[n]->Length() ;
-	  
+	  std::cout<< " part_id_f = " << part_id_f<< std::endl;
 	  // Get track based variables
 	  std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
 	  std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
@@ -474,13 +328,13 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      if( !cal_f[m] ) continue ;
 	      if( !cal_f[m]->PlaneID().isValid) continue ;
 	      if( cal_f[m]->PlaneID().Plane == 2 ) {	    
-		// save information 
-		r_chi2_mu[j] = pid_f[k]->Chi2Muon() ;
-		r_chi2_pi[j] = pid_f[k]->Chi2Pion() ;
-		r_chi2_p[j]  = pid_f[k]->Chi2Proton() ;
-		r_PIDA[j]    = pid_f[k]->PIDA();
-		r_missenergy[j] = pid_f[k]->MissingE();
-		r_KineticEnergy[j] = cal_f[m]->KineticEnergy();
+		// save information -> Before instead of part_id_f it was j : check if right . 
+		r_chi2_mu[part_id_f] = pid_f[k]->Chi2Muon() ;
+		r_chi2_pi[part_id_f] = pid_f[k]->Chi2Pion() ;
+		r_chi2_p[part_id_f]  = pid_f[k]->Chi2Proton() ;
+		r_PIDA[part_id_f]    = pid_f[k]->PIDA();
+		r_missenergy[part_id_f] = pid_f[k]->MissingE();
+		r_KineticEnergy[part_id_f] = cal_f[m]->KineticEnergy();
 		
 		for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
 		  r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
@@ -501,7 +355,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		}
 	      }
 	      
-	      r_Range[j] = cal_f[m]->Range();
+	      r_Range[part_id_f] = cal_f[m]->Range(); // check 
 	      rdQdx_size += (cal_f[m]->dQdx()).size();
 	    } //close calo
 	  } //close pid
@@ -512,9 +366,9 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
 	  std::cout<< " shower begining x = " << shower_f->ShowerStart()[0] << " shower ID = " << shower_f->ID() << std::endl;
 	}	
-      } // if elseif
-    } // for j 
-  } // if daughters 
+      } // track vs shower
+      // } // for j 
+      // } // if daughters 
 }
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
