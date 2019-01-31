@@ -24,6 +24,7 @@
 #include "lardataobj/RecoBase/Vertex.h"
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/Shower.h"
+#include "lardataobj/RecoBase/SpacePoint.h" 
 #include "lardataobj/AnalysisBase/Calorimetry.h"
 #include "lardataobj/AnalysisBase/ParticleID.h"
 #include "canvas/Persistency/Common/FindManyP.h"
@@ -72,7 +73,6 @@ public:
   void reconfigure(fhicl::ParameterSet const & p);
   void beginJob() override;
   void endJob() override;
-  //  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, art::Ptr< recob::PFParticle > & pfparticle , lar_pandora::PFParticleMap & particleMap ) ;
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
 
 private:
@@ -97,7 +97,6 @@ private:
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
   recob::TrackTrajectory primary_trajectory ;
-  double rVertex_x, rVertex_y, rVertex_z, rEnd_x, rEnd_y, rEnd_z;
   int rnu_hits, rdQdx_size ;
 
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
@@ -215,8 +214,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   
   // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
   art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, m_recotrackLabel );
-  //  art::FindManyP< recob::Shower > findShowers( pfParticleHandle, e, m_recoshowerLabel );
- 
 
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
     art::fill_ptr_vector(pfplist, pfParticleHandle );
@@ -247,28 +244,15 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    if( pfparticle->NumDaughters() > 0 ) {
 	      for( int j2 = 0 ; j2 < pfparticle->NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
 		
-		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) std::cout<< "Particle " << particleMap[ pfparticle->Daughters()[j2] ] -> Self() << " HAS DAUGHTER with ID " << particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] << std::endl;
+		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
+		  std::cout<< "Particle " << particleMap[ pfparticle->Daughters()[j2] ] -> Self() << " HAS DAUGHTER with ID " << particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] << std::endl;
+		  int id_2daughter = particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] ;
+		  StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter ) ; 
+		}
 	      }
 	    }
 	  }
 	}
-	/*
-	if( pfparticle->NumDaughters() > 0 ) {
-	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
-	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-
-	    std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
-	    // check if other particles exist 
-	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) {
-	      std::cout<< "Particle " << particleMap[ pfparticle->Daughters()[j] ] -> Self() << " HAS DAUGHTER with ID " << particleMap[ pfparticle->Daughters()[j] ]->Daughters()[0] << std::endl;
-
-// ---- SHOULD CALL AGAIN FUNCTION IF SO for this particle 
-	      //////////////////////////////////////////////////
-
-	      /////////////////////////////////////////////////
-	    } // if daughter has daughter ...
-	  } //loop j particle daughter
-	  } // if daugthers */
       } // primary 
     } //pfparticleHandle
   } //valid handle
@@ -281,14 +265,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 } // event 
 
 void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
-  
-  //void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, art::Ptr< recob::PFParticle > & pfparticle , lar_pandora::PFParticleMap & particleMap ) {
-  // if( pfparticle->NumDaughters() > 0 ) {
-  //  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
-  //    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-      
-  //    std::cout<< "   --->  Daughter Self ID  " << part_id_f << " PDG CODE =" << particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() << " track size " << findTracks.at( part_id_f ).size() << " Is primary ? " << pfparticle->IsPrimary() <<std::endl;
-      
+        
       // Save track info
       if ( findTracks.at( part_id_f ).size()!=0 ){
 	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
@@ -299,16 +276,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	// Loop over tracks per event
 	for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
 	  
-	  /*	  if( j == 0 ) { // save for first particle : TRUE VERTEX 
-	    rVertex_x = track_f[n]->Vertex( ).X() ;
-	    rVertex_y = track_f[n]->Vertex( ).Y() ;
-	    rVertex_z = track_f[n]->Vertex( ).Z() ;
-	  }
-	  if( j == pfparticle->NumDaughters() - 1 ){ // TRUE END 
-	    rEnd_x    = track_f[n]->End( ).X() ;
-	    rEnd_y    = track_f[n]->End( ).Y() ;
-	    rEnd_z    = track_f[n]->End( ).Z() ;
-	    }*/ // NOT NEEDED -> will remove 
 	  rLength   += track_f[n]->Length() ;
 	  std::cout<< " part_id_f = " << part_id_f<< std::endl;
 	  // Get track based variables
@@ -361,14 +328,21 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  } //close pid
 	} //close track  	  
       } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
+	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
+	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
 	std::cout<< " shower size  " << showerHandle->size() << std::endl;
 	for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
+	  std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
+	  std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+	  std::cout<< "shower hits - " << hit_sh_f.size() << std::endl ;
+	  std::cout<< "shower space points- " << spacepoint_f.size() << std::endl ; 
+	  for( unsigned int w = 0 ; w < spacepoint_f.size() ; ++w ) {
+	    std::cout<< "shower space point X - " << spacepoint_f[w]->XYZ()[0] << std::endl ; 
+	  }
 	  std::cout<< " shower begining x = " << shower_f->ShowerStart()[0] << " shower ID = " << shower_f->ID() << std::endl;
 	}	
       } // track vs shower
-      // } // for j 
-      // } // if daughters 
 }
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
@@ -411,12 +385,6 @@ void TrackID::MyAnalysis::beginJob( )
   // reco information
   r_pdg_primary   = 0 ;
   r_nu_daughters  = 0 ;
-  rVertex_x = -999. ;
-  rVertex_y = -999. ;
-  rVertex_z = -999. ;
-  rEnd_x = -999. ;
-  rEnd_y = -999. ;
-  rEnd_z = -999. ;
   rLength = -999. ;
   rnu_hits  = 0 ;
   
@@ -456,12 +424,6 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
   recotrack_tree  -> Branch( "r_pdg_primary",       &r_pdg_primary,     "r_pdg_primary/I");
   recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "r_nu_daughters/I");
-  recotrack_tree  -> Branch( "rVertex_x",           &rVertex_x,         "rVertex_x/D");
-  recotrack_tree  -> Branch( "rVertex_y",           &rVertex_y,         "rVertex_y/D");
-  recotrack_tree  -> Branch( "rVertex_z",           &rVertex_z,         "rVertex_z/D");
-  recotrack_tree  -> Branch( "rEnd_x",              &rEnd_x,            "rEnd_x/D");
-  recotrack_tree  -> Branch( "rEnd_y",              &rEnd_y,            "rEnd_y/D");
-  recotrack_tree  -> Branch( "rEnd_z",              &rEnd_z,            "rEnd_z/D");
   recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
   recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         ("r_chi2_mu[" + std::to_string(10)+"]/D").c_str());
