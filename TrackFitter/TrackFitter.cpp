@@ -71,10 +71,10 @@ TrackFitter::TrackFitter( const Track & p_track ){
    TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
    TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
    TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
-   TBranch * r_track_dQdx = recoparticle_tree->GetBranch("r_track_dQdx");
-   TBranch * r_dQdx = recoparticle_tree->GetBranch("r_dQdx");
+   TBranch * r_track_dEdx = recoparticle_tree->GetBranch("r_track_dEdx");
+   TBranch * r_dEdx = recoparticle_tree->GetBranch("r_dEdx");
 
-   Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dQdx;
+   Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dEdx;
    std::vector< double > chi2_mu, chi2_pi, chi2_p, pida ;
 
    for( unsigned int i = 0; i < recoparticle_tree->GetEntries(); ++i ){
@@ -82,8 +82,8 @@ TrackFitter::TrackFitter( const Track & p_track ){
      track_hit_x.clear();
      track_hit_y.clear();
      track_hit_z.clear();
-     track_hit_dQdx.clear();
-     _reco_dQdx.clear();
+     track_hit_dEdx.clear();
+     _reco_dEdx.clear();
 
      recoparticle_tree->GetEntry(i);
      _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue() ;
@@ -95,17 +95,17 @@ TrackFitter::TrackFitter( const Track & p_track ){
          track_hit_x.push_back( r_track_x->GetLeaf("r_track_x")->GetValue(j));
          track_hit_y.push_back( r_track_y->GetLeaf("r_track_y")->GetValue(j));
          track_hit_z.push_back( r_track_z->GetLeaf("r_track_z")->GetValue(j));
-         track_hit_dQdx.push_back( r_track_dQdx->GetLeaf("r_track_dQdx")->GetValue(j));
+         track_hit_dEdx.push_back( r_track_dEdx->GetLeaf("r_track_dEdx")->GetValue(j));
        }
        _particle_track.push_back(track_hit_x);
        _particle_track.push_back(track_hit_y);
        _particle_track.push_back(track_hit_z);
-       _particle_track.push_back(track_hit_dQdx);
+       _particle_track.push_back(track_hit_dEdx);
 
        _event_tracks.push_back( _particle_track ) ;
 
-       for( int j = 0; j < _hits; ++j ) _reco_dQdx.push_back( recoparticle_tree->GetLeaf("r_dQdx")->GetValue(j));
-       _event_reco_dQdx.push_back( _reco_dQdx ) ;
+       for( int j = 0; j < _hits; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
+       _event_reco_dEdx.push_back( _reco_dEdx ) ;
        _rnu_daughters.push_back( nu_daughters->GetLeaf("r_nu_daughters")->GetValue() ) ;
        for( int j = 0; j < nu_daughters->GetLeaf("r_nu_daughters")->GetValue() + 1 ; ++j){ // loop over all particles from track
          chi2_mu.push_back( r_chi2_mu->GetLeaf("r_chi2_mu")->GetValue(j));
@@ -117,21 +117,18 @@ TrackFitter::TrackFitter( const Track & p_track ){
        _event_chi2_pi.push_back(chi2_pi);
        _event_chi2_p.push_back(chi2_p);
        _event_PIDA.push_back(pida);
-       // HAVE TO FIX THIS:
-       // _event_vertex.push_back( _event_tracks[i][0] ) ;// AccessVertex( p_track );
-       // _event_end.push_back( _event_tracks[i][_event_hits[i]-1] ) ;//AccessEnd( p_track );
-       // Should add more info ...
+
    } else {
      // seting to zero for empty events
      track_hit_x.push_back ( 0 ) ;
      track_hit_y.push_back ( 0 ) ;
      track_hit_z.push_back ( 0 ) ;
-     track_hit_dQdx.push_back( 0 ) ;
+     track_hit_dEdx.push_back( 0 ) ;
      _particle_track.push_back(track_hit_x) ;
      _particle_track.push_back(track_hit_y) ;
      _particle_track.push_back(track_hit_z) ;
-     _particle_track.push_back(track_hit_dQdx) ;
-     _reco_dQdx.push_back( 0 ) ;
+     _particle_track.push_back(track_hit_dEdx) ;
+     _reco_dEdx.push_back( 0 ) ;
      _TPDG_Code_Primary.push_back( 0 ) ;
      _Tnu_mu.push_back( 0 ) ;
      _Tnu_pi.push_back( 0 ) ;
@@ -141,7 +138,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
      _Tnu_photon.push_back( 0 );
      _Tnu_others.push_back( 0 );
      _event_tracks.push_back( _particle_track ) ;
-     _event_reco_dQdx.push_back( _reco_dQdx ) ;
+     _event_reco_dEdx.push_back( _reco_dEdx ) ;
 
    }
  }
@@ -191,7 +188,7 @@ Hit_level TrackFitter::AccessEnd( const unsigned int & event_id_track ) {
   return _event_tracks[event_id_track-1][_event_hits[event_id_track]-1] ;
 }
 
-std::vector< double > TrackFitter::GetdQdx( const unsigned int & event_id_track ){
+std::vector< double > TrackFitter::GetdEdx( const unsigned int & event_id_track ){
   return _event_tracks[event_id_track-1][3];
 }
 
@@ -213,23 +210,28 @@ void TrackFitter::TruthParticles( unsigned int & event_id_track ){
 */
 
 void TrackFitter::SaveTrack( std::string const & path , const unsigned int & event_id_track ) {
-  std::vector< std::vector< double > > min_Linearity_position = FindMinimumLinearityPosition( 15, event_id_track ) ;
-  TH3D *h_track = new TH3D("h_track", " Particle Track ", int(_event_hits[event_id_track-1]/10),
- _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
-_event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10), // need to define number of bins as a function of _hits to avoid bad memory allocation
-_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
+  std::vector< std::vector< double > > min_Linearity_position = FindMinimumLinearityPosition( event_id_track ) ;
+  int bins = int(_event_hits[event_id_track-1]/10) ;
+  int window =  int( _event_hits[event_id_track-1] * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
 
-//  TH3D *h_track_kink = (TH3D * ) h_track ->Clone();
-//  h_track_kink->SetName("h_track_kink") ;
-  TH3D *h_track_kink = new TH3D("h_track_kink", " Particle Track Kink position", int(_event_hits[event_id_track-1]/10),
+  TH3D *h_track = new TH3D("h_track", " Particle Track ", bins,
+ _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], bins,
+_event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], bins, // need to define number of bins as a function of _hits to avoid bad memory allocation
+_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
+  std::cout<< " x = " << _event_tracks[event_id_track-1][0][0] << " Xf= "<<  _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-2] << " hits " << _event_hits[event_id_track-1] << std::endl;
+  TH3D *h_track_kink = (TH3D * ) h_track ->Clone();
+  h_track_kink->SetName("h_track_kink") ;
+/*  TH3D *h_track_kink = new TH3D("h_track_kink", " Particle Track Kink position", int(_event_hits[event_id_track-1]/10),
 _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
 _event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], int(_event_hits[event_id_track-1]/10),
-_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
+_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );*/
+// ! PROBLEM ! : for whathever reason, root is not preserving the size of the second one.
 
   TLegend *leg = new TLegend(0.9,0.7,0.48,0.9);
 
   for( int i = 0; i < _event_hits[event_id_track-1]; ++i ){
-    h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i], _event_tracks[event_id_track-1][3][i]);  }
+    h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i] ) ; } //, _event_tracks[event_id_track-1][3][i]);  }
 
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
@@ -239,7 +241,6 @@ _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event
   h_track->GetYaxis()->SetTitle("Y");
   h_track->GetZaxis()->SetTitle("Z");
   leg->AddEntry( h_track, " Track 3D trajectory ");
-  //h_track->Draw("hist");
   h_track->Draw("BOX2Z");
 
   if( min_Linearity_position.size() > 0 ) { // can remove
@@ -258,24 +259,27 @@ _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event
 //  c->Clear();
 }
 
-void TrackFitter::PrintdQdx( const std::string & path , const unsigned int & event_id_track ) const {
+void TrackFitter::PrintdEdx( const std::string & path , const unsigned int & event_id_track ) const {
 
-  TH1F * h_dQdx = new TH1F( "h_dQdx", "dQdx", int(_event_hits[event_id_track-1]), 0, _event_hits[event_id_track-1] );
+  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", int(_event_hits[event_id_track-1]), 0, _event_hits[event_id_track-1] );
   for ( int i = 0 ; i < _event_hits[event_id_track-1] ; ++i ){
-    h_dQdx -> Fill ( i ,  _event_tracks[event_id_track-1][3][i] );//_reco_dQdx[i] ) ;//
+    h_dEdx -> Fill ( i ,  _event_tracks[event_id_track-1][3][i] );//_reco_dEdx[i] ) ;//
   }
 
   TCanvas *c = new TCanvas() ;
-  h_dQdx -> Draw("hist") ;
-  c->SaveAs( (path+"_dQdx.root").c_str() ) ;
+  h_dEdx -> Draw("hist") ;
+  c->SaveAs( (path+"_dEdx.root").c_str() ) ;
 
 }
 
 
-void TrackFitter::PlotLinearityData( const int & window, const std::string & path , const unsigned int & event_id_track ) {//}, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) {
-  std::vector< double > corrP = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] );//Data_1, Data_2) ;
+void TrackFitter::PlotLinearityData( const std::string & path , const unsigned int & event_id_track ) {//}, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) {
+  std::vector< double > corrP = LinearityData( _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] );//Data_1, Data_2) ;
   TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP.size(), 0,  corrP.size() );
   TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
+
+  int window =  int( _event_hits[event_id_track-1] * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
 
   gStyle->SetOptStat(0);
   h_Linearity->SetLineColor(46);
@@ -296,10 +300,12 @@ void TrackFitter::PlotLinearityData( const int & window, const std::string & pat
 
 }
 
-void TrackFitter::PlotLinearityTrack( const int & window, const std::string & path , const unsigned int & event_id_track ) {
-  std::vector< double > corrP_XY = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] ) ;
-  std::vector< double > corrP_XZ = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][2] ) ;
-  std::vector< double > corrP_YZ = LinearityData( window, _event_tracks[event_id_track-1][2], _event_tracks[event_id_track-1][1] ) ;
+void TrackFitter::PlotLinearityTrack( const std::string & path , const unsigned int & event_id_track ) {
+  std::vector< double > corrP_XY = LinearityData( _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] ) ;
+  std::vector< double > corrP_XZ = LinearityData( _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][2] ) ;
+  std::vector< double > corrP_YZ = LinearityData( _event_tracks[event_id_track-1][2], _event_tracks[event_id_track-1][1] ) ;
+  int window =  int( _event_hits[event_id_track-1] * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
 
   TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
   TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
@@ -349,10 +355,12 @@ void TrackFitter::PlotLinearityTrack( const int & window, const std::string & pa
 }
 
 // STATISTICS GENERAL FUNCTIONS
-std::vector< double > TrackFitter::MeanData( const int & window, const std::vector<double> & data ){
+std::vector< double > TrackFitter::MeanData( const std::vector<double> & data ){
   unsigned int starting_hit , end_hit;
   double muI_data;
   std::vector< double > mu_data ;
+  int window =  int( data.size() * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
 
   for( int i = 0; i < int(data.size()); ++i ){
     muI_data = 0. ;
@@ -378,11 +386,13 @@ std::vector< double > TrackFitter::MeanData( const int & window, const std::vect
   return mu_data;
 }
 
-std::vector< double > TrackFitter::DevData( const int & window, const std::vector<double> & data ){
+std::vector< double > TrackFitter::DevData( const std::vector<double> & data ){
   unsigned int starting_hit , end_hit;
   double devI_data;
   std::vector< double > dev_data , mean ;
-  mean = MeanData( window, data ) ;
+  int window =  int( data.size() * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
+  mean = MeanData( data ) ;
 
   for( int i = 0; i < int(data.size()); ++i ){
     devI_data = 0. ;
@@ -409,12 +419,15 @@ std::vector< double > TrackFitter::DevData( const int & window, const std::vecto
   return dev_data;
 }
 
-std::vector< double > TrackFitter::CovData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
+std::vector< double > TrackFitter::CovData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
   unsigned int starting_hit , end_hit;
   double covI_12 ; // 1 - variable 1, 2 - second variable
   std::vector< double > cov_12 , mean1, mean2;
-  mean1 = MeanData( window , Data_1 ) ; //variable 1
-  mean2 = MeanData( window , Data_2 ) ; //variable 2
+  mean1 = MeanData( Data_1 ) ; //variable 1
+  mean2 = MeanData( Data_2 ) ; //variable 2
+  int window =  int( Data_1.size() * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
+
 
   if( Data_1.size() == Data_2.size() ) {
     for( int i = 0; i < int(Data_1.size()); ++i ) {
@@ -445,13 +458,16 @@ std::vector< double > TrackFitter::CovData( const int & window, const std::vecto
   return cov_12;
 }
 
-std::vector< double > TrackFitter::LinearityData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
+std::vector< double > TrackFitter::LinearityData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
   // It calculates the linearity from Pearson correlation coefficient (corrP)
   unsigned int starting_hit , end_hit;
   std::vector< double > corrP_12, cov_12, dev1, dev2 ;
-  cov_12 = CovData( window, Data_1, Data_2 ) ;
-  dev1 = DevData( window, Data_1 ) ;
-  dev2 = DevData( window, Data_2 ) ;
+  cov_12 = CovData( Data_1, Data_2 ) ;
+  dev1 = DevData( Data_1 ) ;
+  dev2 = DevData( Data_2 ) ;
+  int window =  int( Data_1.size() * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
+
 
   if ( Data_1.size() == Data_2.size()) {
     for( int i = 0; i < int( Data_1.size() ); ++i ){
@@ -461,11 +477,14 @@ std::vector< double > TrackFitter::LinearityData( const int & window, const std:
   return corrP_12;
 }
 
-std::vector< TVector3 > TrackFitter::MeanDirectionData( const int & window , const unsigned int & event_id_track ){
+std::vector< TVector3 > TrackFitter::MeanDirectionData( const unsigned int & event_id_track ){
   // this will only be applied to the track information (x,y,z)
   unsigned int starting_hit , end_hit;
   TVector3 directionI ;
   std::vector< TVector3 > mean_direction ;
+  int window =  int( _event_hits[event_id_track-1] * 0.05 ) ;
+  if( window < 5 ) window = 5 ;
+
   for( int i = 0; i < int(_event_hits[event_id_track-1]); ++i ){
     if ( i - window < 0 ) {
       starting_hit = 0 ;
@@ -489,11 +508,11 @@ std::vector< TVector3 > TrackFitter::MeanDirectionData( const int & window , con
 }
 
 
-std::vector< double > TrackFitter::AngleTrackDistribution( const int & window , const unsigned int & event_id_track ) {
+std::vector< double > TrackFitter::AngleTrackDistribution( const unsigned int & event_id_track ) {
   // this will only be applied to the track information (x,y,z)
   unsigned int starting_hit , end_hit;
   std::vector< double > angle_distribution ;
-  std::vector< TVector3 > mean_direction = MeanDirectionData( window , event_id_track ) ;
+  std::vector< TVector3 > mean_direction = MeanDirectionData( event_id_track ) ;
   TVector3 test1(1, 1, 0);
   TVector3 test2(-1, -1, 0);
   for( int i = 0; i < int(_event_hits[event_id_track-1]) - 1 ; ++i ){
@@ -507,23 +526,29 @@ std::vector< double > TrackFitter::AngleTrackDistribution( const int & window , 
   return angle_distribution;
 }
 
-std::vector< std::vector< double > > TrackFitter::FindMinimumLinearityPosition( const int & window, const unsigned int & event_id_track ){
+std::vector< std::vector< double > > TrackFitter::FindMinimumLinearityPosition( const unsigned int & event_id_track ){
     std::vector< std::vector< double > > min_Linearity_position ;
     std::vector< double > position ;
-    std::vector< double > corrP_XY = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] ) ;
-    std::vector< double > corrP_XZ = LinearityData( window, _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][2] ) ;
-    std::vector< double > corrP_YZ = LinearityData( window, _event_tracks[event_id_track-1][2], _event_tracks[event_id_track-1][1] ) ;
+    std::vector< double > corrP_XY = LinearityData( _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][1] ) ;
+    std::vector< double > corrP_XZ = LinearityData( _event_tracks[event_id_track-1][0], _event_tracks[event_id_track-1][2] ) ;
+    std::vector< double > corrP_YZ = LinearityData( _event_tracks[event_id_track-1][2], _event_tracks[event_id_track-1][1] ) ;
     std::vector< double > corrP ;
+    int window =  int( _event_hits[event_id_track-1] * 0.05 ) ;
+    if( window < 5 ) window = 5 ;
     double linearity_min = 2 ;
     unsigned int min_hit = 0 ;
 
     for( unsigned int i = 0 ; i < corrP_XY.size() ; ++i ) {
         corrP.push_back(corrP_XY[i]*corrP_XZ[i]*corrP_YZ[i] ) ;
-        if( corrP[i] < linearity_min ) {
-          linearity_min = corrP[i] ;
-          min_hit = i ;
+    }
+
+    for( unsigned int i = 0 ; i < corrP_XY.size() - 1 ; ++i ) {
+        if( corrP[i+1] < corrP[i] && corrP[i] < linearity_min ) {
+          linearity_min = corrP[i+1] ;
+          min_hit = i+1 ;
         }
-        if( linearity_min < 0.9 && i == min_hit + int( window / 2 ) && corrP[i] > 0.9 ) {
+
+        if( linearity_min < 0.9 && i == min_hit + int( window / 2 ) && corrP[i] > corrP[ min_hit ] ) {
           // reseting : looking for other minima
           position.push_back( _event_tracks[event_id_track-1][0][min_hit] ) ;
           position.push_back( _event_tracks[event_id_track-1][1][min_hit] ) ;
@@ -534,9 +559,28 @@ std::vector< std::vector< double > > TrackFitter::FindMinimumLinearityPosition( 
         }
     }
     return min_Linearity_position;
-
 }
 
+void TrackFitter::StatisticsKinks( const unsigned int & event_id_track ){
+  int has_kink = 0 , is_straight = 0 , has_one_kink = 0 , has_more_kinks = 0 ;
+  for ( unsigned int i = 1 ; i < _event_tracks.size() +1 ; ++i ){
+    if ( FindMinimumLinearityPosition( i ).size() > 0 ) {
+      ++has_kink ;
+      if ( FindMinimumLinearityPosition( i ).size() == 1 ) ++has_one_kink ;
+      if ( FindMinimumLinearityPosition( i ).size() > 1 ) {
+          ++has_more_kinks ;
+          std::cout<< " Event ID = " << i << std::endl ;
+        }
+    }
+    else { ++is_straight ; }
+  }
+
+  std::cout<< " % kinked tracks = " << has_kink*100/(has_kink+is_straight) << std::endl;
+  std::cout<< " --->   % 1  kinked tracks = " << has_one_kink*100/has_kink << std::endl;
+  std::cout<< " --->   % >1 kinked tracks = " << has_more_kinks*100/has_kink << std::endl;
+  std::cout<< " % straight tracks = " << is_straight*100/(has_kink+is_straight) << std::endl;
+
+}
 ///////////////////////////////////////////////////////////////////////////////
 // Truth information functions :                                             //
 ///////////////////////////////////////////////////////////////////////////////

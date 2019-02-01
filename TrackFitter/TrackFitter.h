@@ -30,26 +30,26 @@ typedef std::vector< double > Hit_level;
     void TruthParticles( unsigned int & event_id_track ) ;
     Hit_level AccessVertex( const unsigned int & event_id_track ) ;
     Hit_level AccessEnd( const unsigned int & event_id_track ) ;
-    std::vector< double > GetdQdx( const unsigned int & event_id_track ) ;
+    std::vector< double > GetdEdx( const unsigned int & event_id_track ) ;
     Track GetTrack( const unsigned int & event_id_track ) ;
 
     /**
     * Functions to check and save information
     */
     void SaveTrack( const std::string & path , const unsigned int & event_id_track ) ;
-    void PrintdQdx( const std::string & path , const unsigned int & event_id_track ) const ;
+    void PrintdEdx( const std::string & path , const unsigned int & event_id_track ) const ;
     void SaveTrack( const std::string & path ) const ;
     //void PrintHipotesis( const std::string & path , const unsigned int & event_id_track ) const ) ;
-    void PlotLinearityTrack( const int & window, const std::string & path , const unsigned int & event_id_track ) ;
-    void PlotLinearityData( const int & window, const std::string & path , const unsigned int & event_id_track );//, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) ;
+    void PlotLinearityTrack( const std::string & path , const unsigned int & event_id_track ) ;
+    void PlotLinearityData( const std::string & path , const unsigned int & event_id_track );//, const std::vector< double > & Data_1, const std::vector< double > & Data_2  ) ;
     void SaveStatisticsTrueEvent( const std::string & path );
     /**
     * Functions to guess about the geometry of the track
     */
     //double FitToLine( ) ;
-    std::vector< TVector3 > MeanDirectionData( const int & window , const unsigned int & event_id_track) ;
-    std::vector< double > AngleTrackDistribution( const int & window , const unsigned int & event_id_track) ;
-    std::vector< std::vector< double > > FindMinimumLinearityPosition( const int & window, const unsigned int & event_id_track );
+    std::vector< TVector3 > MeanDirectionData( const unsigned int & event_id_track) ;
+    std::vector< double > AngleTrackDistribution( const unsigned int & event_id_track) ;
+    void StatisticsKinks( const unsigned int & event_id_track ) ;
 
   private :
   // Object Truth information
@@ -60,12 +60,12 @@ typedef std::vector< double > Hit_level;
   int _hits ;
   std::vector< double > _event_RLenght ;
   Hit_level _vertex_position, _end_position ;
-  std::vector< float > _reco_dQdx ;
+  std::vector< float > _reco_dEdx ;
   Track _particle_track ;
   // If loading all file
   std::vector< int > _event_hits, _rnu_daughters ;
   std::vector< std::vector<double> > _event_vertex, _event_end, _event_chi2_mu, _event_chi2_pi, _event_chi2_p, _event_PIDA  ;
-  std::vector< std::vector< float > > _event_reco_dQdx ;
+  std::vector< std::vector< float > > _event_reco_dEdx ;
   std::vector< Track > _event_tracks;  // maps event and track
 
   /**
@@ -76,10 +76,11 @@ typedef std::vector< double > Hit_level;
   /**
   * Functions to guess about the geometry of the track
   */
-  std::vector< double > MeanData( const int & window, const std::vector< double > & data ) ;
-  std::vector< double > DevData( const int & window, const std::vector< double > & dat ) ;
-  std::vector< double > CovData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
-  std::vector< double > LinearityData( const int & window, const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
+  std::vector< double > MeanData( const std::vector< double > & data ) ;
+  std::vector< double > DevData( const std::vector< double > & dat ) ;
+  std::vector< double > CovData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
+  std::vector< double > LinearityData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
+  std::vector< std::vector< double > > FindMinimumLinearityPosition( const unsigned int & event_id_track );
 
   }; // Event
 
