@@ -321,7 +321,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
       } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
-
 	for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
 	  std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
