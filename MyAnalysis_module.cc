@@ -97,15 +97,15 @@ private:
   // Reco information
   int r_pdg_primary, r_nu_daughters ;
   recob::TrackTrajectory primary_trajectory ;
-  int rnu_hits, rdQdx_size ;
+  int rnu_hits, rdEdx_size ;
 
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
   double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
   float rLength ;
-  float r_dQdx[100000]; // r_track_Q[100000];
-  double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dQdx[100000];
-  std::vector< float > r_dQdx_ID, r_dQdx_total ; // to save it ordered!
-  std::vector< std::vector< float >  > r_dQdx_ID_all ; 
+  float r_dEdx[100000]; // r_track_Q[100000];
+  double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
+  std::vector< float > r_dEdx_ID, r_dEdx_total ; // to save it ordered!
+  std::vector< std::vector< float >  > r_dEdx_ID_all ; 
   lar_pandora::PFParticleMap particleMap ; 
   
 };
@@ -138,6 +138,14 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
 
+  for ( int i = 0 ; i < 100000 ; ++i ){
+    r_dEdx[i] = 0 ;
+    r_track_x[i] = 0 ;
+    r_track_y[i] = 0 ; 
+    r_track_z[i] = 0 ; 
+    r_track_dEdx[i] = 0 ;
+  }
+  
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -212,7 +220,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   
   // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
   art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, m_recotrackLabel );
-
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
     art::fill_ptr_vector(pfplist, pfParticleHandle );
     lar_pandora::LArPandoraHelper::BuildPFParticleMap( pfplist, particleMap );
@@ -220,8 +227,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
   rLength = 0 ;
   rnu_hits = 0 ;
-  rdQdx_size = 0 ;
-  r_dQdx_ID.clear() ; // clean individual one
+  rdEdx_size = 0 ;
+  r_dEdx_ID.clear() ; // clean individual one
 
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
     
@@ -304,17 +311,17 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      
 	      // calo information is stored in all planes:
 	      
-	      for( unsigned int l = 0 ; l < (cal_f[m]->dQdx()).size() ; ++l ) r_dQdx[l+rdQdx_size] = cal_f[m]->dQdx()[l];
+	      for( unsigned int l = 0 ; l < (cal_f[m]->dEdx()).size() ; ++l ) r_dEdx[l+rdEdx_size] = cal_f[m]->dEdx()[l];
 	      for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
 		for( int t = 0 ; t < rnu_hits ; ++t ){
 		  if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
-		    r_track_dQdx[t] = cal_f[m]->dQdx()[l] ; 
+		    r_track_dEdx[t] = cal_f[m]->dEdx()[l] ; 
 		  }
 		}
 	      }
 	      
 	      r_Range[part_id_f] = cal_f[m]->Range(); // check 
-	      rdQdx_size += (cal_f[m]->dQdx()).size();
+	      rdEdx_size += (cal_f[m]->dEdx()).size();
 	    } //close calo
 	  } //close pid
 	} //close track  	  
@@ -325,11 +332,15 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
 	  std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
 	  std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
-	  for( unsigned int l = 0 ; l < spacepoint_f.size(); ++l ) {
+	  for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
 	      r_track_x[l+rnu_hits] = spacepoint_f[l]->XYZ()[0] ;
 	      r_track_y[l+rnu_hits] = spacepoint_f[l]->XYZ()[1] ;
 	      r_track_z[l+rnu_hits] = spacepoint_f[l]->XYZ()[2] ;
-	    }
+	  }
+	  /*	  for( unsigned int l = 0 ; l< shower_f->dEdx().size() ; ++l ){
+	    r_track_dEdx[l+rnu_hits] = shower_f->dEdx()[l] ;
+	    std::cout<< " l + rnuhits " << l+rnu_hits << " dedx = " <<  r_track_dEdx[l] << " shower " << "space point size = " << spacepoint_f.size() << " dedx size " << shower_f->dEdx().size() << std::endl;
+	    }*/
 	    rnu_hits   += spacepoint_f.size() ;
 	}	
       } // track vs shower
@@ -423,11 +434,11 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      ("r_missenergy[" + std::to_string(10)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   ("r_KineticEnergy[" + std::to_string(10)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_Range",             &r_Range,           ("r_Range[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_dQdx",              &r_dQdx,            ("r_dQdx[" + std::to_string(100000)+"]/F").c_str());
+  recotrack_tree  -> Branch( "r_dEdx",              &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/F").c_str());
   recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_dQdx",        &r_track_dQdx,      ("r_track_dQdx[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_dEdx",        &r_track_dEdx,      ("r_track_dEdx[" + std::to_string(100000)+"]/D").c_str());
 
   // Set directories
   event_tree->SetDirectory(0);
