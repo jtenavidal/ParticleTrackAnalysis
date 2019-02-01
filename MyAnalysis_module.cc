@@ -264,7 +264,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
 	art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
-	std::cout<< " hits - " << rnu_hits << std::endl;
 
 	// Loop over tracks per event
 	for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
@@ -332,7 +331,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      r_track_y[l+rnu_hits] = spacepoint_f[l]->XYZ()[1] ;
 	      r_track_z[l+rnu_hits] = spacepoint_f[l]->XYZ()[2] ;
 	    }
-	    rnu_hits   += spacepoint_f.size() + 1 ; // ?: +1 // valid hits
+	    rnu_hits   += spacepoint_f.size() ;
 	}	
       } // track vs shower
 }
