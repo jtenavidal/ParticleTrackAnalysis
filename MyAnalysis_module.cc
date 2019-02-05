@@ -112,7 +112,7 @@ private:
   // -> Breakdown particles in event from Pandora
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
-  double pfps_direction_x[1000] , pfps_direction_y[1000] , pfps_direction_z[1000] , pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
+  double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
   lar_pandora::PFParticleMap particleMap ; 
   
 };
@@ -239,6 +239,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  has_reco_daughters = true ;
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+	    pfps_type[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
 
 	    if( pfparticle->NumDaughters() > 0 ) {
@@ -307,15 +308,23 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		  r_track_y[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
 		  r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
 		}
+
 		rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
 		pfps_hits[part_id_f] = track_f[n]->LastValidPoint() + 1 ;
 		pfps_length[part_id_f] = track_f[n]->Length() ;
+		pfps_dir_start_x[part_id_f] = track_f[n]->StartDirection().X() ;
+		pfps_dir_start_y[part_id_f] = track_f[n]->StartDirection().Y() ;
+		pfps_dir_start_z[part_id_f] = track_f[n]->StartDirection().Z() ;
+		pfps_dir_end_x[part_id_f] = track_f[n]->EndDirection().X() ;
+		pfps_dir_end_y[part_id_f] = track_f[n]->EndDirection().Y() ;
+		pfps_dir_end_z[part_id_f] = track_f[n]->EndDirection().Z() ;
 		pfps_start_x[part_id_f] = track_f[n]->Start().X() ;
 		pfps_start_y[part_id_f] = track_f[n]->Start().Y() ;
 		pfps_start_z[part_id_f] = track_f[n]->Start().Z() ;
 		pfps_end_x[part_id_f] = track_f[n]->End().X() ;
 		pfps_end_y[part_id_f] = track_f[n]->End().Y() ;
 		pfps_end_z[part_id_f] = track_f[n]->End().Z() ;
+
 	      }// just collection plane 
 	      
 	      // calo information is stored in all planes:
@@ -347,10 +356,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      r_track_y[l+rnu_hits] = spacepoint_f[l]->XYZ()[1] ;
 	      r_track_z[l+rnu_hits] = spacepoint_f[l]->XYZ()[2] ;
 	  }
-	  /*	  for( unsigned int l = 0 ; l< shower_f->dEdx().size() ; ++l ){
-	    r_track_dEdx[l+rnu_hits] = shower_f->dEdx()[l] ;
-	    std::cout<< " l + rnuhits " << l+rnu_hits << " dedx = " <<  r_track_dEdx[l] << " shower " << "space point size = " << spacepoint_f.size() << " dedx size " << shower_f->dEdx().size() << std::endl;
-	    }*/
 	    rnu_hits   += spacepoint_f.size() ;
 	}	
       } // track vs shower
@@ -416,9 +421,12 @@ void TrackID::MyAnalysis::beginJob( )
     pfps_hits[i] = 0 ;   
     pfps_type[i] = 0 ;  
     pfps_length[i] = 0 ; 
-    pfps_direction_x[i] = 0 ;
-    pfps_direction_y[i] = 0 ;
-    pfps_direction_z[i] = 0 ;
+    pfps_dir_start_x[i] = 0 ;
+    pfps_dir_start_y[i] = 0 ;
+    pfps_dir_start_z[i] = 0 ;
+    pfps_dir_end_x[i] = 0 ;
+    pfps_dir_end_y[i] = 0 ;
+    pfps_dir_end_z[i] = 0 ;
     pfps_start_x[i] = 0 ;
     pfps_start_y[i] = 0 ;
     pfps_start_z[i] = 0 ;
@@ -484,9 +492,12 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits(" + std::to_string(1000)+")/I").c_str());
   recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type(" + std::to_string(1000)+")/I").c_str());
   recotrack_tree  -> Branch( "pfps_length",         &pfps_length,       ("pfps_length(" + std::to_string(1000)+")/F").c_str());
-  recotrack_tree  -> Branch( "pfps_direction_x",    &pfps_direction_x,  ("pfps_direction_x[" + std::to_string(1000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "pfps_direction_y",    &pfps_direction_y,  ("pfps_direction_y[" + std::to_string(1000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "pfps_direction_z",    &pfps_direction_z,  ("pfps_direction_z[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "pfps_dir_start_x",    &pfps_dir_start_x,  ("pfps_dir_start_x[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "pfps_dir_start_y",    &pfps_dir_start_y,  ("pfps_dir_start_y[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "pfps_dir_start_z",    &pfps_dir_start_z,  ("pfps_dir_start_z[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "pfps_dir_end_x",      &pfps_dir_end_x,    ("pfps_dir_end_x[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "pfps_dir_end_y",      &pfps_dir_end_y,    ("pfps_dir_end_y[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "pfps_dir_end_z",      &pfps_dir_end_z,    ("pfps_dir_end_z[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_start_x",        &pfps_start_x,      ("pfps_start_x["+ std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_start_y",        &pfps_start_y,      ("pfps_start_y["+ std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_start_z",        &pfps_start_z,      ("pfps_start_z["+ std::to_string(1000)+"]/D").c_str());
