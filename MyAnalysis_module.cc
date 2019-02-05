@@ -357,6 +357,17 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      r_track_z[l+rnu_hits] = spacepoint_f[l]->XYZ()[2] ;
 	  }
 	    rnu_hits   += spacepoint_f.size() ;
+	    pfps_hits[part_id_f] = spacepoint_f.size() ;
+	    if( shower_f->has_length() ) pfps_length[part_id_f] = shower_f->Length() ;
+	    pfps_dir_start_x[part_id_f] = shower_f->Direction().X() ;
+	    pfps_dir_start_y[part_id_f] = shower_f->Direction().Y() ;
+	    pfps_dir_start_z[part_id_f] = shower_f->Direction().Z() ;
+	    // No end Direction
+	    pfps_start_x[part_id_f] = shower_f->ShowerStart().X() ;
+	    pfps_start_y[part_id_f] = shower_f->ShowerStart().Y() ;
+	    pfps_start_z[part_id_f] = shower_f->ShowerStart().Z() ;
+	    // no end position
+
 	}	
       } // track vs shower
 }
