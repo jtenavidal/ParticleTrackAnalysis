@@ -74,6 +74,7 @@ public:
   void beginJob() override;
   void endJob() override;
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
+  bool IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
 
 private:
 
@@ -82,12 +83,15 @@ private:
   // Labels
   std::string fTruthLabel, m_particleLabel, m_hitfinderLabel, m_recotrackLabel, m_recoshowerLabel, m_recoPIDLabel, m_recoCaloLabel;
 
+  // Detector information
+  float DetectorHalfLengthX, DetectorHalfLengthY, DetectorHalfLengthZ, CoordinateOffSetX, CoordinateOffSetY, CoordinateOffSetZ, SelectedBorderX, SelectedBorderY, SelectedBorderZ ;
+
   // Tree members
   TTree * event_tree, * mcparticle_tree, * recotrack_tree ; 
   int event_id ; 
 
   // Event tree information
-  bool is_reconstructed, has_reco_daughters, has_reco_tracks, has_reco_showers ; 
+  bool is_reconstructed, has_reco_daughters, has_reco_tracks, has_reco_showers, is_contained ; 
 
   // Truth information
   int fPDG_Code, fTrack_ID, fNumDaughters, fDaughter_mu, fDaughter_pi, fDaughter_e, fDaughter_p, fDaughter_n, fDaughter_photon, fDaughter_other ;
@@ -372,6 +376,50 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
       } // track vs shower
 }
 
+bool TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
+  bool vertex_contained = true , end_contained = true ;
+  
+  if ( findTracks.at( part_id_f ).size()!=0 ){
+    std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
+    art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
+    
+    for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
+      if( ( track_f[part_id_f]->Start().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( track_f[part_id_f]->Start().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( track_f[part_id_f]->Start().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( track_f[part_id_f]->Start().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( track_f[part_id_f]->Start().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( track_f[part_id_f]->Start().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+      if( ( track_f[part_id_f]->End().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( track_f[part_id_f]->End().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( track_f[part_id_f]->End().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( track_f[part_id_f]->End().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( track_f[part_id_f]->End().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( track_f[part_id_f]->End().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+    } //close track  	  
+  } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
+    art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
+    for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
+      art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
+      std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+      if( ( spacepoint_f[0]->XYZ()[0] > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( spacepoint_f[0]->XYZ()[0] < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( spacepoint_f[0]->XYZ()[1] > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( spacepoint_f[0]->XYZ()[1] < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( spacepoint_f[0]->XYZ()[2] > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( spacepoint_f[0]->XYZ()[2] < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+      if( ( spacepoint_f[0]->XYZ()[ spacepoint_f.size()-1 ] > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+    }	
+  } 
+  if ( vertex_contained == true && end_contained == true ) { return true ;} 
+  else return false ;
+}
+
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 {
   // Implementation of required member function here.
@@ -381,14 +429,24 @@ void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 void TrackID::MyAnalysis::beginJob( )
 {
   // Define default for parameters and create variables and trees
-
+  // Detector Geometry
+  DetectorHalfLengthX = 400 ;
+  DetectorHalfLengthY = 400 ;
+  DetectorHalfLengthZ = 500 ;
+  CoordinateOffSetX = 200 ; 
+  CoordinateOffSetY = 200 ; 
+  CoordinateOffSetZ = 0 ; 
+  SelectedBorderX = 10 ;
+  SelectedBorderY = 20 ;
+  SelectedBorderZ = 10 ;
+  
   // Event tree
   event_id = 0 ;
   is_reconstructed   = false ; 
   has_reco_daughters = false ;
   has_reco_tracks    = false ;
   has_reco_showers   = false ; 
-  
+  is_contained       = false ;
   // Truth Information 
   fTrack_ID = -999 ;
   fTrueParticleEnergy = -999. ; 
