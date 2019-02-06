@@ -49,15 +49,19 @@ typedef std::vector< double > Hit_level;
     //double FitToLine( ) ;
     std::vector< TVector3 > MeanDirectionData( const unsigned int & event_id_track) ;
     std::vector< double > AngleTrackDistribution( const unsigned int & event_id_track) ;
-    void StatisticsKinks( const unsigned int & event_id_track ) ;
+    void StatisticsKinks( ) ;
 
   private :
+  // Event tree information
+  std::vector< bool > _is_reconstructed, _has_reco_daughters, _has_reco_tracks, _has_reco_showers ;
+
   // Object Truth information
   std::vector< double > _event_TLenght ;
   std::vector< int > _Tnu_daughters, _TPDG_Code_Primary, _Tnu_mu, _Tnu_pi, _Tnu_p, _Tnu_e, _Tnu_n, _Tnu_photon, _Tnu_others ; // truth information pdg hiearchy
 
   // Object RECO information
   int _hits ;
+  std::vector< bool > _event_primamry_vcontained, _event_primary_econtained ;
   std::vector< double > _event_RLenght ;
   Hit_level _vertex_position, _end_position ;
   std::vector< float > _reco_dEdx ;
@@ -67,6 +71,12 @@ typedef std::vector< double > Hit_level;
   std::vector< std::vector<double> > _event_vertex, _event_end, _event_chi2_mu, _event_chi2_pi, _event_chi2_p, _event_PIDA  ;
   std::vector< std::vector< float > > _event_reco_dEdx ;
   std::vector< Track > _event_tracks;  // maps event and track
+  // Keeping hiearchy information per event_tree
+  std::vector< std::vector< int > > _event_pfps_hits, _event_pfps_type ;
+  std::vector< std::vector< bool > > _event_pfps_vcontained, _event_pfps_econtained ;
+  std::vector< std::vector< float > > _event_pfps_length ;
+  std::vector< std::vector< double > > _event_pfps_dir_start_x, _event_pfps_dir_start_y, _event_pfps_dir_start_z, _event_pfps_dir_end_x,  _event_pfps_dir_end_y, _event_pfps_dir_end_z ;
+  std::vector< std::vector< double > > _event_pfps_start_x, _event_pfps_start_y, _event_pfps_start_z, _event_pfps_end_x,  _event_pfps_end_y, _event_pfps_end_z ;
 
   /**
   * Functions to guess about the geometry of the track
@@ -82,6 +92,8 @@ typedef std::vector< double > Hit_level;
   std::vector< double > LinearityData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
   std::vector< std::vector< double > > FindMinimumLinearityPosition( const unsigned int & event_id_track );
 
+
+  // Need to add ClearTemporary, ClearAll, Delete functions
   }; // Event
 
 
