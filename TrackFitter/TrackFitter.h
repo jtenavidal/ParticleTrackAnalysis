@@ -73,7 +73,7 @@ typedef std::vector< double > Hit_level;
   std::vector< Track > _event_tracks;  // maps event and track
   // Keeping hiearchy information per event_tree
   std::vector< std::vector< int > > _event_pfps_hits, _event_pfps_type ;
-  std::vector< std::vector< bool > > _event_pfps_vcontained, _event_pfps_econtained ;
+  std::vector< std::vector< int > > _event_pfps_vcontained, _event_pfps_econtained ;
   std::vector< std::vector< float > > _event_pfps_length ;
   std::vector< std::vector< double > > _event_pfps_dir_start_x, _event_pfps_dir_start_y, _event_pfps_dir_start_z, _event_pfps_dir_end_x,  _event_pfps_dir_end_y, _event_pfps_dir_end_z ;
   std::vector< std::vector< double > > _event_pfps_start_x, _event_pfps_start_y, _event_pfps_start_z, _event_pfps_end_x,  _event_pfps_end_y, _event_pfps_end_z ;

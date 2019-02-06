@@ -131,7 +131,7 @@ TrackFitter::TrackFitter( const Track & p_track ){
   */
    Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dEdx;
    std::vector< double > chi2_mu, chi2_pi, chi2_p, pida ;
-   std::vector< bool > vcontained, econtained ;
+   std::vector< int > vcontained, econtained ;
    std::vector< int > pfps_hits_i, pfps_type_i ;
    std::vector< float > pfps_length_i ;
    std::vector< double > pfps_dir_start_i_x, pfps_dir_start_i_y, pfps_dir_start_i_z, pfps_dir_end_i_x, pfps_dir_end_i_y, pfps_dir_end_i_z ;
@@ -197,8 +197,8 @@ TrackFitter::TrackFitter( const Track & p_track ){
          chi2_pi.push_back( r_chi2_pi->GetLeaf("r_chi2_pi")->GetValue(j));
          chi2_p.push_back ( r_chi2_p ->GetLeaf("r_chi2_p")->GetValue(j));
          pida.push_back   ( r_PIDA   ->GetLeaf("r_PIDA")->GetValue(j));
-         //vcontained.push_back( event_vcontained->GetLeaf("event_vcontained")->GetValue(j) ) ;
-         //econtained.push_back( event_vcontained->GetLeaf("event_econtained")->GetValue(j) ) ;
+         vcontained.push_back( event_vcontained->GetLeaf("event_vcontained")->GetValue(j) ) ;
+         econtained.push_back( event_econtained->GetLeaf("event_econtained")->GetValue(j) ) ;
          pfps_hits_i.push_back( pfps_hits->GetLeaf("pfps_hits")->GetValue(j) ) ;
          pfps_type_i.push_back( pfps_type->GetLeaf("pfps_type")->GetValue(j) ) ;
          pfps_length_i.push_back( pfps_length->GetLeaf("pfps_length")->GetValue(j) ) ;
@@ -221,8 +221,8 @@ TrackFitter::TrackFitter( const Track & p_track ){
        _event_PIDA.push_back(pida);
        _event_pfps_hits.push_back(pfps_hits_i);
        _event_pfps_type.push_back(pfps_type_i);
-       //_event_pfps_vcontained.push_back(vcontained);
-       //_event_pfps_econtained.push_back(econtained);
+       _event_pfps_vcontained.push_back(vcontained);
+       _event_pfps_econtained.push_back(econtained);
        _event_pfps_length.push_back(pfps_length_i);
        _event_pfps_dir_start_x.push_back(pfps_dir_start_i_x);
        _event_pfps_dir_start_y.push_back(pfps_dir_start_i_y);
