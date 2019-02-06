@@ -373,7 +373,14 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  }
 	    rnu_hits   += spacepoint_f.size() ;
 	    pfps_hits[primary_daughter] = spacepoint_f.size() ;
-	    if( shower_f->has_length() ) pfps_length[primary_daughter] = shower_f->Length() ;
+	    if( shower_f->has_length() ) { 
+	      pfps_length[primary_daughter] = shower_f->Length() ;
+	    } else {
+	      pfps_length[primary_daughter]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
+	      pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
+	      pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
+	      pfps_length[primary_daughter]  = sqrt( pfps_length[primary_daughter] ) ;
+	    } 
 	    pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
 	    pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
 	    pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
