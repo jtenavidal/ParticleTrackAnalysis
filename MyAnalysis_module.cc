@@ -237,7 +237,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   if ( !pfParticleHandle.isValid() && pfParticleHandle->size() == 0 && !hitListHandle.isValid() && !trackHandle.isValid()) is_reconstructed = false ;
   
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
-    
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
       
@@ -251,14 +250,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	      primary_econtained = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] ; 
 		 
 	    } // may end up removing it . Redundant but easy to interpret
-
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
 	    event_vcontained[j] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] ; 
 	    event_econtained[j] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] ; 
  
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
-	      for( int j2 = 0 ; j2 < pfparticle->NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
+	      for( int j2 = 0 ; j2 < particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
 		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
 		  int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
 		  int secondary_daughter = j + j2 + 1 ;
@@ -282,9 +280,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 } // event 
 
 void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter ) {
-        
       // Save track info
-      if ( findTracks.at( part_id_f ).size()!=0 ){
+      if ( findTracks.at( part_id_f ).size() != 0 ){
 	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
 	art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
@@ -358,7 +355,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    } //close calo
 	  } //close pid
 	} //close track  	  
-      } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
+      } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look in showers 
 	has_reco_showers = true ; 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
@@ -366,6 +363,8 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
 	  std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
 	  std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+	  if( spacepoint_f.size() == 0 ) continue ; 
+
 	  for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
 	      r_track_x[l+rnu_hits] = spacepoint_f[l]->XYZ()[0] ;
 	      r_track_y[l+rnu_hits] = spacepoint_f[l]->XYZ()[1] ;
@@ -375,12 +374,12 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    pfps_hits[primary_daughter] = spacepoint_f.size() ;
 	    if( shower_f->has_length() ) { 
 	      pfps_length[primary_daughter] = shower_f->Length() ;
-	    } else {
+	    } else  {
 	      pfps_length[primary_daughter]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
 	      pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
 	      pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
 	      pfps_length[primary_daughter]  = sqrt( pfps_length[primary_daughter] ) ;
-	    } 
+	    }
 	    pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
 	    pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
 	    pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
