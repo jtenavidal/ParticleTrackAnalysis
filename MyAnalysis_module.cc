@@ -73,8 +73,8 @@ public:
   void reconfigure(fhicl::ParameterSet const & p);
   void beginJob() override;
   void endJob() override;
-  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
-  bool IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter) ;
+  std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
 
 private:
 
@@ -102,10 +102,10 @@ private:
   double fMCLength, fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
 
   // Reco information
+  bool primary_vcontained, primary_econtained ;
   int r_pdg_primary, r_nu_daughters ;
   recob::TrackTrajectory primary_trajectory ;
   int rnu_hits, rdEdx_size ;
-
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
   double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
   float rLength ;
@@ -113,7 +113,9 @@ private:
   double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
   std::vector< float > r_dEdx_ID, r_dEdx_total ; // to save it ordered!
   std::vector< std::vector< float >  > r_dEdx_ID_all ; 
+  
   // -> Breakdown particles in event from Pandora
+  bool event_vcontained[1000], event_econtained[1000] ; 
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
   double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
@@ -148,7 +150,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
-  
+
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -232,26 +234,37 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   rnu_hits = 0 ;
   rdEdx_size = 0 ;
   r_dEdx_ID.clear() ; // clean individual one
-
-  if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid()){
+  if ( !pfParticleHandle.isValid() && pfParticleHandle->size() == 0 && !hitListHandle.isValid() && !trackHandle.isValid()) is_reconstructed = false ;
+  
+  if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
     
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-
+      
       if( pfparticle->IsPrimary() == 1 ) { //found primary particle and starting point 
 	if( pfparticle->NumDaughters() > 0 ) {
-	  has_reco_daughters = true ;
+	  if( pfparticle->NumDaughters() > 1 ) has_reco_daughters = true ;
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-	    pfps_type[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
-	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
+	    if( j == 0 ) {
+	      primary_vcontained = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] ; 
+	      primary_econtained = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] ; 
+		 
+	    } // may end up removing it . Redundant but easy to interpret
 
-	    if( pfparticle->NumDaughters() > 0 ) {
+	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
+	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
+	    event_vcontained[j] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] ; 
+	    event_econtained[j] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] ; 
+ 
+	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
 	      for( int j2 = 0 ; j2 < pfparticle->NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
-		
 		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
-		  int id_2daughter = particleMap[ pfparticle->Daughters()[j2] ]->Daughters()[0] ;
-		  StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter ) ; 
+		  int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
+		  int secondary_daughter = j + j2 + 1 ;
+	    	  StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
+		  event_vcontained[id_2daughter] = IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] ; 
+		  event_econtained[id_2daughter] = IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] ; 
 		}
 	      }
 	    }
@@ -268,11 +281,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   
 } // event 
 
-void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
+void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter ) {
         
       // Save track info
       if ( findTracks.at( part_id_f ).size()!=0 ){
-	is_reconstructed = true ; 
 	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
 	art::FindManyP< recob::Hit > findHits (  trackHandle, e, m_recotrackLabel ) ;
 	art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, m_recoCaloLabel );
@@ -299,13 +311,13 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      if( !cal_f[m] ) continue ;
 	      if( !cal_f[m]->PlaneID().isValid) continue ;
 	      if( cal_f[m]->PlaneID().Plane == 2 ) {	    
-		// save information -> Before instead of part_id_f it was j : check if right . 
-		r_chi2_mu[part_id_f] = pid_f[k]->Chi2Muon() ;
-		r_chi2_pi[part_id_f] = pid_f[k]->Chi2Pion() ;
-		r_chi2_p[part_id_f]  = pid_f[k]->Chi2Proton() ;
-		r_PIDA[part_id_f]    = pid_f[k]->PIDA();
-		r_missenergy[part_id_f] = pid_f[k]->MissingE();
-		r_KineticEnergy[part_id_f] = cal_f[m]->KineticEnergy();
+		// save information 
+		r_chi2_mu[primary_daughter] = pid_f[k]->Chi2Muon() ;
+		r_chi2_pi[primary_daughter] = pid_f[k]->Chi2Pion() ;
+		r_chi2_p[primary_daughter]  = pid_f[k]->Chi2Proton() ;
+		r_PIDA[primary_daughter]    = pid_f[k]->PIDA();
+		r_missenergy[primary_daughter] = pid_f[k]->MissingE();
+		r_KineticEnergy[primary_daughter] = cal_f[m]->KineticEnergy();
 		
 		for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
 		  r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
@@ -314,20 +326,20 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		}
 
 		rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
-		pfps_hits[part_id_f] = track_f[n]->LastValidPoint() + 1 ;
-		pfps_length[part_id_f] = track_f[n]->Length() ;
-		pfps_dir_start_x[part_id_f] = track_f[n]->StartDirection().X() ;
-		pfps_dir_start_y[part_id_f] = track_f[n]->StartDirection().Y() ;
-		pfps_dir_start_z[part_id_f] = track_f[n]->StartDirection().Z() ;
-		pfps_dir_end_x[part_id_f] = track_f[n]->EndDirection().X() ;
-		pfps_dir_end_y[part_id_f] = track_f[n]->EndDirection().Y() ;
-		pfps_dir_end_z[part_id_f] = track_f[n]->EndDirection().Z() ;
-		pfps_start_x[part_id_f] = track_f[n]->Start().X() ;
-		pfps_start_y[part_id_f] = track_f[n]->Start().Y() ;
-		pfps_start_z[part_id_f] = track_f[n]->Start().Z() ;
-		pfps_end_x[part_id_f] = track_f[n]->End().X() ;
-		pfps_end_y[part_id_f] = track_f[n]->End().Y() ;
-		pfps_end_z[part_id_f] = track_f[n]->End().Z() ;
+		pfps_hits[primary_daughter] = track_f[n]->LastValidPoint() + 1 ;
+		pfps_length[primary_daughter] = track_f[n]->Length() ;
+		pfps_dir_start_x[primary_daughter] = track_f[n]->StartDirection().X() ;
+		pfps_dir_start_y[primary_daughter] = track_f[n]->StartDirection().Y() ;
+		pfps_dir_start_z[primary_daughter] = track_f[n]->StartDirection().Z() ;
+		pfps_dir_end_x[primary_daughter] = track_f[n]->EndDirection().X() ;
+		pfps_dir_end_y[primary_daughter] = track_f[n]->EndDirection().Y() ;
+		pfps_dir_end_z[primary_daughter] = track_f[n]->EndDirection().Z() ;
+		pfps_start_x[primary_daughter] = track_f[n]->Start().X() ;
+		pfps_start_y[primary_daughter] = track_f[n]->Start().Y() ;
+		pfps_start_z[primary_daughter] = track_f[n]->Start().Z() ;
+		pfps_end_x[primary_daughter] = track_f[n]->End().X() ;
+		pfps_end_y[primary_daughter] = track_f[n]->End().Y() ;
+		pfps_end_z[primary_daughter] = track_f[n]->End().Z() ;
 
 	      }// just collection plane 
 	      
@@ -341,8 +353,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		  }
 		}
 	      }
-	      
-	      r_Range[part_id_f] = cal_f[m]->Range(); // check 
+	      r_Range[primary_daughter] = cal_f[m]->Range(); // check 
 	      rdEdx_size += (cal_f[m]->dEdx()).size();
 	    } //close calo
 	  } //close pid
@@ -361,47 +372,51 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      r_track_z[l+rnu_hits] = spacepoint_f[l]->XYZ()[2] ;
 	  }
 	    rnu_hits   += spacepoint_f.size() ;
-	    pfps_hits[part_id_f] = spacepoint_f.size() ;
-	    if( shower_f->has_length() ) pfps_length[part_id_f] = shower_f->Length() ;
-	    pfps_dir_start_x[part_id_f] = shower_f->Direction().X() ;
-	    pfps_dir_start_y[part_id_f] = shower_f->Direction().Y() ;
-	    pfps_dir_start_z[part_id_f] = shower_f->Direction().Z() ;
+	    pfps_hits[primary_daughter] = spacepoint_f.size() ;
+	    if( shower_f->has_length() ) pfps_length[primary_daughter] = shower_f->Length() ;
+	    pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
+	    pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
+	    pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
 	    // No end Direction
-	    pfps_start_x[part_id_f] = shower_f->ShowerStart().X() ;
-	    pfps_start_y[part_id_f] = shower_f->ShowerStart().Y() ;
-	    pfps_start_z[part_id_f] = shower_f->ShowerStart().Z() ;
+	    pfps_start_x[primary_daughter] = shower_f->ShowerStart().X() ;
+	    pfps_start_y[primary_daughter] = shower_f->ShowerStart().Y() ;
+	    pfps_start_z[primary_daughter] = shower_f->ShowerStart().Z() ;
 	    // no end position
 
 	}	
       } // track vs shower
 }
 
-bool TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
+std::vector< bool > TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
   bool vertex_contained = true , end_contained = true ;
-  
+  std::vector< bool > contained_info ; 
+
   if ( findTracks.at( part_id_f ).size()!=0 ){
     std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
     art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, m_recoPIDLabel );
     
-    for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-      if( ( track_f[part_id_f]->Start().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
-	  || ( track_f[part_id_f]->Start().X() < (-CoordinateOffSetX + SelectedBorderX)) 
-	  || ( track_f[part_id_f]->Start().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
-	  || ( track_f[part_id_f]->Start().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
-	  || ( track_f[part_id_f]->Start().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
-	  || ( track_f[part_id_f]->Start().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
-      if( ( track_f[part_id_f]->End().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
-	  || ( track_f[part_id_f]->End().X() < (-CoordinateOffSetX + SelectedBorderX)) 
-	  || ( track_f[part_id_f]->End().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
-	  || ( track_f[part_id_f]->End().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
-	  || ( track_f[part_id_f]->End().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
-	  || ( track_f[part_id_f]->End().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+    for( unsigned int n = 0 ; n < track_f.size() ; ++n ){      
+      if( ( track_f[n]->Start().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( track_f[n]->Start().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( track_f[n]->Start().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( track_f[n]->Start().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( track_f[n]->Start().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( track_f[n]->Start().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+
+      if( ( track_f[n]->End().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( track_f[n]->End().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( track_f[n]->End().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( track_f[n]->End().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( track_f[n]->End().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( track_f[n]->End().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
     } //close track  	  
   } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
+
     for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
       art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
       std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+      if( spacepoint_f.size() == 0 ) continue ;
       if( ( spacepoint_f[0]->XYZ()[0] > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
 	  || ( spacepoint_f[0]->XYZ()[0] < (-CoordinateOffSetX + SelectedBorderX)) 
 	  || ( spacepoint_f[0]->XYZ()[1] > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
@@ -416,8 +431,9 @@ bool TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::v
 	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
     }	
   } 
-  if ( vertex_contained == true && end_contained == true ) { return true ;} 
-  else return false ;
+  contained_info.push_back( vertex_contained ) ; 
+  contained_info.push_back( end_contained ) ; 
+  return contained_info ; 
 }
 
 void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
@@ -436,9 +452,9 @@ void TrackID::MyAnalysis::beginJob( )
   CoordinateOffSetX = 200 ; 
   CoordinateOffSetY = 200 ; 
   CoordinateOffSetZ = 0 ; 
-  SelectedBorderX = 10 ;
-  SelectedBorderY = 20 ;
-  SelectedBorderZ = 10 ;
+  SelectedBorderX = 16.5 ;
+  SelectedBorderY = 15 ;
+  SelectedBorderZ = 47.5 ;
   
   // Event tree
   event_id = 0 ;
@@ -476,7 +492,8 @@ void TrackID::MyAnalysis::beginJob( )
   r_nu_daughters  = 0 ;
   rLength = -999. ;
   rnu_hits  = 0 ;
-
+  primary_vcontained = true ; 
+  primary_econtained = true ;
 
   for ( int i = 0 ; i < 100000 ; ++i ){
     r_dEdx[i] = 0 ;
@@ -502,6 +519,8 @@ void TrackID::MyAnalysis::beginJob( )
     pfps_end_x[i] = 0 ;  
     pfps_end_y[i] = 0 ;  
     pfps_end_z[i] = 0 ;  
+    event_vcontained[i] = true ;
+    event_econtained[i] = true ; 
   }
   
   // Declare trees and branches
@@ -543,6 +562,8 @@ void TrackID::MyAnalysis::beginJob( )
    */
   recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
   recotrack_tree  -> Branch( "r_pdg_primary",       &r_pdg_primary,     "r_pdg_primary/I");
+  recotrack_tree  -> Branch( "primary_vcontained",  &primary_vcontained,"primary_vcontained/B");
+  recotrack_tree  -> Branch( "primary_econtained",  &primary_econtained,"primary_econtained/B");
   recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "r_nu_daughters/I");
   recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
@@ -558,8 +579,10 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "r_track_dEdx",        &r_track_dEdx,      ("r_track_dEdx[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits(" + std::to_string(1000)+")/I").c_str());
-  recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type(" + std::to_string(1000)+")/I").c_str());
+  recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/B").c_str());
+  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/B").c_str());
   recotrack_tree  -> Branch( "pfps_length",         &pfps_length,       ("pfps_length(" + std::to_string(1000)+")/F").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_x",    &pfps_dir_start_x,  ("pfps_dir_start_x[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_y",    &pfps_dir_start_y,  ("pfps_dir_start_y[" + std::to_string(1000)+"]/D").c_str());
