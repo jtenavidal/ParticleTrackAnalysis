@@ -115,7 +115,7 @@ private:
   std::vector< std::vector< float >  > r_dEdx_ID_all ; 
   
   // -> Breakdown particles in event from Pandora
-  bool event_vcontained[1000], event_econtained[1000] ; 
+  int event_vcontained[1000], event_econtained[1000] ; 
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
   double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
@@ -150,7 +150,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
-
+  std::cout<< " event = " << event_id << std::endl;
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -252,17 +252,22 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    } // may end up removing it . Redundant but easy to interpret
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
-	    event_vcontained[j] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] ; 
-	    event_econtained[j] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] ; 
- 
+	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = 0 ; }
+	    else event_vcontained[j] = 1 ; 
+	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] == 0 ) { event_econtained[j] = 0 ; }
+	    else event_econtained[j] = 1 ; 
+
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
 	      for( int j2 = 0 ; j2 < particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
 		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
 		  int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
 		  int secondary_daughter = j + j2 + 1 ;
 	    	  StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
-		  event_vcontained[id_2daughter] = IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] ; 
-		  event_econtained[id_2daughter] = IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] ; 
+		  if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
+		  else event_vcontained[id_2daughter] = 1 ; 
+		  if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
+		  else event_econtained[id_2daughter] = 1 ; 
+		  // it was not working for array of bools 
 		}
 	      }
 	    }
@@ -322,7 +327,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		  r_track_z[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
 		}
 
-		rnu_hits   += track_f[n]->LastValidPoint() + 1 ; // ?: +1 // valid hits
+		rnu_hits   += track_f[n]->LastValidPoint() + 1 ;
 		pfps_hits[primary_daughter] = track_f[n]->LastValidPoint() + 1 ;
 		pfps_length[primary_daughter] = track_f[n]->Length() ;
 		pfps_dir_start_x[primary_daughter] = track_f[n]->StartDirection().X() ;
@@ -408,13 +413,13 @@ std::vector< bool > TrackID::MyAnalysis::IsContained( art::Event const & e, art:
 	  || ( track_f[n]->Start().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
 	  || ( track_f[n]->Start().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
 	  || ( track_f[n]->Start().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
-
       if( ( track_f[n]->End().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
 	  || ( track_f[n]->End().X() < (-CoordinateOffSetX + SelectedBorderX)) 
 	  || ( track_f[n]->End().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
 	  || ( track_f[n]->End().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
 	  || ( track_f[n]->End().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
 	  || ( track_f[n]->End().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+      
     } //close track  	  
   } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
@@ -525,8 +530,8 @@ void TrackID::MyAnalysis::beginJob( )
     pfps_end_x[i] = 0 ;  
     pfps_end_y[i] = 0 ;  
     pfps_end_z[i] = 0 ;  
-    event_vcontained[i] = true ;
-    event_econtained[i] = true ; 
+    event_vcontained[i] = 1 ;
+    event_econtained[i] = 1 ; 
   }
   
   // Declare trees and branches
@@ -587,9 +592,9 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "r_track_dEdx",        &r_track_dEdx,      ("r_track_dEdx[" + std::to_string(100000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits[" + std::to_string(1000)+"]/I").c_str());
   recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type[" + std::to_string(1000)+"]/I").c_str());
-  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/B").c_str());
-  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/B").c_str());
-  recotrack_tree  -> Branch( "pfps_length",         &pfps_length,       ("pfps_length(" + std::to_string(1000)+")/F").c_str());
+  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "pfps_length",         &pfps_length,       ("pfps_length[" + std::to_string(1000)+"]/F").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_x",    &pfps_dir_start_x,  ("pfps_dir_start_x[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_y",    &pfps_dir_start_y,  ("pfps_dir_start_y[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_z",    &pfps_dir_start_z,  ("pfps_dir_start_z[" + std::to_string(1000)+"]/D").c_str());
