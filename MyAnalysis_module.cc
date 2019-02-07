@@ -193,7 +193,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fMCLength = trueParticle.Trajectory().TotalLength() ;
 	  primary_vcontained = MCIsContained( trueParticle )[0] ; 
 	  primary_econtained = MCIsContained( trueParticle )[1] ; 
-	  
 	} else { // secondary particle information 
 	  if      ( trueParticle.PdgCode() == 13   ) { ++fDaughter_mu ; }
 	  else if ( trueParticle.PdgCode() == 211  ) { ++fDaughter_pi ; } 
@@ -490,7 +489,7 @@ void TrackID::MyAnalysis::beginJob( )
   CoordinateOffSetZ = 0 ; 
   SelectedBorderX = 16.5 ;
   SelectedBorderY = 15 ;
-  SelectedBorderZ = 47.5 ;
+  SelectedBorderZ = 15 ; //47.5 ;
   
   // Event tree
   event_id = 0 ;
