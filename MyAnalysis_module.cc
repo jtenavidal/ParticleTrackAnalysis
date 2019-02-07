@@ -97,14 +97,11 @@ private:
   int fPDG_Code, fTrack_ID, fNumDaughters, fDaughter_mu, fDaughter_pi, fDaughter_e, fDaughter_p, fDaughter_n, fDaughter_photon, fDaughter_other ;
   float fTrueParticleEnergy, fMass;
   float fpx, fpy, fpz, fpt, fp; // momentum variables
-  simb::MCTrajectory True_trajectory ;
-  TLorentzVector MC_Track_Position ;
-  double fMCLength, fTrack_position_x, fTrack_position_y, fTrack_position_z, fTrack_position_T ;
+  double fMCLength, fTrack_vertex_x, fTrack_vertex_y, fTrack_vertex_z, fTrack_vertex_t, fTrack_end_x, fTrack_end_y, fTrack_end_z, fTrack_end_t ;
 
   // Reco information
   bool primary_vcontained, primary_econtained ;
   int r_pdg_primary, r_nu_daughters ;
-  recob::TrackTrajectory primary_trajectory ;
   int rnu_hits, rdEdx_size ;
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
   double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
@@ -183,10 +180,16 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fpz = trueParticle.Pz() ;
 	  fpt = trueParticle.Pt() ;
 	  fp  = trueParticle.P() ;
-	  
+	  fTrack_vertex_x = trueParticle.Trajectory().X( 0 ) ;
+	  fTrack_vertex_y = trueParticle.Trajectory().Y( 0 ) ; 
+	  fTrack_vertex_z = trueParticle.Trajectory().Z( 0 ) ; 
+	  fTrack_vertex_t = trueParticle.Trajectory().T( 0 ) ;
+	  fTrack_end_x = trueParticle.EndX() ;
+	  fTrack_end_y = trueParticle.EndY() ;
+	  fTrack_end_z = trueParticle.EndZ() ; 
+	  fTrack_end_t = trueParticle.EndT() ;
 	  fNumDaughters = trueParticle.NumberDaughters() ;
-	  True_trajectory = trueParticle.Trajectory() ;
-	  fMCLength = True_trajectory.TotalLength() ;
+	  fMCLength = trueParticle.Trajectory().TotalLength() ;
 	  
 	} else { // secondary particle information 
 	  if      ( trueParticle.PdgCode() == 13   ) { ++fDaughter_mu ; }
@@ -493,10 +496,14 @@ void TrackID::MyAnalysis::beginJob( )
   fDaughter_photon = 0 ;
   fDaughter_other = 0 ;
   fMCLength = -999 ;
-  fTrack_position_x = -999. ;
-  fTrack_position_y = -999. ;
-  fTrack_position_z = -999. ;
-  fTrack_position_T = -999.;
+  fTrack_vertex_x = -999. ;
+  fTrack_vertex_y = -999. ;
+  fTrack_vertex_z = -999. ;
+  fTrack_vertex_t = -999.;
+  fTrack_end_x = -999. ;
+  fTrack_end_y = -999. ;
+  fTrack_end_z = -999. ;
+  fTrack_end_t = -999.;
 
   // reco information
   r_pdg_primary   = 0 ;
@@ -553,6 +560,14 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "ftrueEnergy",             &fTrueParticleEnergy, "fTrueParticleEnergy/F");
   mcparticle_tree -> Branch( "fPDG_Code",               &fPDG_Code,           "fPDG_Code/I");
   mcparticle_tree -> Branch( "fMass",                   &fMass,               "fMass/F");
+  mcparticle_tree -> Branch( "fTrack_vertex_x",         &fTrack_vertex_x,     "fTrack_vertex_x/D");
+  mcparticle_tree -> Branch( "fTrack_vertex_y",         &fTrack_vertex_y,     "fTrack_vertex_y/D");
+  mcparticle_tree -> Branch( "fTrack_vertex_z",         &fTrack_vertex_z,     "fTrack_vertex_z/D");
+  mcparticle_tree -> Branch( "fTrack_vertex_t",         &fTrack_vertex_t,     "fTrack_vertex_t/D");
+  mcparticle_tree -> Branch( "fTrack_end_x",            &fTrack_end_x,        "fTrack_end_x/D");
+  mcparticle_tree -> Branch( "fTrack_end_y",            &fTrack_end_y,        "fTrack_end_y/D");
+  mcparticle_tree -> Branch( "fTrack_end_z",            &fTrack_end_z,        "fTrack_end_z/D");
+  mcparticle_tree -> Branch( "fTrack_end_t",            &fTrack_end_t,        "fTrack_end_t/D");
   mcparticle_tree -> Branch( "fpx",                     &fpx,                 "fpx/F");
   mcparticle_tree -> Branch( "fpy",                     &fpy,                 "fpy/F");
   mcparticle_tree -> Branch( "fpz",                     &fpz,                 "fpz/F");
