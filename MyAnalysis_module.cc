@@ -74,6 +74,7 @@ public:
   void beginJob() override;
   void endJob() override;
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter) ;
+  std::vector< bool > MCIsContained( simb::MCParticle const & trueParticle ) ;
   std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
 
 private:
@@ -190,6 +191,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fTrack_end_t = trueParticle.EndT() ;
 	  fNumDaughters = trueParticle.NumberDaughters() ;
 	  fMCLength = trueParticle.Trajectory().TotalLength() ;
+	  primary_vcontained = MCIsContained( trueParticle )[0] ; 
+	  primary_econtained = MCIsContained( trueParticle )[1] ; 
 	  
 	} else { // secondary particle information 
 	  if      ( trueParticle.PdgCode() == 13   ) { ++fDaughter_mu ; }
@@ -248,11 +251,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  if( pfparticle->NumDaughters() > 1 ) has_reco_daughters = true ;
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-	    if( j == 0 ) {
-	      primary_vcontained = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] ; 
-	      primary_econtained = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] ; 
-		 
-	    } // may end up removing it . Redundant but easy to interpret
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
 	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = 0 ; }
@@ -400,6 +398,30 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	}	
       } // track vs shower
 }
+
+
+std::vector< bool > TrackID::MyAnalysis::MCIsContained( simb::MCParticle const & trueParticle ) {
+  // Checks if true primary track is contained in fiducial. As it is either a muon or a pion, only look for tracks.
+  bool vertex_contained = true , end_contained = true ;
+  std::vector< bool > contained_info ; 
+
+  if( ( trueParticle.Trajectory().X( 0 ) > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+      || ( trueParticle.Trajectory().X( 0 ) < (-CoordinateOffSetX + SelectedBorderX)) 
+      || ( trueParticle.Trajectory().Y( 0 ) > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+      || ( trueParticle.Trajectory().Y( 0 ) < (-CoordinateOffSetY + SelectedBorderY)) 
+      || ( trueParticle.Trajectory().Z( 0 ) > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+      || ( trueParticle.Trajectory().Z( 0 ) < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+  if( ( trueParticle.EndX() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+      || ( trueParticle.EndX() < (-CoordinateOffSetX + SelectedBorderX)) 
+      || ( trueParticle.EndY() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+      || ( trueParticle.EndY() < (-CoordinateOffSetY + SelectedBorderY)) 
+      || ( trueParticle.EndZ() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+      || ( trueParticle.EndZ() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+  contained_info.push_back( vertex_contained ) ; 
+  contained_info.push_back( end_contained ) ; 
+  return contained_info ; 
+}
+
 
 std::vector< bool > TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
   bool vertex_contained = true , end_contained = true ;
