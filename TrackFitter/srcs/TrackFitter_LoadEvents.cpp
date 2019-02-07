@@ -29,6 +29,14 @@
    TBranch * trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
    TBranch * PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
    TBranch * Mass = mcparticle_tree->GetBranch("fMass");
+   TBranch * MC_vertex_x = mcparticle_tree->GetBranch("fTrack_vertex_x");
+   TBranch * MC_vertex_y = mcparticle_tree->GetBranch("fTrack_vertex_y");
+   TBranch * MC_vertex_z = mcparticle_tree->GetBranch("fTrack_vertex_z");
+   TBranch * MC_vertex_t = mcparticle_tree->GetBranch("fTrack_vertex_t");
+   TBranch * MC_end_x = mcparticle_tree->GetBranch("fTrack_end_x");
+   TBranch * MC_end_y = mcparticle_tree->GetBranch("fTrack_end_y");
+   TBranch * MC_end_z = mcparticle_tree->GetBranch("fTrack_end_z");
+   TBranch * MC_end_t = mcparticle_tree->GetBranch("fTrack_end_t");
    TBranch * Px = mcparticle_tree->GetBranch("fpx");
    TBranch * Py = mcparticle_tree->GetBranch("fpy");
    TBranch * Pz = mcparticle_tree->GetBranch("fpz");
@@ -96,11 +104,24 @@
    /**
      * MC information
      */
+    std::vector<double> MC_vertex, MC_end ;
     for( unsigned int i = 0; i < mcparticle_tree->GetEntries(); ++i ){
       mcparticle_tree->GetEntry(i);
+      MC_vertex.clear();
+      MC_end.clear();
       //_event_TLenght.push_back( MC_Lenght->GetLeaf("fMCLength")->GetValue() ) ; // still breaks
       _Tnu_daughters.push_back(Num_Daughters->GetLeaf("fNumDaughters")->GetValue());
       _TPDG_Code_Primary.push_back( PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
+      MC_vertex.push_back( MC_vertex_x->GetLeaf("fTrack_vertex_x")->GetValue() ) ;
+      MC_vertex.push_back( MC_vertex_y->GetLeaf("fTrack_vertex_y")->GetValue() ) ;
+      MC_vertex.push_back( MC_vertex_z->GetLeaf("fTrack_vertex_z")->GetValue() ) ;
+      MC_vertex.push_back( MC_vertex_t->GetLeaf("fTrack_vertex_t")->GetValue() ) ;
+      _event_MC_vertex.push_back(MC_vertex) ;
+      MC_end.push_back( MC_end_x->GetLeaf("fTrack_end_x")->GetValue() ) ;
+      MC_end.push_back( MC_end_y->GetLeaf("fTrack_end_y")->GetValue() ) ;
+      MC_end.push_back( MC_end_z->GetLeaf("fTrack_end_z")->GetValue() ) ;
+      MC_end.push_back( MC_end_t->GetLeaf("fTrack_end_t")->GetValue() ) ;
+      _event_MC_end.push_back(MC_end) ;
       _Tnu_mu.push_back( Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
       _Tnu_pi.push_back( Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
       _Tnu_p.push_back( Daughter_p->GetLeaf("fDaughter_p")->GetValue() ) ;
