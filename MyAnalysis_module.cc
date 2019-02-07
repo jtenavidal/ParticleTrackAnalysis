@@ -92,7 +92,8 @@ private:
   int event_id ; 
 
   // Event tree information
-  bool is_reconstructed, has_reco_daughters, has_reco_tracks, has_reco_showers, is_contained ; 
+  bool is_reconstructed, is_contained ; 
+  int has_reco_daughters, has_reco_tracks, has_reco_showers ;
 
   // Truth information
   int fPDG_Code, fTrack_ID, fNumDaughters, fDaughter_mu, fDaughter_pi, fDaughter_e, fDaughter_p, fDaughter_n, fDaughter_photon, fDaughter_other ;
@@ -239,16 +240,16 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   rnu_hits = 0 ;
   rdEdx_size = 0 ;
   r_dEdx_ID.clear() ; // clean individual one
-  if ( !pfParticleHandle.isValid() && pfParticleHandle->size() == 0 && !hitListHandle.isValid() && !trackHandle.isValid()) is_reconstructed = false ;
   
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
+    is_reconstructed = true ; 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
       
       if( pfparticle->IsPrimary() == 1 ) { //found primary particle and starting point 
 	if( pfparticle->NumDaughters() > 0 ) {
-	  if( pfparticle->NumDaughters() > 1 ) has_reco_daughters = true ;
-	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
+	  if( pfparticle->NumDaughters() > 1 ) { has_reco_daughters = pfparticle->NumDaughters() ; }
+ 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
@@ -294,7 +295,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 
 	// Loop over tracks per event
 	for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-	  has_reco_tracks = true ; 
+	  ++ has_reco_tracks ; 
 	  rLength   += track_f[n]->Length() ;
 	  // Get track based variables
 	  std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
@@ -361,7 +362,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  } //close pid
 	} //close track  	  
       } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look in showers 
-	has_reco_showers = true ; 
+	++ has_reco_showers ; 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
 	for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
@@ -494,9 +495,9 @@ void TrackID::MyAnalysis::beginJob( )
   // Event tree
   event_id = 0 ;
   is_reconstructed   = false ; 
-  has_reco_daughters = false ;
-  has_reco_tracks    = false ;
-  has_reco_showers   = false ; 
+  has_reco_daughters = 0 ;
+  has_reco_tracks    = 0 ;
+  has_reco_showers   = 0 ; 
   is_contained       = false ;
   // Truth Information 
   fTrack_ID = -999 ;
@@ -569,7 +570,7 @@ void TrackID::MyAnalysis::beginJob( )
 
   event_tree      -> Branch( "event_id",                  &event_id,           "event_id/I");
   event_tree      -> Branch( "is_reconstructed",          &is_reconstructed,   "is_reconstructed/B");
-  event_tree      -> Branch( "has_reco_daughters",        &has_reco_daughters, "has_reco_daughters/B");
+  event_tree      -> Branch( "has_reco_daughters",        &has_reco_daughters, "has_reco_daughters/I");
   event_tree      -> Branch( "has_reco_tracks",           &has_reco_tracks,    "has_reco_tracks/B");
   event_tree      -> Branch( "has_reco_showers",          &has_reco_showers,   "has_reco_showers/B");
 
