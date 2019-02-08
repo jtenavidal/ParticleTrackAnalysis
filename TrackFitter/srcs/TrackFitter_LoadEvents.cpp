@@ -1,15 +1,6 @@
 #include "../include/TrackFitter.h"
 #include <iostream>
 #include <string>
-#include "TH1.h"
-#include "TH3D.h"
-#include "THStack.h"
-#include "TCanvas.h"
-#include "TLegend.h"
-#include "TLatex.h"
-#include "TStyle.h"
-#include "TColor.h"
-#include "TGraph.h"
 #include "TVector3.h"
 #include "math.h"
 
@@ -24,11 +15,13 @@
    TBranch * has_reco_showers = event_tree->GetBranch("has_reco_showers");
    // MC Tree
    TTree * mcparticle_tree   = (TTree*) track_file.Get("mcparticle_tree") ;
-   TBranch * mc_event_id = mcparticle_tree->GetBranch("event_id");
-   TBranch * Track_ID = mcparticle_tree->GetBranch("fTrack_id");
-   TBranch * trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
-   TBranch * PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
-   TBranch * Mass = mcparticle_tree->GetBranch("fMass");
+   TBranch * MC_event_id = mcparticle_tree->GetBranch("event_id");
+   TBranch * MC_primary_vcontained = mcparticle_tree->GetBranch("primary_vcontained");
+   TBranch * MC_primary_econtained = mcparticle_tree->GetBranch("primary_econtained");
+   TBranch * MC_PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
+   TBranch * MC_trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
+   TBranch * MC_Mass = mcparticle_tree->GetBranch("fMass");
+   TBranch * MC_Lenght= mcparticle_tree->GetBranch("fMC_Lenght");
    TBranch * MC_vertex_x = mcparticle_tree->GetBranch("fTrack_vertex_x");
    TBranch * MC_vertex_y = mcparticle_tree->GetBranch("fTrack_vertex_y");
    TBranch * MC_vertex_z = mcparticle_tree->GetBranch("fTrack_vertex_z");
@@ -37,44 +30,30 @@
    TBranch * MC_end_y = mcparticle_tree->GetBranch("fTrack_end_y");
    TBranch * MC_end_z = mcparticle_tree->GetBranch("fTrack_end_z");
    TBranch * MC_end_t = mcparticle_tree->GetBranch("fTrack_end_t");
-   TBranch * Px = mcparticle_tree->GetBranch("fpx");
-   TBranch * Py = mcparticle_tree->GetBranch("fpy");
-   TBranch * Pz = mcparticle_tree->GetBranch("fpz");
-   TBranch * Pt = mcparticle_tree->GetBranch("fpt");
-   TBranch * P = mcparticle_tree->GetBranch("fp");
-   TBranch * Num_Daughters = mcparticle_tree->GetBranch("fNumDaughters");
-   TBranch * Daughter_mu = mcparticle_tree->GetBranch("fDaughter_mu");
-   TBranch * Daughter_pi = mcparticle_tree->GetBranch("fDaughter_pi");
-   TBranch * Daughter_e = mcparticle_tree->GetBranch("fDaughter_e");
-   TBranch * Daughter_p = mcparticle_tree->GetBranch("fDaughter_p");
-   TBranch * Daughter_n = mcparticle_tree->GetBranch("fDaughter_n");
-   TBranch * Daughter_photon = mcparticle_tree->GetBranch("fDaughter_photon");
-   TBranch * Daughter_other = mcparticle_tree->GetBranch("fDaughter_other");
-   TBranch * MC_Lenght= mcparticle_tree->GetBranch("fMC_Lenght");
+   TBranch * MC_Px = mcparticle_tree->GetBranch("fpx");
+   TBranch * MC_Py = mcparticle_tree->GetBranch("fpy");
+   TBranch * MC_Pz = mcparticle_tree->GetBranch("fpz");
+   TBranch * MC_Pt = mcparticle_tree->GetBranch("fpt");
+   TBranch * MC_P = mcparticle_tree->GetBranch("fp");
+   TBranch * MC_Num_Daughters = mcparticle_tree->GetBranch("fNumDaughters");
+   TBranch * MC_Daughter_mu = mcparticle_tree->GetBranch("fDaughter_mu");
+   TBranch * MC_Daughter_pi = mcparticle_tree->GetBranch("fDaughter_pi");
+   TBranch * MC_Daughter_e = mcparticle_tree->GetBranch("fDaughter_e");
+   TBranch * MC_Daughter_p = mcparticle_tree->GetBranch("fDaughter_p");
+   TBranch * MC_Daughter_n = mcparticle_tree->GetBranch("fDaughter_n");
+   TBranch * MC_Daughter_photon = mcparticle_tree->GetBranch("fDaughter_photon");
+   TBranch * MC_Daughter_other = mcparticle_tree->GetBranch("fDaughter_other");
    // RECO Tree
    TTree * recoparticle_tree   = (TTree*) track_file.Get("recoparticle_tree") ;
    TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
-   TBranch * primary_vcontained = recoparticle_tree->GetBranch("primary_vcontained");
-   TBranch * primary_econtained = recoparticle_tree->GetBranch("primary_econtained");
-   TBranch * r_pdg_primary = recoparticle_tree->GetBranch("r_pdg_primary");
    TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
-   TBranch * Length = recoparticle_tree->GetBranch("rLength");
-   TBranch * rnu_hits = recoparticle_tree->GetBranch("rnu_hits");
-   TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
-   TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
-   TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
-   TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
-   TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
-   TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
-   TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
-   TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
-   TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
-   TBranch * r_track_dEdx = recoparticle_tree->GetBranch("r_track_dEdx");
-   TBranch * r_dEdx = recoparticle_tree->GetBranch("r_dEdx");
-   TBranch * pfps_hits = recoparticle_tree->GetBranch("pfps_hits");
-   TBranch * pfps_type = recoparticle_tree->GetBranch("pfps_type");
+   TBranch * pfps_truePDG = recoparticle_tree->GetBranch("pfps_truePDG");
    TBranch * event_vcontained = recoparticle_tree->GetBranch("event_vcontained");
    TBranch * event_econtained = recoparticle_tree->GetBranch("event_econtained");
+   TBranch * pfps_type = recoparticle_tree->GetBranch("pfps_type");
+   TBranch * rnu_hits = recoparticle_tree->GetBranch("rnu_hits");
+   TBranch * pfps_hits = recoparticle_tree->GetBranch("pfps_hits");
+   TBranch * Length = recoparticle_tree->GetBranch("rLength");
    TBranch * pfps_length = recoparticle_tree->GetBranch("pfps_length");
    TBranch * pfps_dir_start_x = recoparticle_tree->GetBranch("pfps_dir_start_x");
    TBranch * pfps_dir_start_y = recoparticle_tree->GetBranch("pfps_dir_start_y");
@@ -88,7 +67,17 @@
    TBranch * pfps_end_x = recoparticle_tree->GetBranch("pfps_end_x");
    TBranch * pfps_end_y = recoparticle_tree->GetBranch("pfps_end_y");
    TBranch * pfps_end_z = recoparticle_tree->GetBranch("pfps_end_z");
-
+   TBranch * r_track_x = recoparticle_tree->GetBranch("r_track_x");
+   TBranch * r_track_y = recoparticle_tree->GetBranch("r_track_y");
+   TBranch * r_track_z = recoparticle_tree->GetBranch("r_track_z");
+   TBranch * r_KineticEnergy = recoparticle_tree->GetBranch("r_KineticEnergy");
+   TBranch * r_Range = recoparticle_tree->GetBranch("r_Range");
+   TBranch * r_track_dEdx = recoparticle_tree->GetBranch("r_track_dEdx");
+   TBranch * r_chi2_mu = recoparticle_tree->GetBranch("r_chi2_mu");
+   TBranch * r_chi2_pi = recoparticle_tree->GetBranch("r_chi2_pi");
+   TBranch * r_chi2_p = recoparticle_tree->GetBranch("r_chi2_p");
+   TBranch * r_PIDA = recoparticle_tree->GetBranch("r_PIDA");
+   TBranch * r_missing_energy = recoparticle_tree->GetBranch("r_missing_energy");
 
    /**
      * General event information
@@ -109,9 +98,12 @@
       mcparticle_tree->GetEntry(i);
       MC_vertex.clear();
       MC_end.clear();
-      //_event_TLenght.push_back( MC_Lenght->GetLeaf("fMCLength")->GetValue() ) ; // still breaks
-      _Tnu_daughters.push_back(Num_Daughters->GetLeaf("fNumDaughters")->GetValue());
-      _TPDG_Code_Primary.push_back( PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
+      _TPrimary_vcontained.push_back( MC_primary_vcontained->GetLeaf("primary_vcontained")->GetValue() ) ;
+      _TPrimary_econtained.push_back( MC_primary_econtained->GetLeaf("primary_econtained")->GetValue() ) ;
+      _TPDG_Code_Primary.push_back( MC_PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
+      // _event_TPrimaryE.push_back( MC_trueEnergy->GetLeaf("ftrueEnergy")->GetValue() ) ;
+      _event_TPrimaryMass.push_back( MC_Mass->GetLeaf("fMass")->GetValue() ) ;
+      _Tnu_daughters.push_back(MC_Num_Daughters->GetLeaf("fNumDaughters")->GetValue());
       MC_vertex.push_back( MC_vertex_x->GetLeaf("fTrack_vertex_x")->GetValue() ) ;
       MC_vertex.push_back( MC_vertex_y->GetLeaf("fTrack_vertex_y")->GetValue() ) ;
       MC_vertex.push_back( MC_vertex_z->GetLeaf("fTrack_vertex_z")->GetValue() ) ;
@@ -122,13 +114,14 @@
       MC_end.push_back( MC_end_z->GetLeaf("fTrack_end_z")->GetValue() ) ;
       MC_end.push_back( MC_end_t->GetLeaf("fTrack_end_t")->GetValue() ) ;
       _event_MC_end.push_back(MC_end) ;
-      _Tnu_mu.push_back( Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
-      _Tnu_pi.push_back( Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
-      _Tnu_p.push_back( Daughter_p->GetLeaf("fDaughter_p")->GetValue() ) ;
-      _Tnu_e.push_back( Daughter_e->GetLeaf("fDaughter_e")->GetValue() ) ;
-      _Tnu_n.push_back( Daughter_n->GetLeaf("fDaughter_n")->GetValue() );
-      _Tnu_photon.push_back( Daughter_photon->GetLeaf("fDaughter_photon")->GetValue() );
-      _Tnu_others.push_back( Daughter_other->GetLeaf("fDaughter_other")->GetValue() );
+      _Tnu_mu.push_back( MC_Daughter_mu->GetLeaf("fDaughter_mu")->GetValue() ) ;
+      _Tnu_pi.push_back( MC_Daughter_pi->GetLeaf("fDaughter_pi")->GetValue() ) ;
+      _Tnu_p.push_back( MC_Daughter_p->GetLeaf("fDaughter_p")->GetValue() ) ;
+      _Tnu_e.push_back( MC_Daughter_e->GetLeaf("fDaughter_e")->GetValue() ) ;
+      _Tnu_photon.push_back( MC_Daughter_photon->GetLeaf("fDaughter_photon")->GetValue() );
+      _Tnu_n.push_back( MC_Daughter_n->GetLeaf("fDaughter_n")->GetValue() );
+      _Tnu_others.push_back( MC_Daughter_other->GetLeaf("fDaughter_other")->GetValue() );
+
      }
 
 /**
@@ -176,8 +169,6 @@
      recoparticle_tree->GetEntry(i);
      _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue() ;
      _event_hits.push_back( _hits ) ;
-     _event_primamry_vcontained.push_back( primary_vcontained->GetLeaf("primary_vcontained")->GetValue() ) ;
-     _event_primary_econtained.push_back( primary_econtained->GetLeaf("primary_econtained")->GetValue() ) ;
 
      if ( _hits != 0 ) {
        _event_RLenght.push_back( Length->GetLeaf("rLength")->GetValue() );
@@ -194,8 +185,8 @@
 
        _event_tracks.push_back( _particle_track ) ;
 
-       for( int j = 0; j < _hits; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
-       _event_reco_dEdx.push_back( _reco_dEdx ) ;
+//       for( int j = 0; j < _hits; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
+//       _event_reco_dEdx.push_back( _reco_dEdx ) ;
        _rnu_daughters.push_back( nu_daughters->GetLeaf("r_nu_daughters")->GetValue() ) ;
        for( int j = 0; j < nu_daughters->GetLeaf("r_nu_daughters")->GetValue() + 1 ; ++j){ // loop over all particles from track
          chi2_mu.push_back( r_chi2_mu->GetLeaf("r_chi2_mu")->GetValue(j));

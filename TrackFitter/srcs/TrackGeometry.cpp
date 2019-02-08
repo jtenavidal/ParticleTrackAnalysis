@@ -27,3 +27,19 @@ std::vector< double > TrackFitter::GetdEdx( const unsigned int & event_id_track 
 Track TrackFitter::GetTrack( const unsigned int & event_id_track ){
   return _event_tracks[event_id_track-1] ;
 }
+
+double TrackFitter::FindMaxCoordinate( const unsigned int & event_id_track , const int & coordinate_id ) {
+  double max_coordinate = -600 ;
+  for( int i = 0 ; i < _event_hits[event_id_track-1] ; ++i ){
+    if ( _event_tracks[event_id_track-1][coordinate_id][i] > max_coordinate ) max_coordinate = _event_tracks[event_id_track-1][coordinate_id][i] ;
+  }
+  return max_coordinate ;
+}
+
+double TrackFitter::FindMinCoordinate( const unsigned int & event_id_track , const int & coordinate_id ) {
+  double min_coordinate = 600 ;
+  for( int i = 0 ; i < _event_hits[event_id_track-1] ; ++i ){
+    if ( _event_tracks[event_id_track-1][coordinate_id][i] < min_coordinate ) min_coordinate = _event_tracks[event_id_track-1][coordinate_id][i] ;
+  }
+  return min_coordinate ;
+}

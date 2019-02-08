@@ -12,6 +12,7 @@
 #include "TGraph.h"
 #include "TVector3.h"
 #include "math.h"
+#include "TArrow.h"
 
 
 /**
@@ -23,37 +24,60 @@
 void TrackFitter::SaveTrack( std::string const & path , const unsigned int & event_id_track ) {
   std::vector< std::vector< double > > min_Linearity_position = FindMinimumLinearityPosition( event_id_track ) ;
   int bins = int(_event_hits[event_id_track-1]/10) ;
-  int window =  int( _event_hits[event_id_track-1] * 0.07 ) ;
-  if( window < 5 ) window = 5 ;
+  double min_x, min_y, min_z, max_x, max_y, max_z ;
+  std::string title ;
 
-  TH3D *h_track = new TH3D("h_track", " Particle Track ", bins,
- _event_tracks[event_id_track-1][0][0], _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-1], bins,
-_event_tracks[event_id_track-1][1][0], _event_tracks[event_id_track-1][1][_event_hits[event_id_track-1]-1], bins, // need to define number of bins as a function of _hits to avoid bad memory allocation
-_event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event_hits[event_id_track-1]-1] );
-  std::cout<< " x = " << _event_tracks[event_id_track-1][0][0] << " Xf= "<<  _event_tracks[event_id_track-1][0][_event_hits[event_id_track-1]-2] << " hits " << _event_hits[event_id_track-1] << std::endl;
+  min_x = FindMinCoordinate( event_id_track, 0 ) ;
+  min_y = FindMinCoordinate( event_id_track, 1 ) ;
+  min_z = FindMinCoordinate( event_id_track, 2 ) ;
+  max_x = FindMaxCoordinate( event_id_track, 0 ) ;
+  max_y = FindMaxCoordinate( event_id_track, 1 ) ;
+  max_z = FindMaxCoordinate( event_id_track, 2 ) ;
+
+  TH3D *h_track = new TH3D("h_track", " Particle Track ", bins, min_x, max_x, bins, min_y, max_y, bins, min_z, max_z );
+  TH3D *h_track_MCvertex = (TH3D * ) h_track ->Clone();
   TH3D *h_track_kink = (TH3D * ) h_track ->Clone();
   h_track_kink->SetName("h_track_kink") ;
 
-  TLegend *leg = new TLegend(0.9,0.7,0.48,0.9);
+  TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
 
   for( int i = 0; i < _event_hits[event_id_track-1]; ++i ){
     h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i] ) ; }//, _event_tracks[event_id_track-1][3][i]);  }
 
+  if( _TPDG_Code_Primary[event_id_track-1] == 13 ) title = "  #mu^{-} gun event : " ;
+  if( _TPDG_Code_Primary[event_id_track-1] == 211 ) title = " #pi^{-} gun event : " ;
+  if( _Tnu_mu[event_id_track-1] != 0 ) title += std::to_string(_Tnu_mu[event_id_track-1])+" #mu^{-} " ;
+  if( _Tnu_pi[event_id_track-1] != 0 ) title += std::to_string(_Tnu_pi[event_id_track-1])+" #pi^{-} " ;
+  if( _Tnu_p[event_id_track-1] != 0 ) title += std::to_string(_Tnu_p[event_id_track-1])+" p " ;
+  if( _Tnu_e[event_id_track-1] != 0 ) title += std::to_string(_Tnu_e[event_id_track-1])+" #e^{-} " ;
+  if( _Tnu_photon[event_id_track-1] != 0 ) title += std::to_string(_Tnu_photon[event_id_track-1])+" #gamma " ;
+  if( _Tnu_others[event_id_track-1] != 0 ) title += std::to_string(_Tnu_others[event_id_track-1])+" others " ;
+  std::cout<< _event_MC_vertex[event_id_track-1][0] << std::endl;
+  h_track->SetTitle( title.c_str() ) ;
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
   gStyle->SetNumberContours(250);
   h_track->SetLineColor(2);
-  h_track->GetXaxis()->SetTitle("X");
-  h_track->GetYaxis()->SetTitle("Y");
-  h_track->GetZaxis()->SetTitle("Z");
+  h_track->GetXaxis()->SetTitle("X [cm]");
+  h_track->GetYaxis()->SetTitle("Y [cm]");
+  h_track->GetZaxis()->SetTitle("Z [cm]");
   leg->AddEntry( h_track, " Track 3D trajectory ");
   h_track->Draw("BOX2Z");
+
+  h_track_MCvertex->Fill( _event_MC_vertex[event_id_track-1][0], _event_MC_vertex[event_id_track-1][1], _event_MC_vertex[event_id_track-1][2]) ;
+  h_track_MCvertex->SetLineColor(2) ;
+  h_track_MCvertex->SetLineWidth(3) ;
+  h_track_MCvertex->SetFillColor(kRed);
+  h_track_MCvertex->SetFillStyle(3001);
+  h_track_MCvertex->Draw("BOX same") ;
+  leg->AddEntry(h_track_MCvertex, "Truth vertex position" );
 
   if( min_Linearity_position.size() > 0 ) { // can remove
     for( unsigned int i = 0 ; i < min_Linearity_position.size() ; ++i ) {
       h_track_kink -> Fill( min_Linearity_position[i][0], min_Linearity_position[i][1], min_Linearity_position[i][2] ) ;
     }
     h_track_kink->SetLineColor(3) ;
+    h_track_kink->SetLineWidth(3) ;
     h_track_kink->SetFillColor(kRed);
     h_track_kink->SetFillStyle(3004);
     h_track_kink->Draw("BOX same") ;
@@ -62,7 +86,7 @@ _event_tracks[event_id_track-1][2][0], _event_tracks[event_id_track-1][2][_event
 
   leg->Draw();
   c->SaveAs((path+".root").c_str());
-//  c->Clear();
+  //  c->Clear();
 }
 
 void TrackFitter::PrintdEdx( const std::string & path , const unsigned int & event_id_track ) const {
