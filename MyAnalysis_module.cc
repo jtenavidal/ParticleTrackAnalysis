@@ -29,6 +29,7 @@
 #include "lardataobj/AnalysisBase/ParticleID.h"
 #include "canvas/Persistency/Common/FindManyP.h"
 #include "larpandora/LArPandoraInterface/LArPandoraHelper.h"
+#include "sbndcode/RecoUtils/RecoUtils.h"
 
 #include "TTree.h"
 #include "TFile.h"
@@ -48,6 +49,7 @@
 #include <string> 
 #include "TVector3.h"
 #include "math.h"
+#include <map>
 
 namespace TrackID {
   class MyAnalysis;
@@ -71,6 +73,7 @@ public:
 
   //                    ->  Added functions (*)
   void reconfigure(fhicl::ParameterSet const & p);
+  void clearVariables() ;
   void beginJob() override;
   void endJob() override;
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter) ;
@@ -92,28 +95,30 @@ private:
   int event_id ; 
 
   // Event tree information
-  int is_reconstructed, has_reco_tracks, has_reco_showers ; 
+  bool is_reconstructed, has_reco_tracks, has_reco_showers ; 
   int has_reco_daughters ;
 
   // Truth information
-  int fPDG_Code, fTrack_ID, fNumDaughters, fDaughter_mu, fDaughter_pi, fDaughter_e, fDaughter_p, fDaughter_n, fDaughter_photon, fDaughter_other ;
+  int fPDG_Code, fNumDaughters, fDaughter_mu, fDaughter_pi, fDaughter_e, fDaughter_p, fDaughter_n, fDaughter_photon, fDaughter_other ;
   float fTrueParticleEnergy, fMass;
-  float fpx, fpy, fpz, fpt, fp; // momentum variables
+  float fpx, fpy, fpz, fpt, fp; 
   double fMCLength, fTrack_vertex_x, fTrack_vertex_y, fTrack_vertex_z, fTrack_vertex_t, fTrack_end_x, fTrack_end_y, fTrack_end_z, fTrack_end_t ;
+  std::map< int , int > mapMC_reco_pdg ;
 
   // Reco information
   bool primary_vcontained, primary_econtained ;
   int r_pdg_primary, r_nu_daughters ;
-  int rnu_hits, rdEdx_size ;
+  int rnu_hits ;
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
   double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
   float rLength ;
-  float r_dEdx[100000]; // r_track_Q[100000];
   double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
-  std::vector< float > r_dEdx_ID, r_dEdx_total ; // to save it ordered!
+  std::vector< float > r_dEdx_ID, r_dEdx_total ; 
   std::vector< std::vector< float >  > r_dEdx_ID_all ; 
   
   // -> Breakdown particles in event from Pandora
+  int tr_id_energy, tr_id_charge, tr_id_hits;
+  int pfps_truePDG[1000] ;
   int event_vcontained[1000], event_econtained[1000] ; 
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
@@ -143,13 +148,14 @@ TrackID::MyAnalysis::MyAnalysis(fhicl::ParameterSet const & p)
 
 void TrackID::MyAnalysis::analyze(art::Event const & e)
 {
+  clearVariables();
   event_id = e.id().event();
   std::stringstream t_path, r_path ;
   t_path << "Histograms/eid_"<<event_id<<"_truth_track" ;
   r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
-  std::cout<< " event = " << event_id << std::endl;
+  std::cout<< " EVENT ID = " << event_id << std::endl;
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -171,9 +177,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
- 
+	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ; 
 	if(trueParticle.Process() == "primary" ){
-	  fTrack_ID = trueParticle.TrackId() ;
 	  fPDG_Code = trueParticle.PdgCode() ;
 	  fTrueParticleEnergy = trueParticle.E() ;
 	  fMass = trueParticle.Mass() ;
@@ -194,13 +199,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	  fMCLength = trueParticle.Trajectory().TotalLength() ;
 	  primary_vcontained = MCIsContained( trueParticle )[0] ; 
 	  primary_econtained = MCIsContained( trueParticle )[1] ; 
-	} else { // secondary particle information 
+	} else { // secondary particle information : Just storing total number of each type
 	  if      ( trueParticle.PdgCode() == 13   ) { ++fDaughter_mu ; }
 	  else if ( trueParticle.PdgCode() == 211  ) { ++fDaughter_pi ; } 
 	  else if ( trueParticle.PdgCode() == 11   ) { ++fDaughter_e ;  } 
 	  else if ( trueParticle.PdgCode() == 2212 ) { ++fDaughter_p ;  }
 	  else if ( trueParticle.PdgCode() == 2112 ) { ++fDaughter_n ;  }
-	  else if ( trueParticle.PdgCode() == 22  )  { ++fDaughter_photon ; }
+	  else if ( trueParticle.PdgCode() == 22   ) { ++fDaughter_photon ; }
 	  else                                       { ++fDaughter_other ;  }
 	}
       }
@@ -238,17 +243,16 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
   rLength = 0 ;
   rnu_hits = 0 ;
-  rdEdx_size = 0 ;
-  r_dEdx_ID.clear() ; // clean individual one
+  r_dEdx_ID.clear() ; 
   
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
-    is_reconstructed = 1 ; 
+    is_reconstructed = true ; 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
       
       if( pfparticle->IsPrimary() == 1 ) { //found primary particle and starting point 
 	if( pfparticle->NumDaughters() > 0 ) {
-	  if( pfparticle->NumDaughters() > 1 ) { has_reco_daughters = pfparticle->NumDaughters() - 1 ; }
+	  if( pfparticle->NumDaughters() > 1 ) has_reco_daughters = pfparticle->NumDaughters() - 1 ; 
  	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
@@ -260,6 +264,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
 	      for( int j2 = 0 ; j2 < particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
+		has_reco_daughters += particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; 
+		
 		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
 		  int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
 		  int secondary_daughter = j + j2 + 1 ;
@@ -267,8 +273,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		  if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
 		  else event_vcontained[id_2daughter] = 1 ; 
 		  if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
-		  else event_econtained[id_2daughter] = 1 ; 
-		  // it was not working for array of bools 
+		  else event_econtained[id_2daughter] = 1 ;  
 		}
 	      }
 	    }
@@ -295,7 +300,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 
 	// Loop over tracks per event
 	for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
-	  has_reco_tracks = 1 ; 
+	  has_reco_tracks = true ; 
 	  rLength   += track_f[n]->Length() ;
 	  // Get track based variables
 	  std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
@@ -314,6 +319,21 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      if( !cal_f[m] ) continue ;
 	      if( !cal_f[m]->PlaneID().isValid) continue ;
 	      if( cal_f[m]->PlaneID().Plane == 2 ) {	    
+		// Get associated MCParticle ID using 3 different methods:
+		//    Which particle contributes the most energy to all the hits
+		//    Which particle contributes the reco charge to all the hits
+		//    Which particle is the biggest contributor to all the hits
+              
+		tr_id_energy      = RecoUtils::TrueParticleIDFromTotalTrueEnergy(hit_f);
+		tr_id_charge      = RecoUtils::TrueParticleIDFromTotalRecoCharge(hit_f);
+		tr_id_hits        = RecoUtils::TrueParticleIDFromTotalRecoHits(hit_f);
+		// save the most common answer : 
+		if( tr_id_energy == tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
+		if( tr_id_energy == tr_id_charge && tr_id_energy != tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
+		if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
+		if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
+		if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
+
 		// save information 
 		r_chi2_mu[primary_daughter] = pid_f[k]->Chi2Muon() ;
 		r_chi2_pi[primary_daughter] = pid_f[k]->Chi2Pion() ;
@@ -348,7 +368,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      
 	      // calo information is stored in all planes:
 	      
-	      for( unsigned int l = 0 ; l < (cal_f[m]->dEdx()).size() ; ++l ) r_dEdx[l+rdEdx_size] = cal_f[m]->dEdx()[l];
 	      for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
 		for( int t = 0 ; t < rnu_hits ; ++t ){
 		  if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
@@ -357,12 +376,11 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		}
 	      }
 	      r_Range[primary_daughter] = cal_f[m]->Range(); // check 
-	      rdEdx_size += (cal_f[m]->dEdx()).size();
 	    } //close calo
 	  } //close pid
 	} //close track  	  
       } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look in showers 
-	has_reco_showers = 1 ; 
+	has_reco_showers = true ; 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
 	for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
@@ -478,8 +496,9 @@ void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
   // Here you add an external fcl file to change configuration
 }
 
-void TrackID::MyAnalysis::beginJob( )
+void TrackID::MyAnalysis::clearVariables( )
 {
+  
   // Define default for parameters and create variables and trees
   // Detector Geometry
   DetectorHalfLengthX = 400 ;
@@ -491,16 +510,15 @@ void TrackID::MyAnalysis::beginJob( )
   SelectedBorderX = 16.5 ;
   SelectedBorderY = 15 ;
   SelectedBorderZ = 15 ; //47.5 ;
-  
+
   // Event tree
   event_id = 0 ;
-  is_reconstructed   = 0 ; 
-  has_reco_daughters = 0 ;
-  has_reco_tracks    = 0 ;
-  has_reco_showers   = 0 ; 
+  is_reconstructed   =  false ; 
+  has_reco_daughters =  0 ;
+  has_reco_tracks    =  false ;
+  has_reco_showers   =  false ; 
 
   // Truth Information 
-  fTrack_ID = -999 ;
   fTrueParticleEnergy = -999. ; 
   fPDG_Code = -999 ;
   fMass = -1  ;
@@ -526,7 +544,10 @@ void TrackID::MyAnalysis::beginJob( )
   fTrack_end_y = -999. ;
   fTrack_end_z = -999. ;
   fTrack_end_t = -999.;
-
+  tr_id_energy = -999 ;
+  tr_id_charge = -999 ;
+  tr_id_hits = -999 ;
+    
   // reco information
   r_pdg_primary   = 0 ;
   r_nu_daughters  = 0 ;
@@ -536,7 +557,6 @@ void TrackID::MyAnalysis::beginJob( )
   primary_econtained = true ;
 
   for ( int i = 0 ; i < 100000 ; ++i ){
-    r_dEdx[i] = 0 ;
     r_track_x[i] = 0 ;
     r_track_y[i] = 0 ; 
     r_track_z[i] = 0 ; 
@@ -544,6 +564,7 @@ void TrackID::MyAnalysis::beginJob( )
   }
 
   for( int i = 0 ; i < 1000 ; ++i ) {
+    pfps_truePDG[i] = 0 ;
     pfps_hits[i] = 0 ;   
     pfps_type[i] = 0 ;  
     pfps_length[i] = 0 ; 
@@ -563,25 +584,32 @@ void TrackID::MyAnalysis::beginJob( )
     event_econtained[i] = 1 ; 
   }
   
+}
+
+void TrackID::MyAnalysis::beginJob( )
+{
+  clearVariables() ; 
   // Declare trees and branches
   event_tree      = new TTree( "event_tree",           "Event tree: True and reconstructed SBND event information");
   mcparticle_tree = new TTree( "mcparticle_tree",      "MC tree:    True Particle track information");
   recotrack_tree  = new TTree( "recoparticle_tree",    "Reco tree: reconstructed information of the tracks, hit level included");
 
   event_tree      -> Branch( "event_id",                  &event_id,           "event_id/I");
-  event_tree      -> Branch( "is_reconstructed",          &is_reconstructed,   "is_reconstructed/I");
+  event_tree      -> Branch( "is_reconstructed",          &is_reconstructed,   "is_reconstructed/B");
   event_tree      -> Branch( "has_reco_daughters",        &has_reco_daughters, "has_reco_daughters/I");
-  event_tree      -> Branch( "has_reco_tracks",           &has_reco_tracks,    "has_reco_tracks/I");
-  event_tree      -> Branch( "has_reco_showers",          &has_reco_showers,   "has_reco_showers/I");
+  event_tree      -> Branch( "has_reco_tracks",           &has_reco_tracks,    "has_reco_tracks/B");
+  event_tree      -> Branch( "has_reco_showers",          &has_reco_showers,   "has_reco_showers/B");
 
   /**
      MC PARTICLE TREE BRANCHES :
    */
   mcparticle_tree -> Branch( "event_id",                &event_id,            "event_id/I");
-  mcparticle_tree -> Branch( "fTrack_ID",               &fTrack_ID,           "fTrack_ID/I");
-  mcparticle_tree -> Branch( "ftrueEnergy",             &fTrueParticleEnergy, "fTrueParticleEnergy/F");
+  mcparticle_tree -> Branch( "primary_vcontained",      &primary_vcontained,  "primary_vcontained/B");
+  mcparticle_tree -> Branch( "primary_econtained",      &primary_econtained,  "primary_econtained/B");
   mcparticle_tree -> Branch( "fPDG_Code",               &fPDG_Code,           "fPDG_Code/I");
+  mcparticle_tree -> Branch( "ftrueEnergy",             &fTrueParticleEnergy, "fTrueParticleEnergy/F");
   mcparticle_tree -> Branch( "fMass",                   &fMass,               "fMass/F");
+  mcparticle_tree -> Branch( "fMC_Length",              &fMCLength,           "fMCLength/D");
   mcparticle_tree -> Branch( "fTrack_vertex_x",         &fTrack_vertex_x,     "fTrack_vertex_x/D");
   mcparticle_tree -> Branch( "fTrack_vertex_y",         &fTrack_vertex_y,     "fTrack_vertex_y/D");
   mcparticle_tree -> Branch( "fTrack_vertex_z",         &fTrack_vertex_z,     "fTrack_vertex_z/D");
@@ -603,34 +631,19 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "fDaughter_n",             &fDaughter_n,         "fDaughter_n/I");
   mcparticle_tree -> Branch( "fDaughter_photon",        &fDaughter_photon,    "fDaughter_photon/I");
   mcparticle_tree -> Branch( "fDaughter_other",         &fDaughter_other,     "fDaughter_other/I");
-  mcparticle_tree -> Branch( "fMC_Length",              &fMCLength,           "fMCLength/D");
 
  /**
-     RECONSTRUCTED PARTICLE TREE BRANCHES :
+   *  RECONSTRUCTED PARTICLE TREE BRANCHES :
    */
   recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
-  recotrack_tree  -> Branch( "r_pdg_primary",       &r_pdg_primary,     "r_pdg_primary/I");
-  recotrack_tree  -> Branch( "primary_vcontained",  &primary_vcontained,"primary_vcontained/B");
-  recotrack_tree  -> Branch( "primary_econtained",  &primary_econtained,"primary_econtained/B");
   recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "r_nu_daughters/I");
-  recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
-  recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
-  recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         ("r_chi2_mu[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         ("r_chi2_pi[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          ("r_chi2_p[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_PIDA",              &r_PIDA,            ("r_PIDA[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      ("r_missenergy[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   ("r_KineticEnergy[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_Range",             &r_Range,           ("r_Range[" + std::to_string(10)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_dEdx",              &r_dEdx,            ("r_dEdx[" + std::to_string(100000)+"]/F").c_str());
-  recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "r_track_dEdx",        &r_track_dEdx,      ("r_track_dEdx[" + std::to_string(100000)+"]/D").c_str());
-  recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits[" + std::to_string(1000)+"]/I").c_str());
-  recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "pfps_truePDG",        &pfps_truePDG,      ("pfps_truePDG["+ std::to_string(1000)+"]/I").c_str());
   recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/I").c_str());
   recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
+  recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "rLength",             &rLength,           "rLength/F");
   recotrack_tree  -> Branch( "pfps_length",         &pfps_length,       ("pfps_length[" + std::to_string(1000)+"]/F").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_x",    &pfps_dir_start_x,  ("pfps_dir_start_x[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_dir_start_y",    &pfps_dir_start_y,  ("pfps_dir_start_y[" + std::to_string(1000)+"]/D").c_str());
@@ -644,6 +657,17 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "pfps_end_x",          &pfps_end_x,        ("pfps_end_x[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_end_y",          &pfps_end_y,        ("pfps_end_y[" + std::to_string(1000)+"]/D").c_str());
   recotrack_tree  -> Branch( "pfps_end_z",          &pfps_end_z,        ("pfps_end_z[" + std::to_string(1000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_x",           &r_track_x,         ("r_track_x[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_y",           &r_track_y,         ("r_track_y[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_z",           &r_track_z,         ("r_track_z[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_KineticEnergy",     &r_KineticEnergy,   ("r_KineticEnergy[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_Range",             &r_Range,           ("r_Range[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_track_dEdx",        &r_track_dEdx,      ("r_track_dEdx[" + std::to_string(100000)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_chi2_mu",           &r_chi2_mu,         ("r_chi2_mu[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_chi2_pi",           &r_chi2_pi,         ("r_chi2_pi[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_chi2_p",            &r_chi2_p,          ("r_chi2_p[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_PIDA",              &r_PIDA,            ("r_PIDA[" + std::to_string(10)+"]/D").c_str());
+  recotrack_tree  -> Branch( "r_missing_energy",    &r_missenergy,      ("r_missenergy[" + std::to_string(10)+"]/D").c_str());
  
   // Set directories
   event_tree->SetDirectory(0);
