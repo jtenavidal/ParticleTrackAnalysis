@@ -52,15 +52,16 @@ typedef std::vector< double > Hit_level;
 
   private :
   // Event tree information
-  std::vector< bool > _is_reconstructed, _has_reco_daughters, _has_reco_tracks, _has_reco_showers ;
-
+  std::vector< bool >  _is_reconstructed, _has_reco_tracks, _has_reco_showers ;
+  std::vector< int > _has_reco_daughters ;
   // Object Truth information
-  std::vector< double > _event_TLenght ;
+  std::vector< bool > _TPrimary_vcontained, _TPrimary_econtained ;
+  std::vector< double > _event_TLenght, _event_TPrimaryE, _event_TPrimaryMass ;
   std::vector< int > _Tnu_daughters, _TPDG_Code_Primary, _Tnu_mu, _Tnu_pi, _Tnu_p, _Tnu_e, _Tnu_n, _Tnu_photon, _Tnu_others ; // truth information pdg hiearchy
+  std::vector< std::vector<double> > _event_MC_vertex, _event_MC_end ;
 
   // Object RECO information
   int _hits ;
-  std::vector< bool > _event_primamry_vcontained, _event_primary_econtained ;
   std::vector< double > _event_RLenght ;
   Hit_level _vertex_position, _end_position ;
   std::vector< float > _reco_dEdx ;
@@ -77,6 +78,9 @@ typedef std::vector< double > Hit_level;
   std::vector< std::vector< double > > _event_pfps_dir_start_x, _event_pfps_dir_start_y, _event_pfps_dir_start_z, _event_pfps_dir_end_x,  _event_pfps_dir_end_y, _event_pfps_dir_end_z ;
   std::vector< std::vector< double > > _event_pfps_start_x, _event_pfps_start_y, _event_pfps_start_z, _event_pfps_end_x,  _event_pfps_end_y, _event_pfps_end_z ;
 
+
+  double FindMaxCoordinate( const unsigned int & event_id_track , const int & coordinate_id ) ;
+  double FindMinCoordinate( const unsigned int & event_id_track , const int & coordinate_id ) ;
 
   /**
   * Functions to guess about the geometry of the track
