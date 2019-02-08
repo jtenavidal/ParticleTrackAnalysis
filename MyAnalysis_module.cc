@@ -155,7 +155,6 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
-  std::cout<< " EVENT ID = " << event_id << std::endl;
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -263,18 +262,16 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    else event_econtained[j] = 1 ; 
 
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
+	      has_reco_daughters += particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; 
 	      for( int j2 = 0 ; j2 < particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
-		has_reco_daughters += particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; 
-		
-		if( particleMap[ pfparticle->Daughters()[j2] ] -> NumDaughters() > 0 ) { 
-		  int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
-		  int secondary_daughter = j + j2 + 1 ;
-	    	  StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
-		  if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
-		  else event_vcontained[id_2daughter] = 1 ; 
-		  if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
-		  else event_econtained[id_2daughter] = 1 ;  
-		}
+		int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
+		int secondary_daughter = j + j2 + 1 ;
+		pfps_type[secondary_daughter] = particleMap[ id_2daughter ] -> PdgCode() ; 
+		StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
+		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
+		else event_vcontained[id_2daughter] = 1 ; 
+		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
+		else event_econtained[id_2daughter] = 1 ;  
 	      }
 	    }
 	  }
