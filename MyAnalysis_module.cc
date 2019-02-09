@@ -604,7 +604,7 @@ void TrackID::MyAnalysis::beginJob( )
   mcparticle_tree -> Branch( "primary_vcontained",      &primary_vcontained,  "primary_vcontained/B");
   mcparticle_tree -> Branch( "primary_econtained",      &primary_econtained,  "primary_econtained/B");
   mcparticle_tree -> Branch( "fPDG_Code",               &fPDG_Code,           "fPDG_Code/I");
-  mcparticle_tree -> Branch( "ftrueEnergy",             &fTrueParticleEnergy, "fTrueParticleEnergy/F");
+  mcparticle_tree -> Branch( "fTrueParticleEnergy",     &fTrueParticleEnergy, "fTrueParticleEnergy/F");
   mcparticle_tree -> Branch( "fMass",                   &fMass,               "fMass/F");
   mcparticle_tree -> Branch( "fMC_Length",              &fMCLength,           "fMCLength/D");
   mcparticle_tree -> Branch( "fTrack_vertex_x",         &fTrack_vertex_x,     "fTrack_vertex_x/D");
