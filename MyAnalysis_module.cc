@@ -30,6 +30,7 @@
 #include "canvas/Persistency/Common/FindManyP.h"
 #include "larpandora/LArPandoraInterface/LArPandoraHelper.h"
 #include "sbndcode/RecoUtils/RecoUtils.h"
+#include "sbndcode/RecoUtils/ShowerUtils.h"
 
 #include "TTree.h"
 #include "TFile.h"
@@ -409,7 +410,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    pfps_start_y[primary_daughter] = shower_f->ShowerStart().Y() ;
 	    pfps_start_z[primary_daughter] = shower_f->ShowerStart().Z() ;
 	    // no end position
-
+	    pfps_truePDG[primary_daughter] = 0 ; // need to update
 	}	
       } // track vs shower
 }
