@@ -120,7 +120,7 @@ private:
   // -> Breakdown particles in event from Pandora
   int tr_id_energy, tr_id_charge, tr_id_hits;
   int pfps_truePDG[1000] ;
-  int event_vcontained[1000], event_econtained[1000] ; 
+  bool event_vcontained[1000], event_econtained[1000] ; 
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
   double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
@@ -269,10 +269,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		int secondary_daughter = j + j2 + 1 ;
 		pfps_type[secondary_daughter] = particleMap[ id_2daughter ] -> PdgCode() ; 
 		StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
-		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
-		else event_vcontained[id_2daughter] = 1 ; 
-		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
-		else event_econtained[id_2daughter] = 1 ;  
+		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = false ; }
+		else event_vcontained[id_2daughter] = true ; 
+		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = false ; }
+		else event_econtained[id_2daughter] = true ;  
 	      }
 	    }
 	  }
@@ -578,8 +578,8 @@ void TrackID::MyAnalysis::clearVariables( )
     pfps_end_x[i] = 0 ;  
     pfps_end_y[i] = 0 ;  
     pfps_end_z[i] = 0 ;  
-    event_vcontained[i] = 1 ;
-    event_econtained[i] = 1 ; 
+    event_vcontained[i] = true ;
+    event_econtained[i] = true ; 
   }
   
 }
@@ -636,8 +636,8 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
   recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "r_nu_daughters/I");
   recotrack_tree  -> Branch( "pfps_truePDG",        &pfps_truePDG,      ("pfps_truePDG["+ std::to_string(1000)+"]/I").c_str());
-  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/I").c_str());
-  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/B").c_str());
+  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/B").c_str());
   recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type[" + std::to_string(1000)+"]/I").c_str());
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
   recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits[" + std::to_string(1000)+"]/I").c_str());
