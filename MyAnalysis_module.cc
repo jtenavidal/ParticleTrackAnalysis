@@ -257,10 +257,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
-	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = 0 ; }
-	    else event_vcontained[j] = 1 ; 
-	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] == 0 ) { event_econtained[j] = 0 ; }
-	    else event_econtained[j] = 1 ; 
+	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = false ; }
+	    else event_vcontained[j] = true ; 
+	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] == 0 ) { event_econtained[j] = false ; }
+	    else event_econtained[j] = true ; 
 
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
 	      has_reco_daughters += particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; 
