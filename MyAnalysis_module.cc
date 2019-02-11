@@ -636,8 +636,8 @@ void TrackID::MyAnalysis::beginJob( )
   recotrack_tree  -> Branch( "event_id",            &event_id,          "event_id/I");
   recotrack_tree  -> Branch( "r_nu_daughters",      &r_nu_daughters,    "r_nu_daughters/I");
   recotrack_tree  -> Branch( "pfps_truePDG",        &pfps_truePDG,      ("pfps_truePDG["+ std::to_string(1000)+"]/I").c_str());
-  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/B").c_str());
-  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/B").c_str());
+  recotrack_tree  -> Branch( "event_vcontained",    &event_vcontained,  ("event_vcontained[" + std::to_string(1000)+"]/I").c_str());
+  recotrack_tree  -> Branch( "event_econtained",    &event_econtained,  ("event_econtained[" + std::to_string(1000)+"]/I").c_str());
   recotrack_tree  -> Branch( "pfps_type",           &pfps_type,         ("pfps_type[" + std::to_string(1000)+"]/I").c_str());
   recotrack_tree  -> Branch( "rnu_hits",            &rnu_hits,          "rnu_hits/I");
   recotrack_tree  -> Branch( "pfps_hits",           &pfps_hits,         ("pfps_hits[" + std::to_string(1000)+"]/I").c_str());
