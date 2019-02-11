@@ -120,7 +120,7 @@ private:
   // -> Breakdown particles in event from Pandora
   int tr_id_energy, tr_id_charge, tr_id_hits;
   int pfps_truePDG[1000] ;
-  bool event_vcontained[1000], event_econtained[1000] ; 
+  int event_vcontained[1000], event_econtained[1000] ; 
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
   double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
@@ -257,10 +257,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
-	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = false ; }
-	    else event_vcontained[j] = true ; 
-	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] == 0 ) { event_econtained[j] = false ; }
-	    else event_econtained[j] = true ; 
+	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = 0 ; }
+	    else event_vcontained[j] = 1 ;
+	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] == 0 ) { event_econtained[j] = 0 ; }
+	    else event_econtained[j] = 1 ; 
 
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
 	      has_reco_daughters += particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; 
@@ -269,10 +269,10 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 		int secondary_daughter = j + j2 + 1 ;
 		pfps_type[secondary_daughter] = particleMap[ id_2daughter ] -> PdgCode() ; 
 		StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
-		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = false ; }
-		else event_vcontained[id_2daughter] = true ; 
-		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = false ; }
-		else event_econtained[id_2daughter] = true ;  
+		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
+		else event_vcontained[id_2daughter] = 1 ; 
+		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
+		else event_econtained[id_2daughter] = 1 ;  
 	      }
 	    }
 	  }
@@ -578,8 +578,8 @@ void TrackID::MyAnalysis::clearVariables( )
     pfps_end_x[i] = 0 ;  
     pfps_end_y[i] = 0 ;  
     pfps_end_z[i] = 0 ;  
-    event_vcontained[i] = true ;
-    event_econtained[i] = true ; 
+    event_vcontained[i] = 1 ;
+    event_econtained[i] = 1 ; 
   }
   
 }
