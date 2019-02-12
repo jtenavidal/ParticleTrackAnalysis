@@ -532,6 +532,9 @@ void TrackID::MyAnalysis::clearVariables( )
 {
 
   ShowerMothers.clear();
+  mapMC_reco_pdg.clear() ;
+  trueParticles.clear() ; 
+
   // Define default for parameters and create variables and trees
   // Detector Geometry
   DetectorHalfLengthX = 400 ;
