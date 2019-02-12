@@ -77,7 +77,7 @@ public:
   void clearVariables() ;
   void beginJob() override;
   void endJob() override;
-  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter) ;
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks , std::map< int , std::vector< int > > & ShowerMothers , int const & part_id_f , int const & primary_daughter) ;
   std::vector< bool > MCIsContained( simb::MCParticle const & trueParticle ) ;
   std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
 
@@ -90,6 +90,9 @@ private:
 
   // Detector information
   float DetectorHalfLengthX, DetectorHalfLengthY, DetectorHalfLengthZ, CoordinateOffSetX, CoordinateOffSetY, CoordinateOffSetZ, SelectedBorderX, SelectedBorderY, SelectedBorderZ ;
+
+  // Particle inventory service
+  art::ServiceHandle<cheat::ParticleInventoryService> particleInventory;
 
   // Tree members
   TTree * event_tree, * mcparticle_tree, * recotrack_tree ; 
@@ -105,6 +108,8 @@ private:
   float fpx, fpy, fpz, fpt, fp; 
   double fMCLength, fTrack_vertex_x, fTrack_vertex_y, fTrack_vertex_z, fTrack_vertex_t, fTrack_end_x, fTrack_end_y, fTrack_end_z, fTrack_end_t ;
   std::map< int , int > mapMC_reco_pdg ;
+  std::map<int, const simb::MCParticle*> trueParticles ; 
+  std::map< int , std::vector< int > > ShowerMothers ;
 
   // Reco information
   bool primary_vcontained, primary_econtained ;
@@ -156,13 +161,38 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   r_path << "Histograms/eid_"<<event_id<<"_reco_track" ;
   std::string truth_path = t_path.str();
   std::string reco_path = r_path.str();
+  std::cout<< " event id - " << event_id << std::endl;
+
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
      *************************************************************************************************/
     art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(fTruthLabel);
+    //List the particles in the event                                                                                                                                                              
+    const sim::ParticleList& particles = particleInventory->ParticleList(); // should change. Doing the same twice 
+    
+    //Make a map of Track id and pdgcode                                                                                                                                                           
+    for (sim::ParticleList::const_iterator particleIt = particles.begin(); particleIt != particles.end(); ++particleIt){
+      const simb::MCParticle *particle = particleIt->second;
+      trueParticles[particle->TrackId()] = particle;
+    }
+    for (sim::ParticleList::const_iterator particleIt = particles.begin(); particleIt != particles.end(); ++particleIt){
+      const simb::MCParticle *particle_temp = particleIt->second;
+
+      // Creating shower mother map:      
+      if( particle_temp->Mother() != 0 ){
+	if( trueParticles.find( particle_temp->TrackId() ) == trueParticles.end() || trueParticles.find( particle_temp->Mother()) == trueParticles.end() ){ continue ; }
+	while( particle_temp->Mother() != 0 && (TMath::Abs(trueParticles[particle_temp->Mother()]->PdgCode()) == 11 || trueParticles[particle_temp->Mother()]->PdgCode() == 22 )){
+	  particle_temp =  trueParticles[particle_temp->Mother()];
+	  if( trueParticles.find(particle_temp->Mother()) == trueParticles.end()){ break; } // found mother
+	}
+      }
+      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } 
+
+    }
 
     if(mcParticles.isValid()){
+      
       // Loop over truth info
       fDaughter_mu = 0 ;
       fDaughter_pi = 0 ;
@@ -177,7 +207,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
-	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ; 
+	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ;
+
 	if(trueParticle.Process() == "primary" ){
 	  fPDG_Code = trueParticle.PdgCode() ;
 	  fTrueParticleEnergy = trueParticle.E() ;
@@ -256,19 +287,18 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
  	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ){ // looping over daughters to read them in order 
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
-	    StoreInformation( e, trackHandle, showerHandle, findTracks, part_id_f , j ) ;
+	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
 	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[0] == 0 ) { event_vcontained[j] = 0 ; }
-	    else event_vcontained[j] = 1 ;
+	    else event_vcontained[j] = 1 ; 
 	    if( IsContained( e, trackHandle, showerHandle, findTracks, part_id_f )[1] == 0 ) { event_econtained[j] = 0 ; }
 	    else event_econtained[j] = 1 ; 
-
 	    if( particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() > 0 ) { // Looking for possible secondary particle daughters 
 	      has_reco_daughters += particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; 
 	      for( int j2 = 0 ; j2 < particleMap[ pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ){ // looping over daughters to read them in order 
 		int id_2daughter = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ;
 		int secondary_daughter = j + j2 + 1 ;
 		pfps_type[secondary_daughter] = particleMap[ id_2daughter ] -> PdgCode() ; 
-		StoreInformation( e, trackHandle, showerHandle, findTracks, id_2daughter, secondary_daughter ) ;
+		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, id_2daughter, secondary_daughter ) ;
 		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[0] == 0 ) { event_vcontained[id_2daughter] = 0 ; }
 		else event_vcontained[id_2daughter] = 1 ; 
 		if( IsContained( e, trackHandle, showerHandle, findTracks, id_2daughter )[1] == 0 ) { event_econtained[id_2daughter] = 0 ; }
@@ -288,7 +318,8 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
   
 } // event 
 
-void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f , int & primary_daughter ) {
+
+void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks , std::map< int , std::vector< int > > & ShowerMothers , int const & part_id_f , int const & primary_daughter) {
       // Save track info
       if ( findTracks.at( part_id_f ).size() != 0 ){
 	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
@@ -381,11 +412,14 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	has_reco_showers = true ; 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
+	//	std::cout<< " shower size - " << showerHandle->size() << std::endl;
 	for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
 	  art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
 	  std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
 	  std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
 	  if( spacepoint_f.size() == 0 ) continue ; 
+
+	  std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
 
 	  for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
 	      r_track_x[l+rnu_hits] = spacepoint_f[l]->XYZ()[0] ;
@@ -410,7 +444,9 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    pfps_start_y[primary_daughter] = shower_f->ShowerStart().Y() ;
 	    pfps_start_z[primary_daughter] = shower_f->ShowerStart().Z() ;
 	    // no end position
-	    pfps_truePDG[primary_daughter] = 0 ; // need to update
+	    if( ShowerTrackInfo.first ) { pfps_truePDG[primary_daughter] = mapMC_reco_pdg[ShowerTrackInfo.first] ; }
+	    else pfps_truePDG[primary_daughter] = 0 ; 
+	    std::cout<< "pdg shower  - " << pfps_truePDG[primary_daughter] << std::endl ;
 	}	
       } // track vs shower
 }
