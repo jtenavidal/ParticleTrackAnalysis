@@ -352,7 +352,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		//    Which particle contributes the most energy to all the hits
 		//    Which particle contributes the reco charge to all the hits
 		//    Which particle is the biggest contributor to all the hits
-              
 		tr_id_energy      = RecoUtils::TrueParticleIDFromTotalTrueEnergy(hit_f);
 		tr_id_charge      = RecoUtils::TrueParticleIDFromTotalRecoCharge(hit_f);
 		tr_id_hits        = RecoUtils::TrueParticleIDFromTotalRecoHits(hit_f);
@@ -408,7 +407,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    } //close calo
 	  } //close pid
 	} //close track  	  
-      } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look in showers 
+      } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
 	has_reco_showers = true ; 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
@@ -446,7 +445,6 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	    // no end position
 	    if( ShowerTrackInfo.first ) { pfps_truePDG[primary_daughter] = mapMC_reco_pdg[ShowerTrackInfo.first] ; }
 	    else pfps_truePDG[primary_daughter] = 0 ; 
-	    std::cout<< "pdg shower  - " << pfps_truePDG[primary_daughter] << std::endl ;
 	}	
       } // track vs shower
 }
@@ -532,7 +530,8 @@ void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
 
 void TrackID::MyAnalysis::clearVariables( )
 {
-  
+
+  ShowerMothers.clear();
   // Define default for parameters and create variables and trees
   // Detector Geometry
   DetectorHalfLengthX = 400 ;
