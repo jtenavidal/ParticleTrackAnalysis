@@ -19,7 +19,7 @@
    TBranch * MC_primary_vcontained = mcparticle_tree->GetBranch("primary_vcontained");
    TBranch * MC_primary_econtained = mcparticle_tree->GetBranch("primary_econtained");
    TBranch * MC_PDG_Code = mcparticle_tree->GetBranch("fPDG_Code");
-   TBranch * MC_trueEnergy = mcparticle_tree->GetBranch("ftrueEnergy");
+   TBranch * MC_trueEnergy = mcparticle_tree->GetBranch("fTrueParticleEnergy");
    TBranch * MC_Mass = mcparticle_tree->GetBranch("fMass");
    TBranch * MC_Lenght= mcparticle_tree->GetBranch("fMC_Lenght");
    TBranch * MC_vertex_x = mcparticle_tree->GetBranch("fTrack_vertex_x");
@@ -46,7 +46,6 @@
    // RECO Tree
    TTree * recoparticle_tree   = (TTree*) track_file.Get("recoparticle_tree") ;
    TBranch * reco_event_id = recoparticle_tree->GetBranch("event_id");
-   TBranch * nu_daughters = recoparticle_tree->GetBranch("r_nu_daughters");
    TBranch * pfps_truePDG = recoparticle_tree->GetBranch("pfps_truePDG");
    TBranch * event_vcontained = recoparticle_tree->GetBranch("event_vcontained");
    TBranch * event_econtained = recoparticle_tree->GetBranch("event_econtained");
@@ -101,7 +100,7 @@
       _TPrimary_vcontained.push_back( MC_primary_vcontained->GetLeaf("primary_vcontained")->GetValue() ) ;
       _TPrimary_econtained.push_back( MC_primary_econtained->GetLeaf("primary_econtained")->GetValue() ) ;
       _TPDG_Code_Primary.push_back( MC_PDG_Code->GetLeaf("fPDG_Code")->GetValue() ) ;
-      // _event_TPrimaryE.push_back( MC_trueEnergy->GetLeaf("ftrueEnergy")->GetValue() ) ;
+      _event_TPrimaryE.push_back( MC_trueEnergy->GetLeaf("fTrueParticleEnergy")->GetValue() ) ;
       _event_TPrimaryMass.push_back( MC_Mass->GetLeaf("fMass")->GetValue() ) ;
       _Tnu_daughters.push_back(MC_Num_Daughters->GetLeaf("fNumDaughters")->GetValue());
       MC_vertex.push_back( MC_vertex_x->GetLeaf("fTrack_vertex_x")->GetValue() ) ;
@@ -129,7 +128,7 @@
   */
    Hit_level track_hit_x, track_hit_y, track_hit_z, track_hit_dEdx;
    std::vector< double > chi2_mu, chi2_pi, chi2_p, pida ;
-   std::vector< int > vcontained, econtained ;
+   std::vector< int > vcontained, econtained, true_pdg ;
    std::vector< int > pfps_hits_i, pfps_type_i ;
    std::vector< float > pfps_length_i ;
    std::vector< double > pfps_dir_start_i_x, pfps_dir_start_i_y, pfps_dir_start_i_z, pfps_dir_end_i_x, pfps_dir_end_i_y, pfps_dir_end_i_z ;
@@ -164,7 +163,7 @@
      pfps_end_i_x.clear() ;
      pfps_end_i_y.clear() ;
      pfps_end_i_z.clear() ;
-
+     true_pdg.clear() ;
 
      recoparticle_tree->GetEntry(i);
      _hits = rnu_hits->GetLeaf("rnu_hits")->GetValue() ;
@@ -187,8 +186,8 @@
 
 //       for( int j = 0; j < _hits; ++j ) _reco_dEdx.push_back( recoparticle_tree->GetLeaf("r_dEdx")->GetValue(j));
 //       _event_reco_dEdx.push_back( _reco_dEdx ) ;
-       _rnu_daughters.push_back( nu_daughters->GetLeaf("r_nu_daughters")->GetValue() ) ;
-       for( int j = 0; j < nu_daughters->GetLeaf("r_nu_daughters")->GetValue() + 1 ; ++j){ // loop over all particles from track
+
+       for( int j = 0; j < _has_reco_daughters[i] +1 ; ++j){ // loop over all particles from track
          chi2_mu.push_back( r_chi2_mu->GetLeaf("r_chi2_mu")->GetValue(j));
          chi2_pi.push_back( r_chi2_pi->GetLeaf("r_chi2_pi")->GetValue(j));
          chi2_p.push_back ( r_chi2_p ->GetLeaf("r_chi2_p")->GetValue(j));
@@ -210,7 +209,8 @@
          pfps_end_i_x.push_back( pfps_end_x->GetLeaf("pfps_end_x")->GetValue(j) ) ;
          pfps_end_i_y.push_back( pfps_end_y->GetLeaf("pfps_end_y")->GetValue(j) ) ;
          pfps_end_i_z.push_back( pfps_end_z->GetLeaf("pfps_end_z")->GetValue(j) ) ;
-       }
+         true_pdg.push_back( pfps_truePDG->GetLeaf("pfps_truePDG")->GetValue(j) ) ;
+        }
        _event_chi2_mu.push_back(chi2_mu);
        _event_chi2_pi.push_back(chi2_pi);
        _event_chi2_p.push_back(chi2_p);
@@ -232,6 +232,7 @@
        _event_pfps_end_x.push_back(pfps_end_i_x);
        _event_pfps_end_y.push_back(pfps_end_i_y);
        _event_pfps_end_z.push_back(pfps_end_i_z);
+       _event_true_PDG.push_back(true_pdg);
 
    } else {
      // seting to zero for empty events
@@ -254,6 +255,28 @@
      _Tnu_others.push_back( 0 );
      _event_tracks.push_back( _particle_track ) ;
      _event_reco_dEdx.push_back( _reco_dEdx ) ;
+     _event_pfps_vcontained.push_back(vcontained) ;
+     _event_pfps_econtained.push_back(econtained) ;
+     _event_chi2_mu.push_back(chi2_mu);
+     _event_chi2_pi.push_back(chi2_pi);
+     _event_chi2_p.push_back(chi2_p);
+     _event_PIDA.push_back(pida);
+     _event_pfps_hits.push_back(pfps_hits_i);
+     _event_pfps_type.push_back(pfps_type_i);
+     _event_pfps_length.push_back(pfps_length_i);
+     _event_pfps_dir_start_x.push_back(pfps_dir_start_i_x);
+     _event_pfps_dir_start_y.push_back(pfps_dir_start_i_y);
+     _event_pfps_dir_start_z.push_back(pfps_dir_start_i_z);
+     _event_pfps_dir_end_x.push_back(pfps_dir_end_i_x);
+     _event_pfps_dir_end_y.push_back(pfps_dir_end_i_y);
+     _event_pfps_dir_end_z.push_back(pfps_dir_end_i_z);
+     _event_pfps_start_x.push_back(pfps_start_i_x);
+     _event_pfps_start_y.push_back(pfps_start_i_y);
+     _event_pfps_start_z.push_back(pfps_start_i_z);
+     _event_pfps_end_x.push_back(pfps_end_i_x);
+     _event_pfps_end_y.push_back(pfps_end_i_y);
+     _event_pfps_end_z.push_back(pfps_end_i_z);
+     _event_true_PDG.push_back(true_pdg);
 
    }
  }

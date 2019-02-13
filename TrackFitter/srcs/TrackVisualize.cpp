@@ -24,6 +24,7 @@
 void TrackFitter::SaveTrack( std::string const & path , const unsigned int & event_id_track ) {
   std::vector< std::vector< double > > min_Linearity_position = FindMinimumLinearityPosition( event_id_track ) ;
   int bins = int(_event_hits[event_id_track-1]/10) ;
+  if( _event_hits[event_id_track-1] < 100 ) bins =  _event_hits[event_id_track-1] ;
   double min_x, min_y, min_z, max_x, max_y, max_z ;
   std::string title ;
 
@@ -33,6 +34,14 @@ void TrackFitter::SaveTrack( std::string const & path , const unsigned int & eve
   max_x = FindMaxCoordinate( event_id_track, 0 ) ;
   max_y = FindMaxCoordinate( event_id_track, 1 ) ;
   max_z = FindMaxCoordinate( event_id_track, 2 ) ;
+
+  if ( min_x > _event_MC_vertex[event_id_track-1][0] ) min_x = _event_MC_vertex[event_id_track-1][0] ;
+  if ( min_y > _event_MC_vertex[event_id_track-1][1] ) min_y = _event_MC_vertex[event_id_track-1][1] ;
+  if ( min_z > _event_MC_vertex[event_id_track-1][2] ) min_z = _event_MC_vertex[event_id_track-1][2] ;
+  if ( max_x < _event_MC_vertex[event_id_track-1][0] ) max_x = _event_MC_vertex[event_id_track-1][0] ;
+  if ( max_y < _event_MC_vertex[event_id_track-1][1] ) max_y = _event_MC_vertex[event_id_track-1][1] ;
+  if ( max_z < _event_MC_vertex[event_id_track-1][2] ) max_z = _event_MC_vertex[event_id_track-1][2] ;
+
 
   TH3D *h_track = new TH3D("h_track", " Particle Track ", bins, min_x, max_x, bins, min_y, max_y, bins, min_z, max_z );
   TH3D *h_track_MCvertex = (TH3D * ) h_track ->Clone();
@@ -44,15 +53,20 @@ void TrackFitter::SaveTrack( std::string const & path , const unsigned int & eve
   for( int i = 0; i < _event_hits[event_id_track-1]; ++i ){
     h_track-> Fill(_event_tracks[event_id_track-1][0][i], _event_tracks[event_id_track-1][1][i], _event_tracks[event_id_track-1][2][i] ) ; }//, _event_tracks[event_id_track-1][3][i]);  }
 
-  if( _TPDG_Code_Primary[event_id_track-1] == 13 ) title = "  #mu^{-} gun event : " ;
-  if( _TPDG_Code_Primary[event_id_track-1] == 211 ) title = " #pi^{-} gun event : " ;
-  if( _Tnu_mu[event_id_track-1] != 0 ) title += std::to_string(_Tnu_mu[event_id_track-1])+" #mu^{-} " ;
-  if( _Tnu_pi[event_id_track-1] != 0 ) title += std::to_string(_Tnu_pi[event_id_track-1])+" #pi^{-} " ;
-  if( _Tnu_p[event_id_track-1] != 0 ) title += std::to_string(_Tnu_p[event_id_track-1])+" p " ;
-  if( _Tnu_e[event_id_track-1] != 0 ) title += std::to_string(_Tnu_e[event_id_track-1])+" #e^{-} " ;
-  if( _Tnu_photon[event_id_track-1] != 0 ) title += std::to_string(_Tnu_photon[event_id_track-1])+" #gamma " ;
-  if( _Tnu_others[event_id_track-1] != 0 ) title += std::to_string(_Tnu_others[event_id_track-1])+" others " ;
-  std::cout<< _event_MC_vertex[event_id_track-1][0] << std::endl;
+  if( _TPDG_Code_Primary[event_id_track-1] == 13 ) { title = "  #mu^{-} gun event : " ;}
+  if( _TPDG_Code_Primary[event_id_track-1] == 211 ) { title = " #pi^{-} gun event : " ;}
+  for ( unsigned int i = 0 ; i <  _event_true_PDG[event_id_track-1].size() ; ++i ){
+    if( _event_true_PDG[event_id_track-1][i] == 13 ) { title += " #mu^{-}, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == 211 ) { title += " #pi^{-}, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == - 211 ) { title += " #pi^{+}, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == 2212 ) { title += " p, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == 11 ) { title += " e^{-}, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == - 11 ) { title += " e^{+}, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == 22 ) { title += " #gamma, " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == 0 ) { title += " Shower not defined " ;}
+    else {title +=  " others :"+to_string(  _event_true_PDG[event_id_track-1][i] ) ;}
+  }
+   title += " - " + to_string( _event_hits[event_id_track-1] ) + " Hits " ;
   h_track->SetTitle( title.c_str() ) ;
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
@@ -65,7 +79,7 @@ void TrackFitter::SaveTrack( std::string const & path , const unsigned int & eve
   h_track->Draw("BOX2Z");
 
   h_track_MCvertex->Fill( _event_MC_vertex[event_id_track-1][0], _event_MC_vertex[event_id_track-1][1], _event_MC_vertex[event_id_track-1][2]) ;
-  h_track_MCvertex->SetLineColor(2) ;
+  h_track_MCvertex->SetLineColor(1) ;
   h_track_MCvertex->SetLineWidth(3) ;
   h_track_MCvertex->SetFillColor(kRed);
   h_track_MCvertex->SetFillStyle(3001);
