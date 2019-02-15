@@ -12,7 +12,7 @@
 #include "TGraph.h"
 #include "TVector3.h"
 #include "math.h"
-#include "TArrow.h"
+
 
 
 /**
@@ -63,7 +63,7 @@ void TrackFitter::SaveTrack( std::string const & path , const unsigned int & eve
     else if( _event_true_PDG[event_id_track-1][i] == 11 ) { title += " e^{-}, " ;}
     else if( _event_true_PDG[event_id_track-1][i] == - 11 ) { title += " e^{+}, " ;}
     else if( _event_true_PDG[event_id_track-1][i] == 22 ) { title += " #gamma, " ;}
-    else if( _event_true_PDG[event_id_track-1][i] == 0 ) { title += " Shower not defined " ;}
+    else if( _event_true_PDG[event_id_track-1][i] == 0 ) { title += " not defined " ;}
     else {title +=  " others :"+to_string(  _event_true_PDG[event_id_track-1][i] ) ;}
   }
    title += " - " + to_string( _event_hits[event_id_track-1] ) + " Hits " ;

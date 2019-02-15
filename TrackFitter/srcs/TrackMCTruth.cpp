@@ -48,11 +48,11 @@ void TrackFitter::SaveStatisticsTrueEvent( const std::string & path ) {
   TH1D *h_mu_charged_pi = new TH1D("h_mu_charged_pi", " Muon Statistics: Number of total pi daughters ", 3, 0, 2 );
   TH1D *h_mu_charged_p = new TH1D("h_mu_charged_p", " Muon Statistics: Number of total p daughters ", 3, 0, 2 );
 
-  for( unsigned int j = 0 ; j < _rnu_daughters.size() ; ++j ){
+  for( unsigned int j = 0 ; j < _has_reco_daughters.size() ; ++j ){
     if( _TPDG_Code_Primary[j] != 13 ) continue ;
-    if( _rnu_daughters[j] == 0 ) h_mu_rdaughter->Fill(0) ;
-    if( _rnu_daughters[j] == 1 ) h_mu_rdaughter->Fill(1) ;
-    if( _rnu_daughters[j] > 1 ) h_mu_rdaughter->Fill(2) ; // needs breakdown to understand
+    if( _has_reco_daughters[j] == 0 ) h_mu_rdaughter->Fill(0) ;
+    if( _has_reco_daughters[j] == 1 ) h_mu_rdaughter->Fill(1) ;
+    if( _has_reco_daughters[j] > 1 ) h_mu_rdaughter->Fill(2) ; // needs breakdown to understand
   }
 
   for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
@@ -133,11 +133,11 @@ TH1D *h_pi_charged_mu = new TH1D("h_pi_charged_mu", " Muon Statistics: Number of
 TH1D *h_pi_charged_pi = new TH1D("h_pi_charged_pi", " Muon Statistics: Number of total pi daughters ", 3, 0, 2 );
 TH1D *h_pi_charged_p = new TH1D("h_pi_charged_p", " Muon Statistics: Number of total p daughters ", 3, 0, 2 );
 
-for( unsigned int j = 0 ; j < _rnu_daughters.size() ; ++j ){
+for( unsigned int j = 0 ; j < _has_reco_daughters.size() ; ++j ){
   if( _TPDG_Code_Primary[j] != 211 ) continue ;
-  if( _rnu_daughters[j] == 0 ) h_pi_rdaughter->Fill(0) ;
-  if( _rnu_daughters[j] == 1 ) h_pi_rdaughter->Fill(1) ;
-  if( _rnu_daughters[j] > 1 ) h_pi_rdaughter->Fill(2) ; // needs breakdown to understand
+  if( _has_reco_daughters[j] == 0 ) h_pi_rdaughter->Fill(0) ;
+  if( _has_reco_daughters[j] == 1 ) h_pi_rdaughter->Fill(1) ;
+  if( _has_reco_daughters[j] > 1 ) h_pi_rdaughter->Fill(2) ; // needs breakdown to understand
 }
 
 for( unsigned int j = 0 ; j < _TPDG_Code_Primary.size() ; ++j ){
