@@ -77,9 +77,9 @@ public:
   void clearVariables() ;
   void beginJob() override;
   void endJob() override;
-  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks , std::map< int , std::vector< int > > & ShowerMothers , int const & part_id_f , int const & primary_daughter) ;
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, std::map< int , std::vector< int > > & ShowerMothers , int const & part_id_f , int const & primary_daughter) ;
   std::vector< bool > MCIsContained( simb::MCParticle const & trueParticle ) ;
-  std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
+  std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, int & part_id_f ) ;
 
 private:
 
@@ -182,12 +182,12 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
       // Creating shower mother map:      
       if( particle_temp->Mother() != 0 ){
 	if( trueParticles.find( particle_temp->TrackId() ) == trueParticles.end() || trueParticles.find( particle_temp->Mother()) == trueParticles.end() ){ continue ; }
-	while( particle_temp->Mother() != 0 && (TMath::Abs(trueParticles[particle_temp->Mother()]->PdgCode()) == 11 || trueParticles[particle_temp->Mother()]->PdgCode() == 22 )){
+	while( particle_temp->Mother() != 0 && (TMath::Abs(trueParticles[particle_temp->Mother()]->PdgCode()) == 11 || trueParticles[particle_temp->Mother()]->PdgCode() == 22 || trueParticles[particle_temp->Mother()]->PdgCode() == 111 )){
 	  particle_temp =  trueParticles[particle_temp->Mother()];
 	  if( trueParticles.find(particle_temp->Mother()) == trueParticles.end()){ break; } // found mother
 	}
       }
-      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } 
+      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 111 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } 
 
     }
 
@@ -272,10 +272,13 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
     lar_pandora::LArPandoraHelper::BuildPFParticleMap( pfplist, particleMap );
   }
 
+  // Get showers associations with PFParticles from Pandora. Find all possible tracks associated to an event
+  //  art::FindManyP< recob::Shower > findShowers( pfParticleHandle, e, m_recoshowerLabel );
+  
   rLength = 0 ;
   rnu_hits = 0 ;
   r_dEdx_ID.clear() ; 
-  
+  //  std::cout<< " event " << event_id << std::endl;
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
     is_reconstructed = true ; 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
@@ -319,7 +322,7 @@ void TrackID::MyAnalysis::analyze(art::Event const & e)
 } // event 
 
 
-void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks , std::map< int , std::vector< int > > & ShowerMothers , int const & part_id_f , int const & primary_daughter) {
+void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) {
       // Save track info
       if ( findTracks.at( part_id_f ).size() != 0 ){
 	std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
@@ -379,6 +382,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		rnu_hits   += track_f[n]->LastValidPoint() + 1 ;
 		pfps_hits[primary_daughter] = track_f[n]->LastValidPoint() + 1 ;
 		pfps_length[primary_daughter] = track_f[n]->Length() ;
+		//		std::cout<< " primary daughter = " << primary_daughter << " length = " << track_f[n]->Length() << std::endl;
 		pfps_dir_start_x[primary_daughter] = track_f[n]->StartDirection().X() ;
 		pfps_dir_start_y[primary_daughter] = track_f[n]->StartDirection().Y() ;
 		pfps_dir_start_z[primary_daughter] = track_f[n]->StartDirection().Z() ;
@@ -408,6 +412,8 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	  } //close pid
 	} //close track  	  
       } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
+	//	if( findShowers.at( part_id_f ).size() != 0 ) std::cout << " cucuuu " << std::endl;
+	//	std::vector< art::Ptr<recob::Shower> > shower_f = findShowers.at(part_id_f);
 	has_reco_showers = true ; 
 	art::FindManyP< recob::Hit > findHitShower( showerHandle, e, m_recoshowerLabel ) ;
 	art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, m_recoshowerLabel ) ;
@@ -435,6 +441,8 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 	      pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
 	      pfps_length[primary_daughter]  = sqrt( pfps_length[primary_daughter] ) ;
 	    }
+	    
+	    //	    std::cout<< " primary daughter = " << primary_daughter << " length shower = " << pfps_length[primary_daughter] << std::endl;
 	    pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
 	    pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
 	    pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
@@ -473,7 +481,7 @@ std::vector< bool > TrackID::MyAnalysis::MCIsContained( simb::MCParticle const &
 }
 
 
-std::vector< bool > TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
+std::vector< bool > TrackID::MyAnalysis::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks, int & part_id_f ) {
   bool vertex_contained = true , end_contained = true ;
   std::vector< bool > contained_info ; 
 
