@@ -21,7 +21,8 @@ physics: {
   }
  
  analyzers: {
-     myana: { module_type: MyAnalysis
+     myana: { module_type: NeutrinoTopologyAnalyzer
+     	      TruthLabel: "largeant"
             }  
   }
 
