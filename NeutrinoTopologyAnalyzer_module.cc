@@ -17,6 +17,8 @@
 #include "canvas/Utilities/InputTag.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
+#include "nusimdata/SimulationBase/GTruth.h"
+#include "nusimdata/SimulationBase/MCTruth.h"
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTrajectory.h"
 #include "lardataobj/RecoBase/PFParticle.h"
@@ -83,16 +85,25 @@ public:
 private:
   // Declare member data here ;
   // Labels
-  std::string TruthLabel, ParticleLabel, HitFinderLabel, RecoTrackLabel, RecoShowerLabel, RecoPIDLabel, RecoCaloLabel ; 
+  std::string TruthLabel, G4Label, ParticleLabel, HitFinderLabel, RecoTrackLabel, RecoShowerLabel, RecoPIDLabel, RecoCaloLabel ; 
 
   // Tree members
-  TTree * mcevent_tree, * recoevent_tree ; 
+  TTree * mcparticle_tree, * recoevent_tree ; 
   
   // Event Information
   int event_id ;
 
   // MC Event Information 
-  int MCPdgCode, MCNumDaughters ;
+  // neutrino information
+  int Tnu_PDG, T_interaction ;
+  double t_vertex[3], t_momentum[3], t_vertex_energy ;
+  bool is_cc ; 
+
+  // Truth information ( = > T ) 
+  int TPDG_Code, TNumDaughters, TDaughter_mu, TDaughter_pi, TDaughter_e, TDaughter_p, TDaughter_n, TDaughter_photon, TDaughter_other ;
+  float TrueParticleEnergy, TMass;
+  float Tpx, Tpy, Tpz, Tpt, Tp; 
+  double TMCLength, TTrack_vertex_x, TTrack_vertex_y, TTrack_vertex_z, TTrack_vertex_t, TTrack_end_x, TTrack_end_y, TTrack_end_z, TTrack_end_t ;
   
 };
 
@@ -102,7 +113,8 @@ test::NeutrinoTopologyAnalyzer::NeutrinoTopologyAnalyzer(fhicl::ParameterSet con
   // More initializers here.
 {
   // Call appropriate consumes<>() for any products to be retrieved by this module.
-  TruthLabel = p.get<std::string>("TruthLabel","largeant");
+  TruthLabel = p.get<std::string>("TruthLabel");
+  G4Label = p.get<std::string>("G4Label");
   ParticleLabel = p.get<std::string>("PFParticleModule","pandora");
   HitFinderLabel = p.get<std::string>("HitFinderModule","linecluster");
   RecoTrackLabel = p.get<std::string>("RecoTrackLabel","pandoraTrack");
@@ -110,7 +122,7 @@ test::NeutrinoTopologyAnalyzer::NeutrinoTopologyAnalyzer(fhicl::ParameterSet con
   RecoCaloLabel = p.get<std::string>("RecoCaloLabel","pandoraCalo");
   RecoPIDLabel = p.get<std::string>("RecoPIDLabel","pandoraPid");
   
-  this->reconfiure(p);
+  this->reconfigure(p);
 }
 
 void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
@@ -118,43 +130,111 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   // Implementation of required member function here.
   event_id = e.id().event();
   std::cout<< " Event ID = " << event_id <<std::endl;
+  if( !e.isRealData()){
+    /**************************************************************************************************
+     *  MC INFORMATION
+     *************************************************************************************************/
+    art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(G4Label);
+    art::Handle< std::vector< simb::MCTruth > > mct_handle;
+    e.getByLabel(TruthLabel, mct_handle);
+    // Get the GEANT information of the particles 
+    art::FindManyP< simb::MCParticle > fmcp( mct_handle , e, G4Label );
+    art::FindManyP< simb::GTruth > fmgt( mct_handle, e, TruthLabel );
+    art::Ptr< simb::MCTruth > mct(mct_handle, 0);
+    std::vector< art::Ptr<simb::MCParticle> > mcp_assn = fmcp.at(0);
+    std::vector< art::Ptr<simb::GTruth> > mcgt_assn = fmgt.at(0);
+    simb::MCNeutrino nu = mct->GetNeutrino();
 
+    Tnu_PDG = nu.Nu().PdgCode() ;
+    T_interaction = mcgt_assn[0]->fGint ;
+    t_vertex[0] = nu.Nu().Vx();
+    t_vertex[1] = nu.Nu().Vy();
+    t_vertex[2] = nu.Nu().Vz();
+    t_vertex_energy = nu.Nu().E();
+    is_cc = nu.CCNC() == simb::curr_type_::kCC;
+    
+    if(mcParticles.isValid()){
+      // Loop over true info
+      for( unsigned int t = 0; t < mcParticles->size(); ++t ){
+	const simb::MCParticle trueParticle = mcParticles->at(t) ;
+	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
+	if(trueParticle.Process() == "primary" ){
+	  TPDG_Code = trueParticle.PdgCode() ;
+	  TrueParticleEnergy = trueParticle.E() ;
+	  TMass = trueParticle.Mass() ;
+	  Tpx = trueParticle.Px() ;
+	  Tpy = trueParticle.Py() ;
+	  Tpz = trueParticle.Pz() ;
+	  Tpt = trueParticle.Pt() ;
+	  Tp  = trueParticle.P() ;
+	  TTrack_vertex_x = trueParticle.Trajectory().X( 0 ) ;
+	  TTrack_vertex_y = trueParticle.Trajectory().Y( 0 ) ; 
+	  TTrack_vertex_z = trueParticle.Trajectory().Z( 0 ) ; 
+	  TTrack_vertex_t = trueParticle.Trajectory().T( 0 ) ;
+	  TTrack_end_x = trueParticle.EndX() ;
+	  TTrack_end_y = trueParticle.EndY() ;
+	  TTrack_end_z = trueParticle.EndZ() ; 
+	  TTrack_end_t = trueParticle.EndT() ;
+	  TNumDaughters = trueParticle.NumberDaughters() ;
+	  TMCLength = trueParticle.Trajectory().TotalLength() ;
+	  
+	  //primary_vcontained = MCIsContained( trueParticle )[0] ; 
+	  //primary_econtained = MCIsContained( trueParticle )[1] ; 
+	  std::cout<< "pdg code primary = " << TPDG_Code << std::endl;
+	} else { // secondary particle information : Just storing total number of each type
+	  if      ( trueParticle.PdgCode() == 13   ) { ++TDaughter_mu ; }
+	  else if ( trueParticle.PdgCode() == 211  ) { ++TDaughter_pi ; } 
+	  else if ( trueParticle.PdgCode() == 11   ) { ++TDaughter_e ;  } 
+	  else if ( trueParticle.PdgCode() == 2212 ) { ++TDaughter_p ;  }
+	  else if ( trueParticle.PdgCode() == 2112 ) { ++TDaughter_n ;  }
+	  else if ( trueParticle.PdgCode() == 22   ) { ++TDaughter_photon ; }
+	  else                                       { ++TDaughter_other ;  }
+	}
+      }
+    }
+  }
 }
 
 
-void TrackID::MyAnalysis::reconfigure(fhicl::ParameterSet const & p)
+void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 {
   // Implementation of required member function here.
   // Here you add an external fcl file to change configuration
 }
 
 
-void TrackID::MyAnalysis::beginJob( )
+void test::NeutrinoTopologyAnalyzer::beginJob( )
 {
   // Declare trees and branches
-  mcevent_tree   = new TTree( "mcevent_tree",    "MC event tree: True event track information" ) ;
+  mcparticle_tree   = new TTree( "mcparticle_tree",    "MC event tree: True event track information" ) ;
   recoevent_tree = new TTree( "recoevent_tree",  "Reco event tree: reconstructed information of event") ;
 
   //set branches
+  mcparticle_tree -> Branch( "event_id",                &event_id,            "event_id/I");
+  mcparticle_tree -> Branch( "Tnu_PDG",                 &Tnu_PDG,             "Tnu_PDG/I");
+  mcparticle_tree -> Branch( "T_interaction",           &T_interaction,       "T_interaction/I");
+  mcparticle_tree -> Branch( "t_vertex",                &t_vertex,            "tvertex[3]/D");
+  mcparticle_tree -> Branch( "t_vertex_energy",         &t_vertex_energy,     "t_vertex_energy/D");
+  mcparticle_tree -> Branch( "is_cc",                   &is_cc,               "is_cc/B");
 
   //set directory
-  mvevent_tree -> SetDirectory(0);
+  mcparticle_tree -> SetDirectory(0);
   recoevent_tree -> SetDirectory(0);
 }
 
 
-void TrackID::MyAnalysis::endJob( )
+void test::NeutrinoTopologyAnalyzer::endJob( )
 {
   // Implementation of required member function here.
   // Write and close files. Other comments also fit here 
   TFile file("output_eventtree.root" , "RECREATE" );
-  mcevent_tree ->Write();
+  mcparticle_tree ->Write();
   recoevent_tree ->Write();
   
   file.Write();
   file.Close();
   
-  delete mcevent_tree ;
+  delete mcparticle_tree ;
   delete recoevent_tree ; 
 }
 

@@ -22,7 +22,8 @@ physics: {
  
  analyzers: {
      myana: { module_type: NeutrinoTopologyAnalyzer
-     	      TruthLabel: "largeant"
+     	      TruthLabel: "generator"
+	      G4Label: "largeant"
             }  
   }
 
