@@ -107,6 +107,8 @@ private:
   float TrueParticleEnergy, TMass;
   float Tpx, Tpy, Tpz, Tpt, Tp; 
   double TMCLength, TTrack_vertex_x, TTrack_vertex_y, TTrack_vertex_z, TTrack_vertex_t, TTrack_end_x, TTrack_end_y, TTrack_end_z, TTrack_end_t ;
+  // vectorization
+  int TPDG_Primary[10000], TNumDaughPrimary[10000];
   
 };
 
@@ -133,7 +135,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   clearVariables();
   // Implementation of required member function here.
   event_id = e.id().event();
-  std::cout<< " Event ID = " << event_id <<std::endl;
+  //  std::cout<< " Event ID = " << event_id <<std::endl;
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -163,6 +165,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
 	if(trueParticle.Process() == "primary" ){
+	  // updating to neutrino events : need to vectorize it all
+	  TPDG_Primary[t] = trueParticle.PdgCode() ;
+	  TNumDaughPrimary[t] = trueParticle.NumberDaughters() ;
+	  TNumDaughters += 1 ;
+	  
+	  
 	  TPDG_Code = trueParticle.PdgCode() ;
 	  TrueParticleEnergy = trueParticle.E() ;
 	  TMass = trueParticle.Mass() ;
@@ -179,12 +187,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  TTrack_end_y = trueParticle.EndY() ;
 	  TTrack_end_z = trueParticle.EndZ() ; 
 	  TTrack_end_t = trueParticle.EndT() ;
-	  TNumDaughters = trueParticle.NumberDaughters() ;
 	  TMCLength = trueParticle.Trajectory().TotalLength() ;
 	  
 	  //primary_vcontained = MCIsContained( trueParticle )[0] ; 
 	  //primary_econtained = MCIsContained( trueParticle )[1] ; 
-	  std::cout<< "pdg code primary = " << TPDG_Code << std::endl;
 	} else { // secondary particle information : Just storing total number of each type
 	  if      ( trueParticle.PdgCode() == 13   ) { ++TDaughter_mu ; }
 	  else if ( trueParticle.PdgCode() == 211  ) { ++TDaughter_pi ; } 
@@ -197,6 +203,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       }
     }
   }
+
+  mcparticle_tree -> Fill();
+  recoevent_tree -> Fill();
 }
 
 
@@ -221,6 +230,9 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "t_vertex",                &t_vertex,            "tvertex[3]/D");
   mcparticle_tree -> Branch( "t_vertex_energy",         &t_vertex_energy,     "t_vertex_energy/D");
   mcparticle_tree -> Branch( "is_cc",                   &is_cc,               "is_cc/B");
+  mcparticle_tree -> Branch( "TPDG_Primary",            &TPDG_Primary,        "TPDG_Primary[10000]/I");
+  mcparticle_tree -> Branch( "TNumDaughPrimary",        &TNumDaughPrimary,    "TNumDaughPrimary[10000]/I");
+  mcparticle_tree -> Branch( "TNumDaughters",           &TNumDaughters,       "TNumDaughters/I");
 
   //set directory
   mcparticle_tree -> SetDirectory(0);
@@ -295,6 +307,10 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   TTrack_end_z = 0 ;
   TTrack_end_t = 0 ;
 
+  for ( int i = 0 ; i < 10000 ; ++i ){
+    TPDG_Primary[i] = 0 ;
+    TNumDaughPrimary[i] = 0 ;
+  }
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
