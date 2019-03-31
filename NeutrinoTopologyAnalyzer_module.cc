@@ -81,11 +81,14 @@ public:
   //  void clearVariables() ;
   void beginJob() override;
   void endJob() override;
-
+  void clearVariables() ; 
 private:
   // Declare member data here ;
   // Labels
   std::string TruthLabel, G4Label, ParticleLabel, HitFinderLabel, RecoTrackLabel, RecoShowerLabel, RecoPIDLabel, RecoCaloLabel ; 
+
+  // Detector information
+  float DetectorHalfLengthX, DetectorHalfLengthY, DetectorHalfLengthZ, CoordinateOffSetX, CoordinateOffSetY, CoordinateOffSetZ, SelectedBorderX, SelectedBorderY, SelectedBorderZ ;
 
   // Tree members
   TTree * mcparticle_tree, * recoevent_tree ; 
@@ -127,6 +130,7 @@ test::NeutrinoTopologyAnalyzer::NeutrinoTopologyAnalyzer(fhicl::ParameterSet con
 
 void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 {
+  clearVariables();
   // Implementation of required member function here.
   event_id = e.id().event();
   std::cout<< " Event ID = " << event_id <<std::endl;
@@ -205,6 +209,7 @@ void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 
 void test::NeutrinoTopologyAnalyzer::beginJob( )
 {
+  clearVariables();
   // Declare trees and branches
   mcparticle_tree   = new TTree( "mcparticle_tree",    "MC event tree: True event track information" ) ;
   recoevent_tree = new TTree( "recoevent_tree",  "Reco event tree: reconstructed information of event") ;
@@ -236,6 +241,60 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   
   delete mcparticle_tree ;
   delete recoevent_tree ; 
+}
+
+void test::NeutrinoTopologyAnalyzer::clearVariables() {
+
+  // Define default for parameters and create variables and trees
+  // Detector Geometry
+  DetectorHalfLengthX = 400 ;
+  DetectorHalfLengthY = 400 ;
+  DetectorHalfLengthZ = 500 ;
+  CoordinateOffSetX = 200 ; 
+  CoordinateOffSetY = 200 ; 
+  CoordinateOffSetZ = 0 ; 
+  SelectedBorderX = 16.5 ;
+  SelectedBorderY = 15 ;
+  SelectedBorderZ = 15 ; //47.5 ;
+
+  // Clear variables
+  event_id = 0 ;
+  Tnu_PDG = 0 ;
+  T_interaction = 0 ;
+  t_vertex[0] = 0 ;
+  t_vertex[1] = 0 ;
+  t_vertex[2] = 0 ;
+  t_momentum[0] = 0 ;
+  t_momentum[1] = 0 ;
+  t_momentum[2] = 0 ;
+  t_vertex_energy = 0 ;
+  is_cc = false ; 
+  TPDG_Code = -999 ; 
+  TNumDaughters = 0 ;
+  TDaughter_mu = 0 ;
+  TDaughter_pi = 0 ;
+  TDaughter_e = 0 ;
+  TDaughter_p = 0 ;
+  TDaughter_n = 0 ;
+  TDaughter_photon = 0 ;
+  TDaughter_other =0 ;
+  TrueParticleEnergy = 0 ;
+  TMass = 0 ;
+  Tpx = 0 ;
+  Tpy = 0 ;
+  Tpz = 0 ;
+  Tpt = 0 ;
+  Tp  = 0 ; 
+  TMCLength = 0 ;
+  TTrack_vertex_x = 0 ;
+  TTrack_vertex_y = 0 ;
+  TTrack_vertex_z = 0 ;
+  TTrack_vertex_t = 0 ;
+  TTrack_end_x = 0 ;
+  TTrack_end_y = 0 ;
+  TTrack_end_z = 0 ;
+  TTrack_end_t = 0 ;
+
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
