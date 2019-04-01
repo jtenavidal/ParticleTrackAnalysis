@@ -1,3 +1,4 @@
+
 ////////////////////////////////////////////////////////////////////////
 // Class:       NeutrinoTopologyAnalyzer
 // Plugin Type: analyzer (art v3_00_00)
@@ -109,7 +110,36 @@ private:
   double TMCLength, TTrack_vertex_x, TTrack_vertex_y, TTrack_vertex_z, TTrack_vertex_t, TTrack_end_x, TTrack_end_y, TTrack_end_z, TTrack_end_t ;
   // vectorization
   int TPDG_Primary[10000], TNumDaughPrimary[10000];
-  
+
+
+  // Reco information
+  lar_pandora::PFParticleMap particleMap ;   
+
+  bool is_reconstructed, primary_vcontained, primary_econtained ;
+  int r_pdg_primary[10000] ;
+  int rnu_hits[10000] ;
+
+  //    => neutrino vertex information
+  bool nu_reconstructed ;
+  int numb_nu_reco ;
+  double nu_reco_vertex[3] ;
+
+
+  //  double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
+  //double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
+  //float rLength ;
+  //double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
+  //std::vector< float > r_dEdx_ID, r_dEdx_total ; 
+  //std::vector< std::vector< float >  > r_dEdx_ID_all ; 
+  /*
+  // -> Breakdown particles in event from Pandora
+  int tr_id_energy, tr_id_charge, tr_id_hits;
+  int pfps_truePDG[1000] ;
+  int event_vcontained[1000], event_econtained[1000] ; 
+  int pfps_hits[1000] , pfps_type[1000] ;
+  float pfps_length[1000] ; 
+  double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
+  */
 };
 
 
@@ -135,7 +165,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   clearVariables();
   // Implementation of required member function here.
   event_id = e.id().event();
-  //  std::cout<< " Event ID = " << event_id <<std::endl;
+  std::cout<< " Event ID = " << event_id <<std::endl;
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
@@ -204,8 +234,63 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     }
   }
 
+
+  /**************************************************************************************************
+   *  RECO INFORMATION
+   *************************************************************************************************/
+  // Get PFParticle Handle
+  art::Handle< std::vector< recob::PFParticle > > pfParticleHandle ;
+  e.getByLabel(ParticleLabel, pfParticleHandle ) ;
+
+  // Save map for hiearchy info
+  lar_pandora::PFParticleVector pfplist; 
+  
+  //Find the hits associated to the reconstructed PFParticle
+  art::Handle< std::vector< recob::Hit > > hitListHandle ;
+  e.getByLabel(HitFinderLabel, hitListHandle);
+
+  //Find the reco tracks
+  art::Handle< std::vector< recob::Track > > trackHandle ;
+  e.getByLabel(RecoTrackLabel, trackHandle ) ;
+  
+  // Get track associations with PFParticles from Pandora. Find all possible tracks associated to an event
+  art::FindManyP< recob::Track > findTracks( pfParticleHandle, e, RecoTrackLabel );
+  if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
+    art::fill_ptr_vector(pfplist, pfParticleHandle );
+    lar_pandora::LArPandoraHelper::BuildPFParticleMap( pfplist, particleMap );
+  }
+
+  //Find the reco showers
+  art::Handle< std::vector< recob::Shower > > showerHandle ;
+  e.getByLabel(RecoShowerLabel, showerHandle ) ;
+  art::FindManyP< recob::Shower > findShowers( pfParticleHandle, e, ParticleLabel );
+
+  if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
+    is_reconstructed = true ; 
+    for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
+      art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
+      
+      if( pfparticle->IsPrimary() == 1 ) { //found primary particle => NEUTRINO
+	// Get vertex association
+	nu_reconstructed = true ; 
+	numb_nu_reco += 1 ;
+
+	art::FindManyP< recob::Vertex  > fvtx( pfParticleHandle, e, ParticleLabel );
+	std::vector< art::Ptr<recob::Vertex> > vtx_assn = fvtx.at(pfparticle->Self()); 
+
+	nu_reco_vertex[0] = vtx_assn[0]->position().X() ;
+	nu_reco_vertex[1] = vtx_assn[0]->position().Y() ;
+	nu_reco_vertex[2] = vtx_assn[0]->position().Z() ;
+
+      }// end if primary
+    }// end loop over particles
+  }
+
+
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
+
+
 }
 
 
@@ -233,6 +318,13 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "TPDG_Primary",            &TPDG_Primary,        "TPDG_Primary[10000]/I");
   mcparticle_tree -> Branch( "TNumDaughPrimary",        &TNumDaughPrimary,    "TNumDaughPrimary[10000]/I");
   mcparticle_tree -> Branch( "TNumDaughters",           &TNumDaughters,       "TNumDaughters/I");
+
+
+  recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
+  recoevent_tree -> Branch( "nu_reconstructed",         &nu_reconstructed,    "nu_reconstructed/B");
+  recoevent_tree -> Branch( "numb_nu_reco",             &numb_nu_reco,        "numb_nu_reco/I");
+  recoevent_tree -> Branch( "nu_reco_vertex",           &nu_reco_vertex,      "nu_reco_vertex[3]/D");
+
 
   //set directory
   mcparticle_tree -> SetDirectory(0);
@@ -311,6 +403,24 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
     TPDG_Primary[i] = 0 ;
     TNumDaughPrimary[i] = 0 ;
   }
+
+  // RECO INFO
+
+  is_reconstructed = false ;
+  primary_vcontained = false ;
+  primary_econtained = false ;
+  for ( int i = 0 ; i < 10000 ; ++i ){
+    r_pdg_primary[i] = 0 ;
+    rnu_hits[i] = 0;
+  }
+
+  nu_reconstructed = false ;
+  numb_nu_reco = 0 ;
+  
+  for( int i = 0 ; i < 3 ; ++i ){
+    nu_reco_vertex[i] = 0 ;
+  }
+
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
