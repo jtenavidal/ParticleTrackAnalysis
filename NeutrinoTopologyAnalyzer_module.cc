@@ -123,7 +123,7 @@ private:
   bool nu_reconstructed ;
   int numb_nu_reco ;
   double nu_reco_vertex[3] ;
-
+  double error_vertex_reco ;
 
   //  double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
   //double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
@@ -286,6 +286,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     }// end loop over particles
   }
 
+  for ( int q = 0 ; q < 3 ; ++q ){
+    error_vertex_reco += (t_vertex[q] - nu_reco_vertex[q]) * (t_vertex[q] - nu_reco_vertex[q]) ;
+  }
+  error_vertex_reco = sqrt( error_vertex_reco ) ;
 
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
@@ -324,6 +328,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   recoevent_tree -> Branch( "nu_reconstructed",         &nu_reconstructed,    "nu_reconstructed/B");
   recoevent_tree -> Branch( "numb_nu_reco",             &numb_nu_reco,        "numb_nu_reco/I");
   recoevent_tree -> Branch( "nu_reco_vertex",           &nu_reco_vertex,      "nu_reco_vertex[3]/D");
+  recoevent_tree -> Branch( "error_vertex_reco",        &error_vertex_reco,   "error_vertex_reco/D");
 
 
   //set directory
@@ -421,6 +426,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
     nu_reco_vertex[i] = 0 ;
   }
 
+  error_vertex_reco = 0 ;
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
