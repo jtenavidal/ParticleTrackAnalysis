@@ -120,7 +120,7 @@ private:
   int rnu_hits[10000] ;
 
   //    => neutrino vertex information
-  bool nu_reconstructed ;
+  bool nu_reconstructed , nu_vertex_contained ;
   int numb_nu_reco ;
   double nu_reco_vertex[3] ;
   double error_vertex_reco ;
@@ -272,16 +272,27 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       
       if( pfparticle->IsPrimary() == 1 ) { //found primary particle => NEUTRINO
 	// Get vertex association
-	nu_reconstructed = true ; 
 	numb_nu_reco += 1 ;
+	if( !nu_reconstructed ) { // only looking for one neutrino event -> Check why there can be more than one  
+	  nu_reconstructed = true ; 
+	  
+	  art::FindManyP< recob::Vertex  > fvtx( pfParticleHandle, e, ParticleLabel );
+	  std::vector< art::Ptr<recob::Vertex> > vtx_assn = fvtx.at(pfparticle->Self()); 
+	  
+	  nu_reco_vertex[0] = vtx_assn[0]->position().X() ;
+	  nu_reco_vertex[1] = vtx_assn[0]->position().Y() ;
+	  nu_reco_vertex[2] = vtx_assn[0]->position().Z() ;
 
-	art::FindManyP< recob::Vertex  > fvtx( pfParticleHandle, e, ParticleLabel );
-	std::vector< art::Ptr<recob::Vertex> > vtx_assn = fvtx.at(pfparticle->Self()); 
+	  // Check if neutrino is contained : 
+	  if( ( vtx_assn[0]->position().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	      || ( vtx_assn[0]->position().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	      || ( vtx_assn[0]->position().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	      || ( vtx_assn[0]->position().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	      || ( vtx_assn[0]->position().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_vertex_contained = false ;
+	  
 
-	nu_reco_vertex[0] = vtx_assn[0]->position().X() ;
-	nu_reco_vertex[1] = vtx_assn[0]->position().Y() ;
-	nu_reco_vertex[2] = vtx_assn[0]->position().Z() ;
-
+	}
       }// end if primary
     }// end loop over particles
   }
@@ -420,6 +431,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   }
 
   nu_reconstructed = false ;
+  nu_vertex_contained = true ; 
   numb_nu_reco = 0 ;
   
   for( int i = 0 ; i < 3 ; ++i ){
