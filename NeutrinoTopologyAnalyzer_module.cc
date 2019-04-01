@@ -120,7 +120,7 @@ private:
   int rnu_hits[10000] ;
 
   //    => neutrino vertex information
-  bool nu_reconstructed , nu_vertex_contained ;
+  bool nu_reconstructed , nu_rvertex_contained ;
   int numb_nu_reco ;
   double nu_reco_vertex[3] ;
   double error_vertex_reco ;
@@ -289,7 +289,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      || ( vtx_assn[0]->position().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
 	      || ( vtx_assn[0]->position().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
 	      || ( vtx_assn[0]->position().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
-	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_vertex_contained = false ;
+	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_rvertex_contained = false ;
 	  
 
 	}
@@ -337,6 +337,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
 
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
   recoevent_tree -> Branch( "nu_reconstructed",         &nu_reconstructed,    "nu_reconstructed/B");
+  recoevent_tree -> Branch( "nu_rvertex_contained",     &nu_rvertex_contained,"nu_rvertex_contained/B");
   recoevent_tree -> Branch( "numb_nu_reco",             &numb_nu_reco,        "numb_nu_reco/I");
   recoevent_tree -> Branch( "nu_reco_vertex",           &nu_reco_vertex,      "nu_reco_vertex[3]/D");
   recoevent_tree -> Branch( "error_vertex_reco",        &error_vertex_reco,   "error_vertex_reco/D");
@@ -431,7 +432,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   }
 
   nu_reconstructed = false ;
-  nu_vertex_contained = true ; 
+  nu_rvertex_contained = true ; 
   numb_nu_reco = 0 ;
   
   for( int i = 0 ; i < 3 ; ++i ){
