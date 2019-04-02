@@ -77,12 +77,15 @@ public:
   void analyze(art::Event const& e) override;
 
   // -> Added functions ( * )
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) ;
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
   void beginJob() override;
   void endJob() override;
   void clearVariables() ; 
+
+
 private:
   // Declare member data here ;
   // Labels
@@ -98,6 +101,9 @@ private:
   int event_id ;
 
   // MC Event Information 
+  // Particle inventory service
+  art::ServiceHandle<cheat::ParticleInventoryService> particleInventory;
+
   // neutrino information
   int Tnu_PDG, T_interaction ;
   double t_vertex[3], t_momentum[3], t_vertex_energy ;
@@ -108,16 +114,20 @@ private:
   float TrueParticleEnergy, TMass;
   float Tpx, Tpy, Tpz, Tpt, Tp; 
   double TMCLength, TTrack_vertex_x, TTrack_vertex_y, TTrack_vertex_z, TTrack_vertex_t, TTrack_end_x, TTrack_end_y, TTrack_end_z, TTrack_end_t ;
+  std::map< int , std::vector< int > > ShowerMothers ;
+  std::map<int, const simb::MCParticle*> trueParticles ; 
   // vectorization
   int TPDG_Primary[10000], TNumDaughPrimary[10000];
 
 
   // Reco information
   lar_pandora::PFParticleMap particleMap ;   
+  std::map< int , int > mapMC_reco_pdg ;
 
   bool is_reconstructed, primary_vcontained, primary_econtained ;
   int r_pdg_primary[10000] ;
   int rnu_hits[10000] ;
+  int rtrack_hits;
 
   //    => neutrino vertex information
   bool nu_reconstructed , nu_rvertex_contained ;
@@ -125,13 +135,16 @@ private:
   double nu_reco_vertex[3] ;
   double error_vertex_reco ;
 
-  //  double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
-  //double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
-  //float rLength ;
-  //double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
-  //std::vector< float > r_dEdx_ID, r_dEdx_total ; 
-  //std::vector< std::vector< float >  > r_dEdx_ID_all ; 
-  /*
+
+  // need to reconfigure 
+  bool has_reco_showers, has_reco_tracks ;
+  double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
+  double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
+  float rLength ;
+  double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
+  std::vector< float > r_dEdx_ID, r_dEdx_total ; 
+  std::vector< std::vector< float >  > r_dEdx_ID_all ; 
+  
   // -> Breakdown particles in event from Pandora
   int tr_id_energy, tr_id_charge, tr_id_hits;
   int pfps_truePDG[1000] ;
@@ -139,7 +152,7 @@ private:
   int pfps_hits[1000] , pfps_type[1000] ;
   float pfps_length[1000] ; 
   double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
-  */
+  
 };
 
 
@@ -166,11 +179,34 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   // Implementation of required member function here.
   event_id = e.id().event();
   std::cout<< " Event ID = " << event_id <<std::endl;
-  if( !e.isRealData()){
+    if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
      *************************************************************************************************/
     art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(G4Label);
+    
+    //List the particles in the event                                                                                                              
+    const sim::ParticleList& particles = particleInventory->ParticleList(); // should change. Doing the same twice 
+    
+    //Make a map of Track id and pdgcode                                                                                                             
+    for (sim::ParticleList::const_iterator particleIt = particles.begin(); particleIt != particles.end(); ++particleIt){
+      const simb::MCParticle *particle = particleIt->second;
+      trueParticles[particle->TrackId()] = particle;
+    }
+    for (sim::ParticleList::const_iterator particleIt = particles.begin(); particleIt != particles.end(); ++particleIt){
+      const simb::MCParticle *particle_temp = particleIt->second;
+
+      // Creating shower mother map:      
+      if( particle_temp->Mother() != 0 ){
+	if( trueParticles.find( particle_temp->TrackId() ) == trueParticles.end() || trueParticles.find( particle_temp->Mother()) == trueParticles.end() ){ continue ; }
+	while( particle_temp->Mother() != 0 && (TMath::Abs(trueParticles[particle_temp->Mother()]->PdgCode()) == 11 || trueParticles[particle_temp->Mother()]->PdgCode() == 22 || trueParticles[particle_temp->Mother()]->PdgCode() == 111 )){
+	  particle_temp =  trueParticles[particle_temp->Mother()];
+	  if( trueParticles.find(particle_temp->Mother()) == trueParticles.end()){ break; } // found mother
+	}
+      }
+      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 111 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } 
+
+    }
     art::Handle< std::vector< simb::MCTruth > > mct_handle;
     e.getByLabel(TruthLabel, mct_handle);
     // Get the GEANT information of the particles 
@@ -194,13 +230,13 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       for( unsigned int t = 0; t < mcParticles->size(); ++t ){
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
+	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ;
 	if(trueParticle.Process() == "primary" ){
 	  // updating to neutrino events : need to vectorize it all
 	  TPDG_Primary[t] = trueParticle.PdgCode() ;
 	  TNumDaughPrimary[t] = trueParticle.NumberDaughters() ;
 	  TNumDaughters += 1 ;
-	  
-	  
+ 
 	  TPDG_Code = trueParticle.PdgCode() ;
 	  TrueParticleEnergy = trueParticle.E() ;
 	  TMass = trueParticle.Mass() ;
@@ -232,8 +268,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	}
       }
     }
-  }
-
+    
+    }  
 
   /**************************************************************************************************
    *  RECO INFORMATION
@@ -290,8 +326,13 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      || ( vtx_assn[0]->position().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
 	      || ( vtx_assn[0]->position().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
 	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_rvertex_contained = false ;
-	  
 
+	    for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) {
+		int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+		//std::cout<<"part id " << part_id_f <<std::endl;
+		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
+		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
+	    }
 	}
       }// end if primary
     }// end loop over particles
@@ -307,6 +348,154 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 
 }
+
+void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) {
+  // Save track info
+  if ( findTracks.at( part_id_f ).size() != 0 ){
+    std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
+    art::FindManyP< recob::Hit > findHits (  trackHandle, e, RecoTrackLabel ) ;
+    art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, RecoCaloLabel );
+    art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, RecoPIDLabel );
+
+    // Loop over tracks found for track_f
+    for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
+      has_reco_tracks = true ; 
+      rLength   += track_f[n]->Length() ; // add end of track
+      // Get track based variables
+      std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
+      std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
+      std::vector< art::Ptr<anab::ParticleID> > pid_f  = findPID.at(track_f[n]->ID());
+      
+      //Loop over PID associations 
+      for ( unsigned int k = 0 ; k < pid_f.size() ; ++k ){
+	
+	if( !pid_f[k] ) continue ;
+	if( !pid_f[k]->PlaneID().isValid) continue ;
+	if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
+	
+	//Loop over calo information also in collection plane
+	for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
+	  if( !cal_f[m] ) continue ;
+	  if( !cal_f[m]->PlaneID().isValid) continue ;
+	  if( cal_f[m]->PlaneID().Plane == 2 ) {    
+	    // Get associated MCParticle ID using 3 different methods:
+	    //    Which particle contributes the most energy to all the hits
+	    //    Which particle contributes the reco charge to all the hits
+	    //    Which particle is the biggest contributor to all the hits
+	    tr_id_energy      = RecoUtils::TrueParticleIDFromTotalTrueEnergy(hit_f);
+	    tr_id_charge      = RecoUtils::TrueParticleIDFromTotalRecoCharge(hit_f);
+	    tr_id_hits        = RecoUtils::TrueParticleIDFromTotalRecoHits(hit_f);
+	    // save the most common answer : 
+	    if( tr_id_energy == tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
+	    if( tr_id_energy == tr_id_charge && tr_id_energy != tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
+	    if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
+	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
+	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
+	    std::cout << " reconstructed particle was << " << mapMC_reco_pdg[tr_id_hits] << std::endl;
+	    // Muon
+	    if( pid_f[k]->PIDA() >= 5 && pid_f[k]->PIDA() < 9) std::cout << " pdg by pida - muon " << std::endl;
+	    //Pion
+	    if( pid_f[k]->PIDA() >= 9 && pid_f[k]->PIDA() < 13) std::cout << " pdg by pida - pion " << std::endl;
+	    //Kaon
+	    if( pid_f[k]->PIDA() >= 13 && pid_f[k]->PIDA() < 13.5) std::cout << " pdg by pida - kaon " << std::endl;
+	    //Proton
+	    if( pid_f[k]->PIDA() >= 13) std::cout << " pdg by pida - proton " << std::endl;
+	      
+	    std::cout << " chi2 values " << std::endl;
+	    std::cout << " chi2 muon " << pid_f[k]->Chi2Muon() << std::endl;
+	    std::cout << " chi2 pion " << pid_f[k]->Chi2Pion() << std::endl;
+	    std::cout << " chi2 proton " << pid_f[k]->Chi2Proton() << std::endl;
+	    std::cout << " lenght " << track_f[n]->Length() << std::endl;
+	    // save information -- add pid methods here !
+	    r_chi2_mu[primary_daughter] = pid_f[k]->Chi2Muon() ;
+	    r_chi2_pi[primary_daughter] = pid_f[k]->Chi2Pion() ;
+	    r_chi2_p[primary_daughter]  = pid_f[k]->Chi2Proton() ;
+	    r_PIDA[primary_daughter]    = pid_f[k]->PIDA();
+	    r_missenergy[primary_daughter] = pid_f[k]->MissingE();
+	    r_KineticEnergy[primary_daughter] = cal_f[m]->KineticEnergy();
+	    
+	    for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
+	      r_track_x[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
+	      r_track_y[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
+	      r_track_z[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
+	    }
+	    
+	    rtrack_hits   += track_f[n]->LastValidPoint() + 1 ;
+	    pfps_hits[primary_daughter] = track_f[n]->LastValidPoint() + 1 ;
+	    pfps_length[primary_daughter] = track_f[n]->Length() ;
+	    pfps_dir_start_x[primary_daughter] = track_f[n]->StartDirection().X() ;
+	    pfps_dir_start_y[primary_daughter] = track_f[n]->StartDirection().Y() ;
+	    pfps_dir_start_z[primary_daughter] = track_f[n]->StartDirection().Z() ;
+	    pfps_dir_end_x[primary_daughter] = track_f[n]->EndDirection().X() ;
+	    pfps_dir_end_y[primary_daughter] = track_f[n]->EndDirection().Y() ;
+	    pfps_dir_end_z[primary_daughter] = track_f[n]->EndDirection().Z() ;
+	    pfps_start_x[primary_daughter] = track_f[n]->Start().X() ;
+	    pfps_start_y[primary_daughter] = track_f[n]->Start().Y() ;
+	    pfps_start_z[primary_daughter] = track_f[n]->Start().Z() ;
+	    pfps_end_x[primary_daughter] = track_f[n]->End().X() ;
+	    pfps_end_y[primary_daughter] = track_f[n]->End().Y() ;
+	    pfps_end_z[primary_daughter] = track_f[n]->End().Z() ;
+	    
+	  }// just collection plane 
+          
+	  // calo information is stored in all planes:
+          
+	  for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
+	    for( int t = 0 ; t < rtrack_hits ; ++t ){
+	      if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
+		r_track_dEdx[t] = cal_f[m]->dEdx()[l] ; 
+	      }
+	    }
+	  }
+	  r_Range[primary_daughter] = cal_f[m]->Range(); // check 
+	} //close calo
+      } //close pid
+    } //close track    
+  } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
+    
+    has_reco_showers = true ; 
+    art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
+    art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
+    for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
+      art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
+      std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
+      std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+      if( spacepoint_f.size() == 0 ) continue ; 
+
+      std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
+
+      for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
+	r_track_x[l+rtrack_hits] = spacepoint_f[l]->XYZ()[0] ;
+	r_track_y[l+rtrack_hits] = spacepoint_f[l]->XYZ()[1] ;
+	r_track_z[l+rtrack_hits] = spacepoint_f[l]->XYZ()[2] ;
+      }
+      rtrack_hits   += spacepoint_f.size() ;
+      pfps_hits[primary_daughter] = spacepoint_f.size() ;
+      if( shower_f->has_length() ) { 
+	pfps_length[primary_daughter] = shower_f->Length() ;
+      } else  {
+	pfps_length[primary_daughter]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
+	pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
+	pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
+	pfps_length[primary_daughter]  = sqrt( pfps_length[primary_daughter] ) ;
+      }
+          
+      //    std::cout<< " primary daughter = " << primary_daughter << " length shower = " << pfps_length[primary_daughter] << std::endl;
+      pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
+      pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
+      pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
+      // No end Direction
+      pfps_start_x[primary_daughter] = shower_f->ShowerStart().X() ;
+      pfps_start_y[primary_daughter] = shower_f->ShowerStart().Y() ;
+      pfps_start_z[primary_daughter] = shower_f->ShowerStart().Z() ;
+      // no end position
+      if( ShowerTrackInfo.first ) { pfps_truePDG[primary_daughter] = mapMC_reco_pdg[ShowerTrackInfo.first] ; }
+      else pfps_truePDG[primary_daughter] = 0 ; 
+    }
+  } // track vs shower
+}
+
+
 
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
@@ -426,11 +615,14 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   is_reconstructed = false ;
   primary_vcontained = false ;
   primary_econtained = false ;
+  has_reco_showers = false ;
+  has_reco_tracks = false ;
+
   for ( int i = 0 ; i < 10000 ; ++i ){
     r_pdg_primary[i] = 0 ;
     rnu_hits[i] = 0;
   }
-
+  rtrack_hits = 0 ;
   nu_reconstructed = false ;
   nu_rvertex_contained = true ; 
   numb_nu_reco = 0 ;
