@@ -78,6 +78,8 @@ public:
 
   // -> Added functions ( * )
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) ;
+  bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f);
+  bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -378,7 +380,9 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	  if( !cal_f[m] ) continue ;
 	  if( !cal_f[m]->PlaneID().isValid) continue ;
 	  if( cal_f[m]->PlaneID().Plane == 2 ) {    
-	    // Get associated MCParticle ID using 3 different methods:
+	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) continue ; // just read potential muon/pion tracks
+	    std::cout << "Muon/Pion candidate  PIDA " << IsMuonPionCandidateChi2( pid_f[k] ) << std::endl ;
+       	    // Get associated MCParticle ID using 3 different methods:
 	    //    Which particle contributes the most energy to all the hits
 	    //    Which particle contributes the reco charge to all the hits
 	    //    Which particle is the biggest contributor to all the hits
@@ -391,22 +395,16 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	    if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
 	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
 	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
-	    std::cout << " reconstructed particle was << " << mapMC_reco_pdg[tr_id_hits] << std::endl;
-	    // Muon
-	    if( pid_f[k]->PIDA() >= 5 && pid_f[k]->PIDA() < 9) std::cout << " pdg by pida - muon " << std::endl;
-	    //Pion
-	    if( pid_f[k]->PIDA() >= 9 && pid_f[k]->PIDA() < 13) std::cout << " pdg by pida - pion " << std::endl;
-	    //Kaon
-	    if( pid_f[k]->PIDA() >= 13 && pid_f[k]->PIDA() < 13.5) std::cout << " pdg by pida - kaon " << std::endl;
-	    //Proton
-	    if( pid_f[k]->PIDA() >= 13) std::cout << " pdg by pida - proton " << std::endl;
-	      
-	    std::cout << " chi2 values " << std::endl;
-	    std::cout << " chi2 muon " << pid_f[k]->Chi2Muon() << std::endl;
-	    std::cout << " chi2 pion " << pid_f[k]->Chi2Pion() << std::endl;
-	    std::cout << " chi2 proton " << pid_f[k]->Chi2Proton() << std::endl;
-	    std::cout << " lenght " << track_f[n]->Length() << std::endl;
+
 	    // save information -- add pid methods here !
+	    /*
+	      1) Find muon/pion candidates
+	      2) Efficiency simple method
+	      3) Apply topology consideretions -> New efficiency
+	      4) Number of kinks -> Efficiency
+	      5) Michael electrons -> Efficiency
+	     */
+
 	    r_chi2_mu[primary_daughter] = pid_f[k]->Chi2Muon() ;
 	    r_chi2_pi[primary_daughter] = pid_f[k]->Chi2Pion() ;
 	    r_chi2_p[primary_daughter]  = pid_f[k]->Chi2Proton() ;
@@ -496,7 +494,23 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 }
 
 
+bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f)
+{
+  if( ( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() ) || ( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() ) ) return true ;
+	 
+  return false ; 
+}
 
+
+bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f)
+{
+  /*
+  // Muon : PIDA >= 5 && PIDA() < 9 
+  //Pion : PIDA() >= 9 && PIDA() < 13 
+  */
+  if( pid_f ->PIDA() >= 5 && pid_f ->PIDA() < 13 ) return true ;
+  return false ; 
+}
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 {
