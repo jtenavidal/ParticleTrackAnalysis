@@ -80,6 +80,7 @@ public:
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) ;
   bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f);
   bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
+  double EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) ;
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -134,9 +135,17 @@ private:
   //    => neutrino vertex information
   bool nu_reconstructed , nu_rvertex_contained ;
   int numb_nu_reco ;
+  bool is_candidate ;
   double nu_reco_vertex[3] ;
   double error_vertex_reco ;
 
+  // Efficiency calculation: just calorimetry information
+  int reco_mu , reco_pi ;
+  int true_mu, true_pi ;
+  int signal_mu, signal_pi ;
+  
+  std::vector< int > daughters ;
+  std::vector< std::vector< int > > daughter_hiearchy ; 
 
   // need to reconfigure 
   bool has_reco_showers, has_reco_tracks ;
@@ -331,9 +340,20 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	    for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) {
 		int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-		//std::cout<<"part id " << part_id_f <<std::endl;
+		is_candidate = false ; // reset for each pfparticle
 		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
+		if( is_candidate == true ) { // just check possible muons and pions !
+		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
+		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ) ;
+		  if( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() == 1 ){ // at the moment just look more if there is one track. Splitted -> pion track 
+		    for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
+		      daughters.push_back(particleMap[ particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ] -> NumDaughters() ) ;
+		    }
+		  }
+		  daughter_hiearchy.push_back(daughters);
+		  daughters.clear();
+		}
 	    }
 	}
       }// end if primary
@@ -380,8 +400,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	  if( !cal_f[m] ) continue ;
 	  if( !cal_f[m]->PlaneID().isValid) continue ;
 	  if( cal_f[m]->PlaneID().Plane == 2 ) {    
-	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) continue ; // just read potential muon/pion tracks
-	    std::cout << "Muon/Pion candidate  PIDA " << IsMuonPionCandidateChi2( pid_f[k] ) << std::endl ;
        	    // Get associated MCParticle ID using 3 different methods:
 	    //    Which particle contributes the most energy to all the hits
 	    //    Which particle contributes the reco charge to all the hits
@@ -396,7 +414,14 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
 	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
 
+	    //	    std::cout<< "efficiency muon " << EfficiencyCalo( pid_f[k] , pfps_truePDG[primary_daughter], "muon" ) << std::endl;
+	    
+	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) {
+	      is_candidate = true ;
+	      continue ; // just read potential muon/pion tracks
+	    }
 	    // save information -- add pid methods here !
+	    
 	    /*
 	      1) Find muon/pion candidates
 	      2) Efficiency simple method
@@ -467,8 +492,10 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	r_track_y[l+rtrack_hits] = spacepoint_f[l]->XYZ()[1] ;
 	r_track_z[l+rtrack_hits] = spacepoint_f[l]->XYZ()[2] ;
       }
+
       rtrack_hits   += spacepoint_f.size() ;
       pfps_hits[primary_daughter] = spacepoint_f.size() ;
+
       if( shower_f->has_length() ) { 
 	pfps_length[primary_daughter] = shower_f->Length() ;
       } else  {
@@ -478,7 +505,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	pfps_length[primary_daughter]  = sqrt( pfps_length[primary_daughter] ) ;
       }
           
-      //    std::cout<< " primary daughter = " << primary_daughter << " length shower = " << pfps_length[primary_daughter] << std::endl;
       pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
       pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
       pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
@@ -494,7 +520,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 }
 
 
-bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f)
+bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f )
 {
   if( ( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() ) || ( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() ) ) return true ;
 	 
@@ -502,7 +528,7 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::Par
 }
 
 
-bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f)
+bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f )
 {
   /*
   // Muon : PIDA >= 5 && PIDA() < 9 
@@ -510,6 +536,34 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidatePIDA( art::Ptr<anab::Par
   */
   if( pid_f ->PIDA() >= 5 && pid_f ->PIDA() < 13 ) return true ;
   return false ; 
+}
+
+double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) {
+  double eff_mu, eff_pi, purity_mu, purity_pi ;
+  // True information 
+  if( true_pdg == 13 ) ++true_mu ;
+  if( true_pdg == 211 ) ++true_pi ; 
+  // reco information
+  if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
+    ++reco_mu ;
+    if( true_pdg == 13 ) ++signal_mu ;
+  }
+
+  if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) {
+    ++reco_pi ;
+    if( true_pdg == 211 ) ++signal_pi ;
+  }
+
+  eff_mu = signal_mu / (double)true_mu ; 
+  purity_mu = signal_mu / (double)reco_mu ; 
+  eff_pi = signal_pi / (double)true_pi ; 
+  purity_pi = signal_pi / (double)reco_pi ; 
+  std::cout<<"reco mu " << reco_mu << " true mu " << true_mu << " signal mu " << signal_mu << std::endl;
+  std::cout<<"reco pi " << reco_pi << " true pi " << true_pi << " signal pi " << signal_pi << std::endl;
+  if( particle == "pion" ) return eff_pi ; 
+  if( particle == "purity pion" ) return purity_pi ; 
+  if( particle == "purity muon" ) return purity_mu ; 
+  return eff_mu;
 }
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
@@ -521,6 +575,14 @@ void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 
 void test::NeutrinoTopologyAnalyzer::beginJob( )
 {
+  // don't initialize per event. 
+  reco_mu = 0 ;
+  reco_pi = 0 ;
+  true_mu = 0 ;
+  true_pi = 0 ;
+  signal_mu = 0 ;
+  signal_pi = 0 ; 
+
   clearVariables();
   // Declare trees and branches
   mcparticle_tree   = new TTree( "mcparticle_tree",    "MC event tree: True event track information" ) ;
@@ -544,6 +606,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   recoevent_tree -> Branch( "numb_nu_reco",             &numb_nu_reco,        "numb_nu_reco/I");
   recoevent_tree -> Branch( "nu_reco_vertex",           &nu_reco_vertex,      "nu_reco_vertex[3]/D");
   recoevent_tree -> Branch( "error_vertex_reco",        &error_vertex_reco,   "error_vertex_reco/D");
+  recoevent_tree -> Branch( "daughter_hiearchy" , "std::vector< std::vector< int > >", &daughter_hiearchy);
 
 
   //set directory
@@ -631,11 +694,12 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   primary_econtained = false ;
   has_reco_showers = false ;
   has_reco_tracks = false ;
-
+  is_candidate = false ; 
   for ( int i = 0 ; i < 10000 ; ++i ){
     r_pdg_primary[i] = 0 ;
     rnu_hits[i] = 0;
   }
+
   rtrack_hits = 0 ;
   nu_reconstructed = false ;
   nu_rvertex_contained = true ; 
@@ -646,6 +710,10 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   }
 
   error_vertex_reco = 0 ;
+  daughters.clear() ;
+  daughter_hiearchy.clear() ; 
+
+
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
