@@ -343,8 +343,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		is_candidate = false ; // reset for each pfparticle
 		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
+
 		if( is_candidate == true ) { // just check possible muons and pions !
-		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
+		  //		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
 		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ) ;
 		  if( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() == 1 ){ // at the moment just look more if there is one track. Splitted -> pion track 
 		    for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
@@ -413,13 +414,13 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
 	    if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
 	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
 	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
-
+	    //	    std::cout << " pdg -> " << pfps_truePDG[primary_daughter] << " Is candidate =  "<< IsMuonPionCandidateChi2( pid_f[k] ) << std::endl; 
 	    //	    std::cout<< "efficiency muon " << EfficiencyCalo( pid_f[k] , pfps_truePDG[primary_daughter], "muon" ) << std::endl;
 	    
 	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) {
-	      is_candidate = true ;
+	      is_candidate = false ;
 	      continue ; // just read potential muon/pion tracks
-	    }
+	    } else is_candidate = true ;
 	    // save information -- add pid methods here !
 	    
 	    /*
@@ -475,7 +476,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
       } //close pid
     } //close track    
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
-    
+    //std::cout<< " is shower " << std::endl;
     has_reco_showers = true ; 
     art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
@@ -514,7 +515,9 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art
       pfps_start_z[primary_daughter] = shower_f->ShowerStart().Z() ;
       // no end position
       if( ShowerTrackInfo.first ) { pfps_truePDG[primary_daughter] = mapMC_reco_pdg[ShowerTrackInfo.first] ; }
-      else pfps_truePDG[primary_daughter] = 0 ; 
+      else pfps_truePDG[primary_daughter] = 0 ;
+      //std::cout<<" --> Shower pdg = " << pfps_truePDG[primary_daughter]  << std::endl; 
+
     }
   } // track vs shower
 }
