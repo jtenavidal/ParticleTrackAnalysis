@@ -591,6 +591,14 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "TPDG_Primary",            "std::vector< int >", &TPDG_Primary);
   mcparticle_tree -> Branch( "TNumDaughPrimary",        "std::vector< int >", &TNumDaughPrimary);
   mcparticle_tree -> Branch( "TNumDaughters",           &TNumDaughters,       "TNumDaughters/I");
+  mcparticle_tree -> Branch( "TDaughter_mu",            &TDaughter_mu,        "TDaughter_mu/I");
+  mcparticle_tree -> Branch( "TDaughter_pi",            &TDaughter_pi,        "TDaughter_pi/I");
+  mcparticle_tree -> Branch( "TDaughter_e",             &TDaughter_e,         "TDaughter_e/I");
+  mcparticle_tree -> Branch( "TDaughter_p",             &TDaughter_p,         "TDaughter_p/I");
+  mcparticle_tree -> Branch( "TDaughter_n",             &TDaughter_n,         "TDaughter_n/I");
+  mcparticle_tree -> Branch( "TDaughter_photon",        &TDaughter_photon,    "TDaughter_photon/I");
+  mcparticle_tree -> Branch( "TDaughter_other",         &TDaughter_other,     "TDaughter_other/I");
+  
 
   // Reco tree
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
