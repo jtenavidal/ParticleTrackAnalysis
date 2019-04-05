@@ -105,27 +105,21 @@ private:
   bool is_reconstructed, has_reco_tracks, has_reco_showers ; 
   int has_reco_daughters ; 
 
-
-
   // MC Event Information 
   // Particle inventory service
   art::ServiceHandle<cheat::ParticleInventoryService> particleInventory;
+  std::map< int , std::vector< int > > ShowerMothers ;
+  std::map<int, const simb::MCParticle*> trueParticles ; 
 
   // neutrino information
   int Tnu_PDG, T_interaction ;
   double t_vertex[3], t_momentum[3], t_vertex_energy ;
   bool is_cc ; 
 
-  // Truth information ( = > T ) 
+  // Truth information of primary particles( = > T ) 
   int TPDG_Code, TNumDaughters, TDaughter_mu, TDaughter_pi, TDaughter_e, TDaughter_p, TDaughter_n, TDaughter_photon, TDaughter_other ;
-  float TrueParticleEnergy, TMass;
-  float Tpx, Tpy, Tpz, Tpt, Tp; 
-  double TMCLength, TTrack_vertex_x, TTrack_vertex_y, TTrack_vertex_z, TTrack_vertex_t, TTrack_end_x, TTrack_end_y, TTrack_end_z, TTrack_end_t ;
-  std::map< int , std::vector< int > > ShowerMothers ;
-  std::map<int, const simb::MCParticle*> trueParticles ; 
-  // vectorization
-  int TPDG_Primary[10000], TNumDaughPrimary[10000];
-
+  double TMCLength;
+  std::vector< int > TPDG_Primary, TNumDaughPrimary ;
 
   // Reco information
   lar_pandora::PFParticleMap particleMap ;   
@@ -190,10 +184,10 @@ test::NeutrinoTopologyAnalyzer::NeutrinoTopologyAnalyzer(fhicl::ParameterSet con
 void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 {
   clearVariables();
-  // Implementation of required member function here.
   event_id = e.id().event();
   std::cout<< " Event ID = " << event_id <<std::endl;
-    if( !e.isRealData()){
+
+  if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
      *************************************************************************************************/
@@ -218,11 +212,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  if( trueParticles.find(particle_temp->Mother()) == trueParticles.end()){ break; } // found mother
 	}
       }
-      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 111 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } 
+      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 111 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } }
 
-    }
     art::Handle< std::vector< simb::MCTruth > > mct_handle;
     e.getByLabel(TruthLabel, mct_handle);
+
     // Get the GEANT information of the particles 
     art::FindManyP< simb::MCParticle > fmcp( mct_handle , e, G4Label );
     art::FindManyP< simb::GTruth > fmgt( mct_handle, e, TruthLabel );
@@ -247,26 +241,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ;
 	if(trueParticle.Process() == "primary" ){
 	  // updating to neutrino events : need to vectorize it all
-	  TPDG_Primary[t] = trueParticle.PdgCode() ;
-	  TNumDaughPrimary[t] = trueParticle.NumberDaughters() ;
+	  TPDG_Primary.push_back(trueParticle.PdgCode()) ;
+	  TNumDaughPrimary.push_back(trueParticle.NumberDaughters()) ;
 	  TNumDaughters += 1 ;
  
 	  TPDG_Code = trueParticle.PdgCode() ;
-	  TrueParticleEnergy = trueParticle.E() ;
-	  TMass = trueParticle.Mass() ;
-	  Tpx = trueParticle.Px() ;
-	  Tpy = trueParticle.Py() ;
-	  Tpz = trueParticle.Pz() ;
-	  Tpt = trueParticle.Pt() ;
-	  Tp  = trueParticle.P() ;
-	  TTrack_vertex_x = trueParticle.Trajectory().X( 0 ) ;
-	  TTrack_vertex_y = trueParticle.Trajectory().Y( 0 ) ; 
-	  TTrack_vertex_z = trueParticle.Trajectory().Z( 0 ) ; 
-	  TTrack_vertex_t = trueParticle.Trajectory().T( 0 ) ;
-	  TTrack_end_x = trueParticle.EndX() ;
-	  TTrack_end_y = trueParticle.EndY() ;
-	  TTrack_end_z = trueParticle.EndZ() ; 
-	  TTrack_end_t = trueParticle.EndT() ;
 	  TMCLength = trueParticle.Trajectory().TotalLength() ;
 	  
 	  //primary_vcontained = MCIsContained( trueParticle )[0] ; 
@@ -609,8 +588,8 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "t_vertex",                &t_vertex,            "tvertex[3]/D");
   mcparticle_tree -> Branch( "t_vertex_energy",         &t_vertex_energy,     "t_vertex_energy/D");
   mcparticle_tree -> Branch( "is_cc",                   &is_cc,               "is_cc/B");
-  mcparticle_tree -> Branch( "TPDG_Primary",            &TPDG_Primary,        "TPDG_Primary[10000]/I");
-  mcparticle_tree -> Branch( "TNumDaughPrimary",        &TNumDaughPrimary,    "TNumDaughPrimary[10000]/I");
+  mcparticle_tree -> Branch( "TPDG_Primary",            "std::vector< int >", &TPDG_Primary);
+  mcparticle_tree -> Branch( "TNumDaughPrimary",        "std::vector< int >", &TNumDaughPrimary);
   mcparticle_tree -> Branch( "TNumDaughters",           &TNumDaughters,       "TNumDaughters/I");
 
   // Reco tree
@@ -687,27 +666,10 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   TDaughter_n = 0 ;
   TDaughter_photon = 0 ;
   TDaughter_other =0 ;
-  TrueParticleEnergy = 0 ;
-  TMass = 0 ;
-  Tpx = 0 ;
-  Tpy = 0 ;
-  Tpz = 0 ;
-  Tpt = 0 ;
-  Tp  = 0 ; 
   TMCLength = 0 ;
-  TTrack_vertex_x = 0 ;
-  TTrack_vertex_y = 0 ;
-  TTrack_vertex_z = 0 ;
-  TTrack_vertex_t = 0 ;
-  TTrack_end_x = 0 ;
-  TTrack_end_y = 0 ;
-  TTrack_end_z = 0 ;
-  TTrack_end_t = 0 ;
-
-  for ( int i = 0 ; i < 10000 ; ++i ){
-    TPDG_Primary[i] = 0 ;
-    TNumDaughPrimary[i] = 0 ;
-  }
+  TPDG_Primary.clear() ;
+  TNumDaughPrimary.clear() ;
+  
 
   // RECO INFO
 
