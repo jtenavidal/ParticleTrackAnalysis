@@ -98,10 +98,14 @@ private:
   float DetectorHalfLengthX, DetectorHalfLengthY, DetectorHalfLengthZ, CoordinateOffSetX, CoordinateOffSetY, CoordinateOffSetZ, SelectedBorderX, SelectedBorderY, SelectedBorderZ ;
 
   // Tree members
-  TTree * mcparticle_tree, * recoevent_tree ; 
+  TTree * event_tree, * mcparticle_tree, * recoevent_tree ; 
   
   // Event Information
   int event_id ;
+  bool is_reconstructed, has_reco_tracks, has_reco_showers ; 
+  int has_reco_daughters ; 
+
+
 
   // MC Event Information 
   // Particle inventory service
@@ -127,7 +131,7 @@ private:
   lar_pandora::PFParticleMap particleMap ;   
   std::map< int , int > mapMC_reco_pdg ;
 
-  bool is_reconstructed, primary_vcontained, primary_econtained ;
+  bool primary_vcontained, primary_econtained ;
   int r_pdg_primary[10000] ;
   int rnu_hits[10000] ;
   int rtrack_hits;
@@ -148,7 +152,6 @@ private:
   std::vector< std::vector< int > > daughter_hiearchy ; 
 
   // need to reconfigure 
-  bool has_reco_showers, has_reco_tracks ;
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
   double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
   float rLength ;
@@ -588,10 +591,18 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
 
   clearVariables();
   // Declare trees and branches
+  event_tree   = new TTree( "event_tree",    "Event tree: General information about the event" ) ;
   mcparticle_tree   = new TTree( "mcparticle_tree",    "MC event tree: True event track information" ) ;
   recoevent_tree = new TTree( "recoevent_tree",  "Reco event tree: reconstructed information of event") ;
 
-  //set branches
+  // Event tree
+  event_tree      -> Branch( "event_id",                  &event_id,           "event_id/I");
+  event_tree      -> Branch( "is_reconstructed",          &is_reconstructed,   "is_reconstructed/B");
+  event_tree      -> Branch( "has_reco_daughters",        &has_reco_daughters, "has_reco_daughters/I");
+  event_tree      -> Branch( "has_reco_tracks",           &has_reco_tracks,    "has_reco_tracks/B");
+  event_tree      -> Branch( "has_reco_showers",          &has_reco_showers,   "has_reco_showers/B");
+
+  // MC tree
   mcparticle_tree -> Branch( "event_id",                &event_id,            "event_id/I");
   mcparticle_tree -> Branch( "Tnu_PDG",                 &Tnu_PDG,             "Tnu_PDG/I");
   mcparticle_tree -> Branch( "T_interaction",           &T_interaction,       "T_interaction/I");
@@ -602,7 +613,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "TNumDaughPrimary",        &TNumDaughPrimary,    "TNumDaughPrimary[10000]/I");
   mcparticle_tree -> Branch( "TNumDaughters",           &TNumDaughters,       "TNumDaughters/I");
 
-
+  // Reco tree
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
   recoevent_tree -> Branch( "nu_reconstructed",         &nu_reconstructed,    "nu_reconstructed/B");
   recoevent_tree -> Branch( "nu_rvertex_contained",     &nu_rvertex_contained,"nu_rvertex_contained/B");
@@ -647,8 +658,16 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   SelectedBorderY = 15 ;
   SelectedBorderZ = 15 ; //47.5 ;
 
+
   // Clear variables
+
+  // event tree variables 
   event_id = 0 ;
+  is_reconstructed   =  false ; 
+  has_reco_daughters =  0 ;
+  has_reco_tracks    =  false ;
+  has_reco_showers = false ; 
+
   Tnu_PDG = 0 ;
   T_interaction = 0 ;
   t_vertex[0] = 0 ;
@@ -692,11 +711,8 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
 
   // RECO INFO
 
-  is_reconstructed = false ;
   primary_vcontained = false ;
   primary_econtained = false ;
-  has_reco_showers = false ;
-  has_reco_tracks = false ;
   is_candidate = false ; 
   for ( int i = 0 ; i < 10000 ; ++i ){
     r_pdg_primary[i] = 0 ;
