@@ -117,9 +117,10 @@ private:
   bool is_cc ; 
 
   // Truth information of primary particles( = > T ) 
-  int TPDG_Code, TNumDaughters, TDaughter_mu, TDaughter_pi, TDaughter_e, TDaughter_p, TDaughter_n, TDaughter_photon, TDaughter_other ;
-  double TMCLength;
-  std::vector< int > TPDG_Primary, TNumDaughPrimary ;
+  std::map < int, int > TPDG_Primary, mapDaughters, mapRescatter ; 
+  std::map < int, double > mapLength;
+  std::map < int, bool > mapPrimary ;
+
 
   // Reco information
   lar_pandora::PFParticleMap particleMap ;   
@@ -201,18 +202,28 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       const simb::MCParticle *particle = particleIt->second;
       trueParticles[particle->TrackId()] = particle;
     }
+
     for (sim::ParticleList::const_iterator particleIt = particles.begin(); particleIt != particles.end(); ++particleIt){
       const simb::MCParticle *particle_temp = particleIt->second;
 
       // Creating shower mother map:      
       if( particle_temp->Mother() != 0 ){
-	if( trueParticles.find( particle_temp->TrackId() ) == trueParticles.end() || trueParticles.find( particle_temp->Mother()) == trueParticles.end() ){ continue ; }
-	while( particle_temp->Mother() != 0 && (TMath::Abs(trueParticles[particle_temp->Mother()]->PdgCode()) == 11 || trueParticles[particle_temp->Mother()]->PdgCode() == 22 || trueParticles[particle_temp->Mother()]->PdgCode() == 111 )){
+	if( trueParticles.find( particle_temp->TrackId() ) == trueParticles.end() || 
+            trueParticles.find( particle_temp->Mother()) == trueParticles.end() ){ continue ; }
+
+	while( particle_temp->Mother() != 0 && (TMath::Abs(trueParticles[particle_temp->Mother()]->PdgCode()) == 11 || 
+               trueParticles[particle_temp->Mother()]->PdgCode() == 22 || trueParticles[particle_temp->Mother()]->PdgCode() == 111 )){
+	  
 	  particle_temp =  trueParticles[particle_temp->Mother()];
 	  if( trueParticles.find(particle_temp->Mother()) == trueParticles.end()){ break; } // found mother
 	}
       }
-      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 111 ) ) { ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; } }
+      if( ShowerMothers.find( particle_temp->TrackId() ) == ShowerMothers.end() 
+          && (TMath::Abs(trueParticles[particle_temp->TrackId()]->PdgCode()) == 11 || trueParticles[particle_temp->TrackId()] -> PdgCode() == 22 
+          || trueParticles[particle_temp->TrackId()] -> PdgCode() == 111 ) ) { 
+	      ShowerMothers[particle_temp->TrackId()].push_back(particle_temp->TrackId()) ; 
+      }
+    }
 
     art::Handle< std::vector< simb::MCTruth > > mct_handle;
     e.getByLabel(TruthLabel, mct_handle);
@@ -236,29 +247,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if(mcParticles.isValid()){
       // Loop over true info
       for( unsigned int t = 0; t < mcParticles->size(); ++t ){
+	// Storing all particles in maps -> [ TrackId vs variable ]
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
 	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ;
-	if(trueParticle.Process() == "primary" ){
-	  // updating to neutrino events : need to vectorize it all
-	  TPDG_Primary.push_back(trueParticle.PdgCode()) ;
-	  TNumDaughPrimary.push_back(trueParticle.NumberDaughters()) ;
-	  TNumDaughters += 1 ;
- 
-	  TPDG_Code = trueParticle.PdgCode() ;
-	  TMCLength = trueParticle.Trajectory().TotalLength() ;
-	  
-	  //primary_vcontained = MCIsContained( trueParticle )[0] ; 
-	  //primary_econtained = MCIsContained( trueParticle )[1] ; 
-	} else { // secondary particle information : Just storing total number of each type
-	  if      ( trueParticle.PdgCode() == 13   ) { ++TDaughter_mu ; }
-	  else if ( trueParticle.PdgCode() == 211  ) { ++TDaughter_pi ; } 
-	  else if ( trueParticle.PdgCode() == 11   ) { ++TDaughter_e ;  } 
-	  else if ( trueParticle.PdgCode() == 2212 ) { ++TDaughter_p ;  }
-	  else if ( trueParticle.PdgCode() == 2112 ) { ++TDaughter_n ;  }
-	  else if ( trueParticle.PdgCode() == 22   ) { ++TDaughter_photon ; }
-	  else                                       { ++TDaughter_other ;  }
-	}
+	mapLength[trueParticle.TrackId()] = trueParticle.Trajectory().TotalLength() ;
+	mapDaughters[trueParticle.TrackId()] = trueParticle.NumberDaughters();
+	mapRescatter[trueParticle.TrackId()] = trueParticle.Rescatter();
+
+	if(trueParticle.Process() == "primary" ) mapPrimary[trueParticle.TrackId()] = true ;
+	else mapPrimary[trueParticle.TrackId()] = false ;
       }
     }
     
@@ -588,17 +586,12 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "t_vertex",                &t_vertex,            "tvertex[3]/D");
   mcparticle_tree -> Branch( "t_vertex_energy",         &t_vertex_energy,     "t_vertex_energy/D");
   mcparticle_tree -> Branch( "is_cc",                   &is_cc,               "is_cc/B");
-  mcparticle_tree -> Branch( "TPDG_Primary",            "std::vector< int >", &TPDG_Primary);
-  mcparticle_tree -> Branch( "TNumDaughPrimary",        "std::vector< int >", &TNumDaughPrimary);
-  mcparticle_tree -> Branch( "TNumDaughters",           &TNumDaughters,       "TNumDaughters/I");
-  mcparticle_tree -> Branch( "TDaughter_mu",            &TDaughter_mu,        "TDaughter_mu/I");
-  mcparticle_tree -> Branch( "TDaughter_pi",            &TDaughter_pi,        "TDaughter_pi/I");
-  mcparticle_tree -> Branch( "TDaughter_e",             &TDaughter_e,         "TDaughter_e/I");
-  mcparticle_tree -> Branch( "TDaughter_p",             &TDaughter_p,         "TDaughter_p/I");
-  mcparticle_tree -> Branch( "TDaughter_n",             &TDaughter_n,         "TDaughter_n/I");
-  mcparticle_tree -> Branch( "TDaughter_photon",        &TDaughter_photon,    "TDaughter_photon/I");
-  mcparticle_tree -> Branch( "TDaughter_other",         &TDaughter_other,     "TDaughter_other/I");
-  
+  mcparticle_tree -> Branch( "mapMC_reco_pdg",          "std::map< int, int >", &mapMC_reco_pdg);
+  mcparticle_tree -> Branch( "TPDG_Primary",            "std::map< int, int >", &TPDG_Primary);
+  mcparticle_tree -> Branch( "mapDaughters",            "std::map< int, int >", &mapDaughters);
+  mcparticle_tree -> Branch( "mapLength",               "std::map< int, double >", &mapLength);
+  mcparticle_tree -> Branch( "mapPrimary",              "std::map< int, bool >",   &mapPrimary);
+  mcparticle_tree -> Branch( "mapRescatter",            "std::map< int, int >", &mapRescatter); 
 
   // Reco tree
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
@@ -665,19 +658,13 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   t_momentum[2] = 0 ;
   t_vertex_energy = 0 ;
   is_cc = false ; 
-  TPDG_Code = -999 ; 
-  TNumDaughters = 0 ;
-  TDaughter_mu = 0 ;
-  TDaughter_pi = 0 ;
-  TDaughter_e = 0 ;
-  TDaughter_p = 0 ;
-  TDaughter_n = 0 ;
-  TDaughter_photon = 0 ;
-  TDaughter_other =0 ;
-  TMCLength = 0 ;
   TPDG_Primary.clear() ;
-  TNumDaughPrimary.clear() ;
-  
+  mapDaughters.clear() ;
+  mapMC_reco_pdg.clear();
+  mapLength.clear();
+  mapPrimary.clear();
+  mapRescatter.clear();
+    
 
   // RECO INFO
 
