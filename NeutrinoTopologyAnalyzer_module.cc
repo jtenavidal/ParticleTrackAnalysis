@@ -116,10 +116,11 @@ private:
   bool is_cc ; 
 
   // Truth information of primary particles 
-  std::map < int, int > mapTDaughters, mapTRescatter, mapTPrimary; 
+  std::map < int, int > mapTDaughters, mapTRescatter, mapTPrimary, mapTPiDaughterPdg; 
   std::map < int, double > mapTLength;
   //  std::map < int, bool > mapTPrimary ;
   bool Thas_primary_mu, Thas_primary_pi, Tmuon_decay, Tdecay_e, Tdecay_nue, Tdecay_numu ; 
+  
 
   // Reco information
   lar_pandora::PFParticleMap particleMap ;   
@@ -261,14 +262,21 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
 
+	// negative muons and positive pions
 	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) Thas_primary_mu = true ;
 	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) Thas_primary_pi = true ;
 	
-	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && TMath::Abs(mapMC_reco_pdg[trueParticle.Mother()]) == 13 ){
+	// Study of mu^- decay. We expect a mu^- for numu CC interactions. If studying numubar CC interactions, change decay products.
+	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 13 ){
 	  if( trueParticle.PdgCode() == 11 ) Tdecay_e = true ;
 	  if( trueParticle.PdgCode() == -12 ) Tdecay_nue = true ;
 	  if( trueParticle.PdgCode() == 14 ) Tdecay_numu = true ;
 	  if( Tdecay_e && Tdecay_nue && Tdecay_numu ) Tmuon_decay = true ;
+	}
+
+	// Study of pi+ elastic and inelastic scattering : final products pdg
+	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 211 ){
+	  mapTPiDaughterPdg[trueParticle.PdgCode()] += 1 ;
 	}
 
       }
@@ -614,7 +622,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "Tmuon_decay",             &Tmuon_decay,          "Tmuon_decay/B");
   mcparticle_tree -> Branch( "Thas_primary_mu",         &Thas_primary_mu,      "Thas_primary_mu/B");
   mcparticle_tree -> Branch( "Thas_primary_pi",         &Thas_primary_pi,      "Thas_primary_pi/B");
-
+  mcparticle_tree -> Branch( "mapTPiDaughterPdg",       "std::map<int,int>",   &mapTPiDaughterPdg);
 
   // Reco tree
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
@@ -692,6 +700,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   Tdecay_numu = false ; 
   Thas_primary_mu = false ;
   Thas_primary_pi = false ;  
+  mapTPiDaughterPdg.clear();
 
   // RECO INFO
 
