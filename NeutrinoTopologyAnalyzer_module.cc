@@ -261,7 +261,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
 
-	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 13  ) Thas_primary_mu = true ;
+	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) Thas_primary_mu = true ;
 	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) Thas_primary_pi = true ;
 	
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && TMath::Abs(mapMC_reco_pdg[trueParticle.Mother()]) == 13 ){
