@@ -1,4 +1,3 @@
-
 ////////////////////////////////////////////////////////////////////////
 // Class:       NeutrinoTopologyAnalyzer
 // Plugin Type: analyzer (art v3_00_00)
@@ -120,7 +119,7 @@ private:
   std::map < int, int > mapTDaughters, mapTRescatter, mapTPrimary; 
   std::map < int, double > mapTLength;
   //  std::map < int, bool > mapTPrimary ;
-
+  bool Thas_primary_mu, Thas_primary_pi, Tmuon_decay, Tdecay_e, Tdecay_nue, Tdecay_numu ; 
 
   // Reco information
   lar_pandora::PFParticleMap particleMap ;   
@@ -192,6 +191,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   if( !e.isRealData()){
     /**************************************************************************************************
      *  MC INFORMATION
+     *
+     *  - > information stored : pdg, daughters, primarys id , length, rescatter
+     *  - > Want to have a estimate of muon decay after neutrino interactions
      *************************************************************************************************/
     art::ValidHandle<std::vector<simb::MCParticle>> mcParticles = e.getValidHandle<std::vector<simb::MCParticle>>(G4Label);
     
@@ -258,6 +260,17 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
+
+	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 13  ) Thas_primary_mu = true ;
+	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) Thas_primary_pi = true ;
+	
+	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && TMath::Abs(mapMC_reco_pdg[trueParticle.Mother()]) == 13 ){
+	  if( trueParticle.PdgCode() == 11 ) Tdecay_e = true ;
+	  if( trueParticle.PdgCode() == -12 ) Tdecay_nue = true ;
+	  if( trueParticle.PdgCode() == 14 ) Tdecay_numu = true ;
+	  if( Tdecay_e && Tdecay_nue && Tdecay_numu ) Tmuon_decay = true ;
+	}
+
       }
     }
     
@@ -265,6 +278,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   /**************************************************************************************************
    *  RECO INFORMATION
+   *
+   *  - > information stored : 
    *************************************************************************************************/
   // Get PFParticle Handle
   art::Handle< std::vector< recob::PFParticle > > pfParticleHandle ;
@@ -319,10 +334,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      || ( vtx_assn[0]->position().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
 	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_rvertex_contained = false ;
 
-	    for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) {
+	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
 		int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 		is_candidate = false ; // reset for each pfparticle
-		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; 
+		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
 
 		if( is_candidate == true ) { // just check possible muons and pions !
@@ -353,7 +368,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 }
 
-void test::NeutrinoTopologyAnalyzer::StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) {
+void test::NeutrinoTopologyAnalyzer::StoreInformation( 
+      art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
+      art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
+      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) {
+
   // Save track info
   if ( findTracks.at( part_id_f ).size() != 0 ){
     std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
@@ -592,6 +611,10 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "mapTRescatter",           "std::map<int,int>",   &mapTRescatter); 
   mcparticle_tree -> Branch( "mapTPrimary",             "std::map<int,int>",   &mapTPrimary);
   mcparticle_tree -> Branch( "mapTLength",              "std::map<int,double>",&mapTLength);
+  mcparticle_tree -> Branch( "Tmuon_decay",             &Tmuon_decay,          "Tmuon_decay/B");
+  mcparticle_tree -> Branch( "Thas_primary_mu",         &Thas_primary_mu,      "Thas_primary_mu/B");
+  mcparticle_tree -> Branch( "Thas_primary_pi",         &Thas_primary_pi,      "Thas_primary_pi/B");
+
 
   // Reco tree
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
@@ -663,7 +686,12 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   mapTLength.clear();
   mapTPrimary.clear();
   mapTRescatter.clear();
-    
+  Tmuon_decay = false ; 
+  Tdecay_e = false ; 
+  Tdecay_nue = false ; 
+  Tdecay_numu = false ; 
+  Thas_primary_mu = false ;
+  Thas_primary_pi = false ;  
 
   // RECO INFO
 
