@@ -116,14 +116,15 @@ private:
   double t_vertex[3], t_momentum[3], t_vertex_energy ;
   bool is_cc ; 
 
-  // Truth information of primary particles( = > T ) 
-  std::map < int, int > TPDG_Primary, mapDaughters, mapRescatter ; 
-  std::map < int, double > mapLength;
-  std::map < int, bool > mapPrimary ;
+  // Truth information of primary particles 
+  std::map < int, int > mapTDaughters, mapTRescatter, mapTPrimary; 
+  std::map < int, double > mapTLength;
+  //  std::map < int, bool > mapTPrimary ;
 
 
   // Reco information
   lar_pandora::PFParticleMap particleMap ;   
+
   std::map< int , int > mapMC_reco_pdg ;
 
   bool primary_vcontained, primary_econtained ;
@@ -251,16 +252,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
 	if( trueParticle.PdgCode() >= 1000018038 ) continue ; // Cut on PDG codes which refer to elements (Argon30 and above)
 	mapMC_reco_pdg[trueParticle.TrackId()] = trueParticle.PdgCode() ;
-	mapLength[trueParticle.TrackId()] = trueParticle.Trajectory().TotalLength() ;
-	mapDaughters[trueParticle.TrackId()] = trueParticle.NumberDaughters();
-	mapRescatter[trueParticle.TrackId()] = trueParticle.Rescatter();
+	mapTLength[trueParticle.TrackId()] = trueParticle.Trajectory().TotalLength() ;
+	mapTDaughters[trueParticle.TrackId()] = trueParticle.NumberDaughters();
+	mapTRescatter[trueParticle.TrackId()] = trueParticle.Rescatter();
 
-	if(trueParticle.Process() == "primary" ) mapPrimary[trueParticle.TrackId()] = true ;
-	else mapPrimary[trueParticle.TrackId()] = false ;
+	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
+	else mapTPrimary[trueParticle.TrackId()] = 2 ;
       }
     }
     
-    }  
+  }  
 
   /**************************************************************************************************
    *  RECO INFORMATION
@@ -586,12 +587,11 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mcparticle_tree -> Branch( "t_vertex",                &t_vertex,            "tvertex[3]/D");
   mcparticle_tree -> Branch( "t_vertex_energy",         &t_vertex_energy,     "t_vertex_energy/D");
   mcparticle_tree -> Branch( "is_cc",                   &is_cc,               "is_cc/B");
-  mcparticle_tree -> Branch( "mapMC_reco_pdg",          "std::map< int, int >", &mapMC_reco_pdg);
-  mcparticle_tree -> Branch( "TPDG_Primary",            "std::map< int, int >", &TPDG_Primary);
-  mcparticle_tree -> Branch( "mapDaughters",            "std::map< int, int >", &mapDaughters);
-  mcparticle_tree -> Branch( "mapLength",               "std::map< int, double >", &mapLength);
-  mcparticle_tree -> Branch( "mapPrimary",              "std::map< int, bool >",   &mapPrimary);
-  mcparticle_tree -> Branch( "mapRescatter",            "std::map< int, int >", &mapRescatter); 
+  mcparticle_tree -> Branch( "mapMC_reco_pdg",          "std::map<int,int>",   &mapMC_reco_pdg);
+  mcparticle_tree -> Branch( "mapTDaughters",           "std::map<int,int>",   &mapTDaughters);
+  mcparticle_tree -> Branch( "mapTRescatter",           "std::map<int,int>",   &mapTRescatter); 
+  mcparticle_tree -> Branch( "mapTPrimary",             "std::map<int,int>",   &mapTPrimary);
+  mcparticle_tree -> Branch( "mapTLength",              "std::map<int,double>",&mapTLength);
 
   // Reco tree
   recoevent_tree -> Branch( "event_id",                 &event_id,            "event_id/I");
@@ -658,12 +658,11 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   t_momentum[2] = 0 ;
   t_vertex_energy = 0 ;
   is_cc = false ; 
-  TPDG_Primary.clear() ;
-  mapDaughters.clear() ;
+  mapTDaughters.clear() ;
   mapMC_reco_pdg.clear();
-  mapLength.clear();
-  mapPrimary.clear();
-  mapRescatter.clear();
+  mapTLength.clear();
+  mapTPrimary.clear();
+  mapTRescatter.clear();
     
 
   // RECO INFO
