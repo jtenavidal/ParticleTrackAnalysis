@@ -90,21 +90,34 @@ public:
 
 private:
   // Declare member data here ;
-  // Labels
+  
+  /******************************************
+   *  LABELS                                *
+   ******************************************/
   std::string TruthLabel, G4Label, ParticleLabel, HitFinderLabel, RecoTrackLabel, RecoShowerLabel, RecoPIDLabel, RecoCaloLabel ; 
 
-  // Detector information
+
+  /******************************************
+   *  DETECTOR INFORMATION                  *
+   ******************************************/
   float DetectorHalfLengthX, DetectorHalfLengthY, DetectorHalfLengthZ, CoordinateOffSetX, CoordinateOffSetY, CoordinateOffSetZ, SelectedBorderX, SelectedBorderY, SelectedBorderZ ;
 
-  // Tree members
+  /******************************************
+   *  TREE DEFINITIONS                      *
+   ******************************************/
   TTree * event_tree, * mcparticle_tree, * recoevent_tree ; 
   
-  // Event Information
+  /******************************************
+   *  GENERAL EVENT INFORMATION             *
+   ******************************************/
   int event_id ;
   bool is_reconstructed, has_reco_tracks, has_reco_showers ; 
   int has_reco_daughters ; 
 
-  // MC Event Information 
+  /******************************************
+   *  MC INFORMATION                        *
+   ******************************************/
+  
   // Particle inventory service
   art::ServiceHandle<cheat::ParticleInventoryService> particleInventory;
   std::map< int , std::vector< int > > ShowerMothers ;
@@ -121,23 +134,32 @@ private:
   //  std::map < int, bool > mapTPrimary ;
   bool Thas_primary_mu, Thas_primary_pi, Tmuon_decay, Tdecay_e, Tdecay_nue, Tdecay_numu ; 
   
-
-  // Reco information
+  /******************************************
+   *  RECONSTRUCTED INFORMATION             *  <- this needs to be changed 
+   ******************************************/
+  
   lar_pandora::PFParticleMap particleMap ;   
 
   std::map< int , int > mapMC_reco_pdg ;
 
+  // neutrino related quantities
   bool primary_vcontained, primary_econtained ;
+  bool nu_reconstructed , nu_rvertex_contained ;
+  int numb_nu_reco ;
+  double nu_reco_vertex[3] ;
+  double error_vertex_reco ;
+  
+  // reco - true id matching variables. tr_id_best -> best of the three methods
+  int tr_id_best, tr_id_energy, tr_id_charge, tr_id_hits;
+  
+  // muon - pion candidates
+  bool is_candidate ;
+  
+  
+  // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
   int rnu_hits[10000] ;
   int rtrack_hits;
-
-  //    => neutrino vertex information
-  bool nu_reconstructed , nu_rvertex_contained ;
-  int numb_nu_reco ;
-  bool is_candidate ;
-  double nu_reco_vertex[3] ;
-  double error_vertex_reco ;
 
   // Efficiency calculation: just calorimetry information
   int reco_mu , reco_pi ;
@@ -156,7 +178,6 @@ private:
   std::vector< std::vector< float >  > r_dEdx_ID_all ; 
   
   // -> Breakdown particles in event from Pandora
-  int tr_id_energy, tr_id_charge, tr_id_hits;
   int pfps_truePDG[1000] ;
   int event_vcontained[1000], event_econtained[1000] ; 
   int pfps_hits[1000] , pfps_type[1000] ;
@@ -278,10 +299,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 211 ){
 	  mapTPiDaughterPdg[trueParticle.PdgCode()] += 1 ;
 	}
-
       }
     }
-    
   }  
 
   /**************************************************************************************************
@@ -348,7 +367,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
 
-		if( is_candidate == true ) { // just check possible muons and pions !
+		if( is_candidate == true ) { // store daugher information for muons and pions
 		  //		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
 		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ) ;
 		  if( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() == 1 ){ // at the moment just look more if there is one track. Splitted -> pion track 
@@ -380,7 +399,14 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
       art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
       art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
       std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) {
-
+  /*
+    1) Find muon/pion candidates
+    2) Efficiency simple method
+    3) Apply topology consideretions -> New efficiency
+    4) Number of kinks -> Efficiency
+    5) Michael electrons -> Efficiency
+  */
+  
   // Save track info
   if ( findTracks.at( part_id_f ).size() != 0 ){
     std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
@@ -391,7 +417,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     // Loop over tracks found for track_f
     for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
       has_reco_tracks = true ; 
-      rLength   += track_f[n]->Length() ; // add end of track
+      //      rLength   += track_f[n]->Length() ; // This must change now
       // Get track based variables
       std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
       std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
@@ -409,6 +435,13 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	  if( !cal_f[m] ) continue ;
 	  if( !cal_f[m]->PlaneID().isValid) continue ;
 	  if( cal_f[m]->PlaneID().Plane == 2 ) {    
+
+	    // looks for muons /pions or daughters of muons /pions candidates 
+	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 || is_candidate == false ) { continue ; 
+	    } else is_candidate = true ;
+
+	    // save information -- add pid methods here !
+
        	    // Get associated MCParticle ID using 3 different methods:
 	    //    Which particle contributes the most energy to all the hits
 	    //    Which particle contributes the reco charge to all the hits
@@ -416,35 +449,21 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    tr_id_energy      = RecoUtils::TrueParticleIDFromTotalTrueEnergy(hit_f);
 	    tr_id_charge      = RecoUtils::TrueParticleIDFromTotalRecoCharge(hit_f);
 	    tr_id_hits        = RecoUtils::TrueParticleIDFromTotalRecoHits(hit_f);
-	    // save the most common answer : 
-	    if( tr_id_energy == tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
-	    if( tr_id_energy == tr_id_charge && tr_id_energy != tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
-	    if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
-	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
-	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
+	    // save the most common answer in tr_id_best: 
+	    if( tr_id_energy == tr_id_charge && tr_id_energy == tr_id_hits ) tr_id_best = tr_id_energy ;
+	    if( tr_id_energy == tr_id_charge && tr_id_energy != tr_id_hits ) tr_id_best = tr_id_energy ;
+	    if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) tr_id_best = tr_id_energy ;
+	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) tr_id_best = tr_id_charge ;
+	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) tr_id_best = tr_id_hits ;
+
+
+	    // OLD CODE TO UPDATE : 
+	    pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_best] ;
+
 	    //	    std::cout << " pdg -> " << pfps_truePDG[primary_daughter] << " Is candidate =  "<< IsMuonPionCandidateChi2( pid_f[k] ) << std::endl; 
 	    //	    std::cout<< "efficiency muon " << EfficiencyCalo( pid_f[k] , pfps_truePDG[primary_daughter], "muon" ) << std::endl;
 	    
-	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) {
-	      is_candidate = false ;
-	      continue ; // just read potential muon/pion tracks
-	    } else is_candidate = true ;
-	    // save information -- add pid methods here !
-	    
-	    /*
-	      1) Find muon/pion candidates
-	      2) Efficiency simple method
-	      3) Apply topology consideretions -> New efficiency
-	      4) Number of kinks -> Efficiency
-	      5) Michael electrons -> Efficiency
-	     */
-
-	    r_chi2_mu[primary_daughter] = pid_f[k]->Chi2Muon() ;
-	    r_chi2_pi[primary_daughter] = pid_f[k]->Chi2Pion() ;
-	    r_chi2_p[primary_daughter]  = pid_f[k]->Chi2Proton() ;
-	    r_PIDA[primary_daughter]    = pid_f[k]->PIDA();
-	    r_missenergy[primary_daughter] = pid_f[k]->MissingE();
-	    r_KineticEnergy[primary_daughter] = cal_f[m]->KineticEnergy();
+	    //	    r_KineticEnergy[primary_daughter] = cal_f[m]->KineticEnergy();
 	    
 	    for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
 	      r_track_x[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
@@ -703,7 +722,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   mapTPiDaughterPdg.clear();
 
   // RECO INFO
-
+  tr_id_best = 0;
   primary_vcontained = false ;
   primary_econtained = false ;
   is_candidate = false ; 
