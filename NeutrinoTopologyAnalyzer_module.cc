@@ -135,12 +135,10 @@ private:
   bool Thas_primary_mu, Thas_primary_pi, Tmuon_decay, Tdecay_e, Tdecay_nue, Tdecay_numu ; 
   
   /******************************************
-   *  RECONSTRUCTED INFORMATION             *  <- this needs to be changed 
+   *  RECONSTRUCTED INFORMATION             *   
    ******************************************/
   
   lar_pandora::PFParticleMap particleMap ;   
-
-  std::map< int , int > mapMC_reco_pdg ;
 
   // neutrino related quantities
   bool primary_vcontained, primary_econtained ;
@@ -151,11 +149,17 @@ private:
   
   // reco - true id matching variables. tr_id_best -> best of the three methods
   int tr_id_best, tr_id_energy, tr_id_charge, tr_id_hits;
+
+  // Particle True - Reco map 
+  std::map< int , int > mapMC_reco_pdg ;
   
-  // muon - pion candidates
+  // muon - pion candidates stored information :
   bool is_candidate ;
-  
-  
+  std::map< int , bool > map_RecoVContained, map_RecoEContained ; 
+  std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters ; 
+  std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
+  std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
+
   // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
   int rnu_hits[10000] ;
@@ -302,7 +306,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       }
     }
   }  
-
+  
   /**************************************************************************************************
    *  RECO INFORMATION
    *
@@ -367,8 +371,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
 
-		if( is_candidate == true ) { // store daugher information for muons and pions
-		  //		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
+	    /*	if( is_candidate == true ) { // store daugher information for muons and pions
+		  		  //		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
 		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ) ;
 		  if( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() == 1 ){ // at the moment just look more if there is one track. Splitted -> pion track 
 		    for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
@@ -378,8 +382,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		  daughter_hiearchy.push_back(daughters);
 		  daughters.clear();
 		}
-	    }
-	}
+	    */}
+	  }
       }// end if primary
     }// end loop over particles
   }
@@ -429,16 +433,16 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	if( !pid_f[k] ) continue ;
 	if( !pid_f[k]->PlaneID().isValid) continue ;
 	if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
+
+	// looks for muons /pions or daughters of muons /pions candidates || is_candidate == false  
+	if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) { continue ; std::cout<< " is NOT muon / pion candidate " << std::endl;
+	} else is_candidate = true ;
 	
 	//Loop over calo information also in collection plane
 	for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
 	  if( !cal_f[m] ) continue ;
 	  if( !cal_f[m]->PlaneID().isValid) continue ;
 	  if( cal_f[m]->PlaneID().Plane == 2 ) {    
-
-	    // looks for muons /pions or daughters of muons /pions candidates 
-	    if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 || is_candidate == false ) { continue ; 
-	    } else is_candidate = true ;
 
 	    // save information -- add pid methods here !
 
@@ -449,61 +453,52 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    tr_id_energy      = RecoUtils::TrueParticleIDFromTotalTrueEnergy(hit_f);
 	    tr_id_charge      = RecoUtils::TrueParticleIDFromTotalRecoCharge(hit_f);
 	    tr_id_hits        = RecoUtils::TrueParticleIDFromTotalRecoHits(hit_f);
+
 	    // save the most common answer in tr_id_best: 
 	    if( tr_id_energy == tr_id_charge && tr_id_energy == tr_id_hits ) tr_id_best = tr_id_energy ;
 	    if( tr_id_energy == tr_id_charge && tr_id_energy != tr_id_hits ) tr_id_best = tr_id_energy ;
 	    if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) tr_id_best = tr_id_energy ;
 	    if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) tr_id_best = tr_id_charge ;
-	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) tr_id_best = tr_id_hits ;
+	    if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) {
+	      if( tr_id_hits > 0 ) tr_id_best = tr_id_hits ;
+	      else if( tr_id_energy > 0 ) tr_id_best = tr_id_energy ;
+	      else if( tr_id_charge > 0 ) tr_id_best = tr_id_hits ;
+	      else tr_id_best = 9999 ; // couldn't find id 
+	    }
 
+	    map_RecoHits[ tr_id_best ] += track_f[n]->LastValidPoint() + 1 ;
+	    map_RecoLength[ tr_id_best ] += track_f[n]->Length() ;
+	    map_RecoKEnergy[ tr_id_best ] += cal_f[m]->KineticEnergy();
 
+	    for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint() + 1 ; ++l ) {
+	      map_RecoXPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.X() ) ; 
+	      map_RecoYPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Y() ) ; 
+	      map_RecoZPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Z() ) ; 
+	    }
 	    // OLD CODE TO UPDATE : 
-	    pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_best] ;
-
-	    //	    std::cout << " pdg -> " << pfps_truePDG[primary_daughter] << " Is candidate =  "<< IsMuonPionCandidateChi2( pid_f[k] ) << std::endl; 
 	    //	    std::cout<< "efficiency muon " << EfficiencyCalo( pid_f[k] , pfps_truePDG[primary_daughter], "muon" ) << std::endl;
 	    
-	    //	    r_KineticEnergy[primary_daughter] = cal_f[m]->KineticEnergy();
-	    
-	    for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
-	      r_track_x[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
-	      r_track_y[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.Y();
-	      r_track_z[l+rtrack_hits] = track_f[n]->TrajectoryPoint( l ).position.Z();
-	    }
-	    
-	    rtrack_hits   += track_f[n]->LastValidPoint() + 1 ;
-	    pfps_hits[primary_daughter] = track_f[n]->LastValidPoint() + 1 ;
-	    pfps_length[primary_daughter] = track_f[n]->Length() ;
-	    pfps_dir_start_x[primary_daughter] = track_f[n]->StartDirection().X() ;
-	    pfps_dir_start_y[primary_daughter] = track_f[n]->StartDirection().Y() ;
-	    pfps_dir_start_z[primary_daughter] = track_f[n]->StartDirection().Z() ;
-	    pfps_dir_end_x[primary_daughter] = track_f[n]->EndDirection().X() ;
-	    pfps_dir_end_y[primary_daughter] = track_f[n]->EndDirection().Y() ;
-	    pfps_dir_end_z[primary_daughter] = track_f[n]->EndDirection().Z() ;
-	    pfps_start_x[primary_daughter] = track_f[n]->Start().X() ;
-	    pfps_start_y[primary_daughter] = track_f[n]->Start().Y() ;
-	    pfps_start_z[primary_daughter] = track_f[n]->Start().Z() ;
-	    pfps_end_x[primary_daughter] = track_f[n]->End().X() ;
-	    pfps_end_y[primary_daughter] = track_f[n]->End().Y() ;
-	    pfps_end_z[primary_daughter] = track_f[n]->End().Z() ;
-	    
 	  }// just collection plane 
-          
-	  // calo information is stored in all planes:
-          
+	  // calo information is stored in all planes. Need to read dEdx in an ordered way           
+	  if( is_candidate == false ) continue ; 
+	  
 	  for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
-	    for( int t = 0 ; t < rtrack_hits ; ++t ){
-	      if( cal_f[m]->XYZ()[l].X() == r_track_x[t] && cal_f[m]->XYZ()[l].Y() == r_track_y[t] && cal_f[m]->XYZ()[l].Z() == r_track_z[t]) {
-		r_track_dEdx[t] = cal_f[m]->dEdx()[l] ; 
+	    for( unsigned int t = 0 ; t < track_f[n] -> LastValidPoint() ; ++t ){
+	      if( cal_f[m]->XYZ()[l].X() == map_RecoXPosition[ tr_id_best ][t] 
+		  && cal_f[m]->XYZ()[l].Y() == map_RecoYPosition[ tr_id_best ][t] 
+		  && cal_f[m]->XYZ()[l].Z() == map_RecoZPosition[ tr_id_best ][t]  ){
+		  
+                  map_RecodEdx[ tr_id_best ].push_back( cal_f[m]->dEdx()[l] ) ; 
+	     
 	      }
 	    }
 	  }
-	  r_Range[primary_daughter] = cal_f[m]->Range(); // check 
 	} //close calo
       } //close pid
-    } //close track    
+    } //close track
+    
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
-    //std::cout<< " is shower " << std::endl;
+    // Need to call with id! 
     has_reco_showers = true ; 
     art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
@@ -514,37 +509,26 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
       if( spacepoint_f.size() == 0 ) continue ; 
 
       std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
-
+      tr_id_best = ShowerTrackInfo.first ;
+      if( !ShowerTrackInfo.first ) tr_id_best = 9999 ; // default no match 
+     
+      map_RecoHits[ tr_id_best ] += spacepoint_f.size() ; 
+      
       for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
-	r_track_x[l+rtrack_hits] = spacepoint_f[l]->XYZ()[0] ;
-	r_track_y[l+rtrack_hits] = spacepoint_f[l]->XYZ()[1] ;
-	r_track_z[l+rtrack_hits] = spacepoint_f[l]->XYZ()[2] ;
-      }
-
-      rtrack_hits   += spacepoint_f.size() ;
-      pfps_hits[primary_daughter] = spacepoint_f.size() ;
-
+	  map_RecoXPosition[ tr_id_best ].push_back( spacepoint_f[l]->XYZ()[0] ) ; 
+	  map_RecoYPosition[ tr_id_best ].push_back( spacepoint_f[l]->XYZ()[1] ) ; 
+	  map_RecoZPosition[ tr_id_best ].push_back( spacepoint_f[l]->XYZ()[2] ) ;
+	}
+	          
       if( shower_f->has_length() ) { 
-	pfps_length[primary_daughter] = shower_f->Length() ;
+	pfps_length[primary_daughter] = map_RecoLength[ tr_id_best ] ; 
       } else  {
-	pfps_length[primary_daughter]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
-	pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
-	pfps_length[primary_daughter] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
-	pfps_length[primary_daughter]  = sqrt( pfps_length[primary_daughter] ) ;
+	map_RecoLength[ tr_id_best ]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
+	map_RecoLength[ tr_id_best ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
+	map_RecoLength[ tr_id_best ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
+	map_RecoLength[ tr_id_best ]  = sqrt( map_RecoLength[ tr_id_best ] ) ;
       }
-          
-      pfps_dir_start_x[primary_daughter] = shower_f->Direction().X() ;
-      pfps_dir_start_y[primary_daughter] = shower_f->Direction().Y() ;
-      pfps_dir_start_z[primary_daughter] = shower_f->Direction().Z() ;
-      // No end Direction
-      pfps_start_x[primary_daughter] = shower_f->ShowerStart().X() ;
-      pfps_start_y[primary_daughter] = shower_f->ShowerStart().Y() ;
-      pfps_start_z[primary_daughter] = shower_f->ShowerStart().Z() ;
-      // no end position
-      if( ShowerTrackInfo.first ) { pfps_truePDG[primary_daughter] = mapMC_reco_pdg[ShowerTrackInfo.first] ; }
-      else pfps_truePDG[primary_daughter] = 0 ;
-      //std::cout<<" --> Shower pdg = " << pfps_truePDG[primary_daughter]  << std::endl; 
-
+        
     }
   } // track vs shower
 }
