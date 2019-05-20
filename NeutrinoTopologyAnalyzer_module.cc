@@ -54,6 +54,8 @@
 #include "TVector3.h"
 #include "math.h"
 #include <map>
+#include <iostream>
+#include <fstream>
 
 namespace test {
   class NeutrinoTopologyAnalyzer;
@@ -160,15 +162,18 @@ private:
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
 
-  // ------------- OLD CODE TO CHANGE
-  int r_pdg_primary[10000] ;
-  int rnu_hits[10000] ;
-  int rtrack_hits;
-
   // Efficiency calculation: just calorimetry information
   int reco_mu , reco_pi ;
   int true_mu, true_pi ;
   int signal_mu, signal_pi ;
+  int bg_mu_pi, bg_mu_p, bg_mu_others ; 
+  int bg_pi_mu, bg_pi_p, bg_pi_others ; 
+  double eff_mu, eff_pi, purity_mu, purity_pi ;
+
+  // ------------- OLD CODE TO CHANGE
+  int r_pdg_primary[10000] ;
+  int rnu_hits[10000] ;
+  int rtrack_hits;
   
   std::vector< int > daughters ;
   std::vector< std::vector< int > > daughter_hiearchy ; 
@@ -288,8 +293,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
 
 	// negative muons and positive pions
-	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) Thas_primary_mu = true ;
-	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) Thas_primary_pi = true ;
+	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) { Thas_primary_mu = true ; ++true_mu ; }
+	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) { Thas_primary_pi = true ; ++true_pi ; }
 	
 	// Study of mu^- decay. We expect a mu^- for numu CC interactions. If studying numubar CC interactions, change decay products.
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 13 ){
@@ -393,6 +398,35 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   }
   error_vertex_reco = sqrt( error_vertex_reco ) ;
 
+  std::ofstream eff_chi2_file ; 
+  
+  eff_chi2_file.open("eff_chi2_information.txt");
+
+  if( eff_chi2_file.is_open() ) {
+    eff_chi2_file << " ******************** MUONS CALORIMETRY STUDY *********************** \n" ;
+    eff_chi2_file << " Number of reconstructed muons = " << reco_mu << "\n" ;
+    eff_chi2_file << " Number of true muons from MC = " << true_mu << "\n" ;
+    eff_chi2_file << " Signal events ( true & reco ) = " << signal_mu << "\n" ;
+    eff_chi2_file << " Background events : \n " ;
+    eff_chi2_file << "     -- > True MC ID - pions " << bg_mu_pi << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - proton " << bg_mu_p << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - other " << bg_mu_others << "\n" ; 
+    eff_chi2_file << " EFFICIENCY =  " << eff_mu << "\n" ;
+    eff_chi2_file << " PURITY =  " << purity_mu << "\n" ; 
+    eff_chi2_file << " \n\n******************** PIONS CALORIMETRY STUDY *********************** \n" ;
+    eff_chi2_file << " Number of reconstructed pions = " << reco_pi << "\n" ;
+    eff_chi2_file << " Number of true pions from MC = " << true_pi << "\n" ;
+    eff_chi2_file << " Signal events ( true & reco ) = " << signal_pi << "\n" ;
+    eff_chi2_file << " Background events : \n " ;
+    eff_chi2_file << "     -- > True MC ID - muons " << bg_pi_mu << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - proton " << bg_pi_p << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - other " << bg_pi_others << "\n" ; 
+    eff_chi2_file << " EFFICIENCY =  " << eff_pi << "\n" ;
+    eff_chi2_file << " PURITY =  " << purity_pi << "\n" ; 
+   
+  }
+  eff_chi2_file.close();
+  
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
 
@@ -435,8 +469,8 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
 
 	// looks for muons /pions or daughters of muons /pions candidates || is_candidate == false  
-	if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) { continue ; std::cout<< " is NOT muon / pion candidate " << std::endl;
-	} else is_candidate = true ;
+	if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) continue ;
+        else is_candidate = true ;
 	
 	//Loop over calo information also in collection plane
 	for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
@@ -476,8 +510,8 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	      map_RecoZPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Z() ) ; 
 	    }
 	    // OLD CODE TO UPDATE : 
-	    //	    std::cout<< "efficiency muon " << EfficiencyCalo( pid_f[k] , pfps_truePDG[primary_daughter], "muon" ) << std::endl;
-	    
+	    EfficiencyCalo( pid_f[k] , mapMC_reco_pdg[ tr_id_best ], "muon" ); 
+  
 	  }// just collection plane 
 	  // calo information is stored in all planes. Need to read dEdx in an ordered way           
 	  if( is_candidate == false ) continue ; 
@@ -553,27 +587,30 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidatePIDA( art::Ptr<anab::Par
 }
 
 double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) {
-  double eff_mu, eff_pi, purity_mu, purity_pi ;
-  // True information 
-  if( true_pdg == 13 ) ++true_mu ;
-  if( true_pdg == 211 ) ++true_pi ; 
-  // reco information
+  // True information -> Calculated in the MC loop 
+
+  // reco information -> Need to call in reco loop! If not muon check if pion, avoid double-id 
   if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
     ++reco_mu ;
-    if( true_pdg == 13 ) ++signal_mu ;
-  }
+    if( true_pdg == 13 ) { ++signal_mu ;
+    } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
+    } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_mu_p ;
+    } else { ++bg_mu_others ; }
 
-  if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) {
+  } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) {
     ++reco_pi ;
-    if( true_pdg == 211 ) ++signal_pi ;
+    if( true_pdg == 211 ) { ++signal_pi ;
+    } else if( TMath::Abs(true_pdg) == 13  ) { ++bg_pi_mu ; // check for miss reco particles . was reco as pion is a muon
+    } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_pi_p ;
+    } else { ++bg_mu_others ; }
+
   }
 
   eff_mu = signal_mu / (double)true_mu ; 
   purity_mu = signal_mu / (double)reco_mu ; 
   eff_pi = signal_pi / (double)true_pi ; 
   purity_pi = signal_pi / (double)reco_pi ; 
-  std::cout<<"reco mu " << reco_mu << " true mu " << true_mu << " signal mu " << signal_mu << std::endl;
-  std::cout<<"reco pi " << reco_pi << " true pi " << true_pi << " signal pi " << signal_pi << std::endl;
+
   if( particle == "pion" ) return eff_pi ; 
   if( particle == "purity pion" ) return purity_pi ; 
   if( particle == "purity muon" ) return purity_mu ; 
@@ -596,6 +633,16 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   true_pi = 0 ;
   signal_mu = 0 ;
   signal_pi = 0 ; 
+  bg_mu_pi = 0 ;
+  bg_mu_p = 0 ;
+  bg_mu_others = 0 ; 
+  bg_pi_mu = 0 ;
+  bg_pi_p = 0 ;
+  bg_pi_others = 0 ; 
+  eff_mu = 0 ;
+  eff_pi = 0 ;
+  purity_mu = 0 ;
+  purity_pi = 0 ;
 
   clearVariables();
   // Declare trees and branches
