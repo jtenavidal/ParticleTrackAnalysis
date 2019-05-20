@@ -79,9 +79,11 @@ public:
 
   // -> Added functions ( * )
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) ;
-  bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f);
+  bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f );
+  bool IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
   double EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) ;
+  void IsReconstructed( int  const & best_id ) ;
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -161,6 +163,7 @@ private:
   std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters ; 
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
+  std::map< int , int > map_IsReconstructed ; 
 
   // Efficiency calculation: just calorimetry information
   int reco_mu , reco_pi ;
@@ -288,6 +291,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	mapTLength[trueParticle.TrackId()] = trueParticle.Trajectory().TotalLength() ;
 	mapTDaughters[trueParticle.TrackId()] = trueParticle.NumberDaughters();
 	mapTRescatter[trueParticle.TrackId()] = trueParticle.Rescatter();
+	map_IsReconstructed[trueParticle.TrackId()] = 0 ; // creates the map empty  
 
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
@@ -469,7 +473,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
 
 	// looks for muons /pions or daughters of muons /pions candidates || is_candidate == false  
-	if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) continue ;
+	if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) is_candidate = false ;
         else is_candidate = true ;
 	
 	//Loop over calo information also in collection plane
@@ -500,18 +504,21 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	      else tr_id_best = 9999 ; // couldn't find id 
 	    }
 
-	    map_RecoHits[ tr_id_best ] += track_f[n]->LastValidPoint() + 1 ;
-	    map_RecoLength[ tr_id_best ] += track_f[n]->Length() ;
-	    map_RecoKEnergy[ tr_id_best ] += cal_f[m]->KineticEnergy();
+	    IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
 
-	    for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint() + 1 ; ++l ) {
-	      map_RecoXPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.X() ) ; 
-	      map_RecoYPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Y() ) ; 
-	      map_RecoZPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Z() ) ; 
+	    if( is_candidate == true ) {
+	      map_RecoHits[ tr_id_best ] += track_f[n]->LastValidPoint() + 1 ;
+	      map_RecoLength[ tr_id_best ] += track_f[n]->Length() ;
+	      map_RecoKEnergy[ tr_id_best ] += cal_f[m]->KineticEnergy();
+	      
+	      for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint() + 1 ; ++l ) {
+		map_RecoXPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.X() ) ; 
+		map_RecoYPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Y() ) ; 
+		map_RecoZPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Z() ) ; 
+	      }
+	      // OLD CODE TO UPDATE : 
+	      EfficiencyCalo( pid_f[k] , mapMC_reco_pdg[ tr_id_best ], "muon" ); 
 	    }
-	    // OLD CODE TO UPDATE : 
-	    EfficiencyCalo( pid_f[k] , mapMC_reco_pdg[ tr_id_best ], "muon" ); 
-  
 	  }// just collection plane 
 	  // calo information is stored in all planes. Need to read dEdx in an ordered way           
 	  if( is_candidate == false ) continue ; 
@@ -562,7 +569,9 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	map_RecoLength[ tr_id_best ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
 	map_RecoLength[ tr_id_best ]  = sqrt( map_RecoLength[ tr_id_best ] ) ;
       }
-        
+
+      IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
+
     }
   } // track vs shower
 }
@@ -570,9 +579,18 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f )
 {
+  if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ; // remove this line for pure Chi2 method 
+
   if( ( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() ) || ( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() ) ) return true ;
 	 
   return false ; 
+}
+
+bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f )
+{
+  if( pid_f->Chi2Proton() < 80 ) return false ; 
+	 
+  return true ; 
 }
 
 
@@ -586,11 +604,26 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidatePIDA( art::Ptr<anab::Par
   return false ; 
 }
 
+void test::NeutrinoTopologyAnalyzer::IsReconstructed( int  const & best_id )  {
+  std::map<int, int>::iterator it;
+  for (it = map_IsReconstructed.begin(); it != map_IsReconstructed.end(); it++) {
+    if ( it -> first == best_id ) ++map_IsReconstructed[best_id] ; // will return the number of tracks reconstructed! 
+  }
+}
+
 double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) {
   // True information -> Calculated in the MC loop 
 
+  // check muons by proton pdg 
+  if( pid_f->Chi2Proton() > 80 ) { // cut from muon / proton chi2 hipotesis (R.Johnes)
+     ++reco_mu ;
+    if( true_pdg == 13 ) { ++signal_mu ;
+    } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
+    } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_mu_p ;
+    } else { ++bg_mu_others ; }
+
   // reco information -> Need to call in reco loop! If not muon check if pion, avoid double-id 
-  if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
+  } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
     ++reco_mu ;
     if( true_pdg == 13 ) { ++signal_mu ;
     } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
