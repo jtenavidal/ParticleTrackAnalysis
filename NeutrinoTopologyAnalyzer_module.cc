@@ -173,6 +173,18 @@ private:
   int bg_pi_mu, bg_pi_p, bg_pi_others ; 
   double eff_mu, eff_pi, purity_mu, purity_pi ;
 
+
+  /******************************************
+   * HISTOGRAMS FOR STUDIES                 *   
+   ******************************************/
+  TCanvas *c = new TCanvas();
+  TLegend *l = new TLegend( 0.58, 0.68, 0.88, 0.88 );
+
+  TH1D * Chi2p_Tmu = new TH1D("Chi2p_Tmu", " CHI2 under PROTON HYPOTESIS FOR MUONS"   , 50 , 0 , 200 );
+  TH1D * Chi2p_Tp  = new TH1D("Chi2p_Tp",  " CHI2 under PROTON HYPOTESIS FOR PROTONS" , 50 , 0 , 200 );
+
+  int total_p , reco_p ; 
+
   // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
   int rnu_hits[10000] ;
@@ -283,6 +295,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     
     if(mcParticles.isValid()){
       // Loop over true info
+      //std::cout<< " MC INFORMATION : " << std::endl;
+      //std::cout<< " ------------------" << std::endl;
+
       for( unsigned int t = 0; t < mcParticles->size(); ++t ){
 	// Storing all particles in maps -> [ TrackId vs variable ]
 	const simb::MCParticle trueParticle = mcParticles->at(t) ;
@@ -292,6 +307,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	mapTDaughters[trueParticle.TrackId()] = trueParticle.NumberDaughters();
 	mapTRescatter[trueParticle.TrackId()] = trueParticle.Rescatter();
 	map_IsReconstructed[trueParticle.TrackId()] = 0 ; // creates the map empty  
+
+	//	std::cout<< " particle t = " << t << " with pdg " << mapMC_reco_pdg[trueParticle.TrackId()] << std::endl;
 
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
@@ -375,10 +392,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_rvertex_contained = false ;
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
-		int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-		is_candidate = false ; // reset for each pfparticle
-		pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
-		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
+	    //	    std::cout<< "\n RECO INFORMATION : " << std::endl;
+	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+	    //    std::cout<< " Particle i = " << part_id_f << std::endl;
+	    is_candidate = false ; // reset for each pfparticle
+	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
+	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
 
 	    /*	if( is_candidate == true ) { // store daugher information for muons and pions
 		  		  //		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
@@ -427,13 +446,40 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     eff_chi2_file << "     -- > True MC ID - other " << bg_pi_others << "\n" ; 
     eff_chi2_file << " EFFICIENCY =  " << eff_pi << "\n" ;
     eff_chi2_file << " PURITY =  " << purity_pi << "\n" ; 
-   
+    eff_chi2_file << " \n\n******************** RECONSTRUCT PROTONS STUDY *********************** \n" ;
+    eff_chi2_file << " Number of reconstructed protons = " << total_p << "\n" ;
+    eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
+    eff_chi2_file << " % reconstructed  = " << reco_p / total_p * 100 << "\n" ;
+    
   }
   eff_chi2_file.close();
   
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
 
+
+  // PRINT HISTOGRAMS
+
+  Chi2p_Tmu -> SetStats(0);
+  Chi2p_Tmu ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
+  Chi2p_Tmu ->GetYaxis()->SetTitle(" Events " ) ;
+  
+  Chi2p_Tp -> SetStats(0);
+  Chi2p_Tp ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
+  Chi2p_Tp ->GetYaxis()->SetTitle(" Events " ) ;
+  
+  l->SetBorderSize(0);
+  l->AddEntry( Chi2p_Tmu,      " True Muon",    "l" );
+  l->AddEntry( Chi2p_Tp,       " True Proton ",           "l" );
+    
+  Chi2p_Tmu->SetLineColor(2);
+  
+  Chi2p_Tmu->Draw();
+  Chi2p_Tp->Draw("same");
+  l->Draw();
+
+  c->SaveAs("chi2_test.root");
+  c->Clear();
 
 }
 
@@ -505,6 +551,20 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    }
 
 	    IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
+	    /*	    if( is_candidate == true && mapMC_reco_pdg[ tr_id_best ] == 2212 ) {
+	      std::cout<< " best pdg = " << mapMC_reco_pdg[ tr_id_best ] << std::endl;
+	      std::cout<< "printing chi2 information : "<< std::endl;
+	      std::cout<< " chi2muon() = " <<  pid_f[k] ->Chi2Muon() << std::endl;
+	      std::cout<< " chi2pion() = " <<  pid_f[k] ->Chi2Pion() << std::endl;
+	      std::cout<< " chi2proton() = " <<  pid_f[k] ->Chi2Proton() << std::endl;
+	    }
+*/
+	    if( mapMC_reco_pdg[ tr_id_best ] == 13   ) Chi2p_Tmu -> Fill( pid_f[k] ->Chi2Proton() ) ;
+	    if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) {
+	      Chi2p_Tp -> Fill( pid_f[k] ->Chi2Proton() ) ;
+	      ++total_p ;
+	      if( IsMuonPionCandidateChi2Proton( pid_f[k] ) == false ) ++reco_p ; 
+	    }
 
 	    if( is_candidate == true ) {
 	      map_RecoHits[ tr_id_best ] += track_f[n]->LastValidPoint() + 1 ;
@@ -516,7 +576,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 		map_RecoYPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Y() ) ; 
 		map_RecoZPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Z() ) ; 
 	      }
-	      // OLD CODE TO UPDATE : 
 	      EfficiencyCalo( pid_f[k] , mapMC_reco_pdg[ tr_id_best ], "muon" ); 
 	    }
 	  }// just collection plane 
@@ -588,7 +647,9 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::Par
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f )
 {
-  if( pid_f->Chi2Proton() < 80 ) return false ; 
+  if( pid_f->Chi2Proton() < 100 ) return false ; // R.J : 80  
+  // If this cut is increased, many muons will be missreconstructed 
+  // Keep the information for now 
 	 
   return true ; 
 }
@@ -676,6 +737,8 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   eff_pi = 0 ;
   purity_mu = 0 ;
   purity_pi = 0 ;
+  total_p = 0 ;
+  reco_p =0 ; 
 
   clearVariables();
   // Declare trees and branches
