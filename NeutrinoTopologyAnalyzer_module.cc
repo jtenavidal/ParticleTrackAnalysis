@@ -180,10 +180,14 @@ private:
   TCanvas *c = new TCanvas();
   TLegend *l = new TLegend( 0.58, 0.68, 0.88, 0.88 );
 
+  TH1D * TFinalStatePi = new TH1D("TFinalStatePi", " True Final State Pion " , 50 , 0 , 3000 ); // could be proton
+
   TH1D * Chi2p_Tmu = new TH1D("Chi2p_Tmu", " CHI2 under PROTON HYPOTESIS FOR MUONS"   , 50 , 0 , 200 );
+  TH1D * Chi2p_Tpi = new TH1D("Chi2p_Tpi", " CHI2 under PROTON HYPOTESIS FOR PIONS"   , 50 , 0 , 200 );
   TH1D * Chi2p_Tp  = new TH1D("Chi2p_Tp",  " CHI2 under PROTON HYPOTESIS FOR PROTONS" , 50 , 0 , 200 );
 
   int total_p , reco_p ; 
+
 
   // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
@@ -315,8 +319,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	// negative muons and positive pions
 	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) { Thas_primary_mu = true ; ++true_mu ; }
-	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) { Thas_primary_pi = true ; ++true_pi ; }
-	
+	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) { Thas_primary_pi = true ; ++true_pi ;}
+
 	// Study of mu^- decay. We expect a mu^- for numu CC interactions. If studying numubar CC interactions, change decay products.
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 13 ){
 	  if( trueParticle.PdgCode() == 11 ) Tdecay_e = true ;
@@ -328,6 +332,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	// Study of pi+ elastic and inelastic scattering : final products pdg
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 211 ){
 	  mapTPiDaughterPdg[trueParticle.PdgCode()] += 1 ;
+	  TFinalStatePi -> Fill ( trueParticle.PdgCode() ) ;
 	}
       }
     }
@@ -449,7 +454,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     eff_chi2_file << " \n\n******************** RECONSTRUCT PROTONS STUDY *********************** \n" ;
     eff_chi2_file << " Number of reconstructed protons = " << total_p << "\n" ;
     eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
-    eff_chi2_file << " % reconstructed  = " << reco_p / total_p * 100 << "\n" ;
+    eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_p * 100 << "\n" ;
     
   }
   eff_chi2_file.close();
@@ -470,15 +475,25 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   
   l->SetBorderSize(0);
   l->AddEntry( Chi2p_Tmu,      " True Muon",    "l" );
+  l->AddEntry( Chi2p_Tpi,      " True Pion",    "l" );
   l->AddEntry( Chi2p_Tp,       " True Proton ",           "l" );
     
   Chi2p_Tmu->SetLineColor(2);
+  Chi2p_Tpi->SetLineColor(4);
   
   Chi2p_Tmu->Draw();
+  Chi2p_Tpi->Draw("same");
   Chi2p_Tp->Draw("same");
   l->Draw();
 
   c->SaveAs("chi2_test.root");
+  c->Clear();
+
+  TFinalStatePi -> SetStats(0); 
+  TFinalStatePi -> GetXaxis() -> SetTitle(" pdg rescatter" ) ; 
+  TFinalStatePi -> Draw();
+
+  c->SaveAs("pion_finalstate.root") ;
   c->Clear();
 
 }
@@ -551,15 +566,16 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    }
 
 	    IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
-	    /*	    if( is_candidate == true && mapMC_reco_pdg[ tr_id_best ] == 2212 ) {
+	    if( mapMC_reco_pdg[ tr_id_best ] == 211 ) {
 	      std::cout<< " best pdg = " << mapMC_reco_pdg[ tr_id_best ] << std::endl;
 	      std::cout<< "printing chi2 information : "<< std::endl;
 	      std::cout<< " chi2muon() = " <<  pid_f[k] ->Chi2Muon() << std::endl;
 	      std::cout<< " chi2pion() = " <<  pid_f[k] ->Chi2Pion() << std::endl;
 	      std::cout<< " chi2proton() = " <<  pid_f[k] ->Chi2Proton() << std::endl;
 	    }
-*/
+
 	    if( mapMC_reco_pdg[ tr_id_best ] == 13   ) Chi2p_Tmu -> Fill( pid_f[k] ->Chi2Proton() ) ;
+	    if( mapMC_reco_pdg[ tr_id_best ] == 221  ) Chi2p_Tpi -> Fill( pid_f[k] ->Chi2Proton() ) ;
 	    if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) {
 	      Chi2p_Tp -> Fill( pid_f[k] ->Chi2Proton() ) ;
 	      ++total_p ;
@@ -675,14 +691,12 @@ void test::NeutrinoTopologyAnalyzer::IsReconstructed( int  const & best_id )  {
 double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) {
   // True information -> Calculated in the MC loop 
 
-  // check muons by proton pdg 
-  if( pid_f->Chi2Proton() > 80 ) { // cut from muon / proton chi2 hipotesis (R.Johnes)
-     ++reco_mu ;
-    if( true_pdg == 13 ) { ++signal_mu ;
-    } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
-    } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_mu_p ;
-    } else { ++bg_mu_others ; }
-
+  // check muons by proton pdg
+  if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) {
+    if( particle == "pion" ) return eff_pi ; 
+    if( particle == "purity pion" ) return purity_pi ; 
+    if( particle == "purity muon" ) return purity_mu ; 
+    return eff_mu;
   // reco information -> Need to call in reco loop! If not muon check if pion, avoid double-id 
   } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
     ++reco_mu ;
