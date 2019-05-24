@@ -84,7 +84,7 @@ public:
   bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
   double EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) ;
   void IsReconstructed( int  const & best_id ) ;
-
+  
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
   void beginJob() override;
@@ -174,6 +174,10 @@ private:
   double eff_mu, eff_pi, purity_mu, purity_pi ;
 
 
+  // Is reconstructed information ( look if particles are reconstructed by pandora )
+  int reco_track_mu, reco_track_pi, reco_track_p ; 
+  
+
   /******************************************
    * HISTOGRAMS FOR STUDIES                 *   
    ******************************************/
@@ -185,6 +189,11 @@ private:
   TH1D * Chi2p_Tmu = new TH1D("Chi2p_Tmu", " CHI2 under PROTON HYPOTESIS FOR MUONS"   , 50 , 0 , 200 );
   TH1D * Chi2p_Tpi = new TH1D("Chi2p_Tpi", " CHI2 under PROTON HYPOTESIS FOR PIONS"   , 50 , 0 , 200 );
   TH1D * Chi2p_Tp  = new TH1D("Chi2p_Tp",  " CHI2 under PROTON HYPOTESIS FOR PROTONS" , 50 , 0 , 200 );
+
+  // for reconstructed info
+  TH1D * Length_Tmu = new TH1D("Length_Tmu", " Length candidates for truth muons "   , 50 , 0 , 2000 );
+  TH1D * Length_Tpi = new TH1D("Length_Tpi", " Length candidates for truth pions "   , 50 , 0 , 2000 );
+  TH1D * Length_Tp  = new TH1D("Length_Tp",  " Length candidates for truth protons "   , 50 , 0 , 2000 );
 
   int total_p , reco_p ; 
 
@@ -457,8 +466,30 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_p * 100 << "\n" ;
     
   }
+
+  // Loop the map to get the pdg of the reconstructed particles. This is per event  
+  // it->second returns the number of tracks/showers reconstructed. Default 0 
+  std::map<int,int>::iterator it ;
+  for( it = map_IsReconstructed.begin(); it != map_IsReconstructed.end() ; ++it ){ 
+    if ( mapMC_reco_pdg[ it -> first ] == 13   && ( it -> second ) != 0 ) ++reco_track_mu ;
+    if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) != 0 ) ++reco_track_pi ;
+    if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) != 0 ) ++reco_track_p  ;
+    //    if ( mapMC_reco_pdg[ it -> first ] == 13   ) reco_track_mu += ( it -> second ) ;
+    //    if ( mapMC_reco_pdg[ it -> first ] == 211  ) reco_track_pi += ( it -> second ) ;
+    //    if ( mapMC_reco_pdg[ it -> first ] == 2212 ) reco_track_p  += ( it -> second ) ;    
+  }
+
+  if( eff_chi2_file.is_open() ) {
+    eff_chi2_file << " ******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
+    eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right * \n" ;
+    eff_chi2_file << " *************************************************************************************** \n" ;
+    eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
+    eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi << "   vs   #MC pions   = " << true_pi << " \n" ;  
+    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p  << "   vs   #MC protons = " << total_p << " \n" ;  
+  }
+
   eff_chi2_file.close();
-  
+   
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
 
@@ -496,6 +527,26 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   c->SaveAs("pion_finalstate.root") ;
   c->Clear();
 
+  Length_Tmu -> SetStats( 0 ) ;
+  Length_Tpi -> SetStats( 0 ) ;
+  Length_Tp -> SetStats( 0 ) ; 
+  
+  Length_Tmu -> SetLineColor( 1 ) ;
+  Length_Tpi -> SetLineColor( 2 ) ;
+  Length_Tp -> SetLineColor( 4 ) ;
+  
+  Length_Tmu -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
+  
+  Length_Tmu -> Draw( ) ;
+  Length_Tpi -> Draw( "same" ) ;
+  Length_Tp -> Draw( "same" ) ;
+
+  c->SaveAs("Length_recoCandidates.root");
+  c->Clear();
+  
+
+
+  
 }
 
 void test::NeutrinoTopologyAnalyzer::StoreInformation( 
@@ -566,13 +617,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    }
 
 	    IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
-	    if( mapMC_reco_pdg[ tr_id_best ] == 211 ) {
-	      std::cout<< " best pdg = " << mapMC_reco_pdg[ tr_id_best ] << std::endl;
-	      std::cout<< "printing chi2 information : "<< std::endl;
-	      std::cout<< " chi2muon() = " <<  pid_f[k] ->Chi2Muon() << std::endl;
-	      std::cout<< " chi2pion() = " <<  pid_f[k] ->Chi2Pion() << std::endl;
-	      std::cout<< " chi2proton() = " <<  pid_f[k] ->Chi2Proton() << std::endl;
-	    }
 
 	    if( mapMC_reco_pdg[ tr_id_best ] == 13   ) Chi2p_Tmu -> Fill( pid_f[k] ->Chi2Proton() ) ;
 	    if( mapMC_reco_pdg[ tr_id_best ] == 221  ) Chi2p_Tpi -> Fill( pid_f[k] ->Chi2Proton() ) ;
@@ -586,7 +630,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	      map_RecoHits[ tr_id_best ] += track_f[n]->LastValidPoint() + 1 ;
 	      map_RecoLength[ tr_id_best ] += track_f[n]->Length() ;
 	      map_RecoKEnergy[ tr_id_best ] += cal_f[m]->KineticEnergy();
-	      
+
 	      for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint() + 1 ; ++l ) {
 		map_RecoXPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.X() ) ; 
 		map_RecoYPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.Y() ) ; 
@@ -610,6 +654,11 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    }
 	  }
 	} //close calo
+	if( is_candidate == true ) {
+	  if( mapMC_reco_pdg[ tr_id_best ] == 13   ) Length_Tmu -> Fill( map_RecoLength[ tr_id_best ] ) ;
+	  if( mapMC_reco_pdg[ tr_id_best ] == 211  ) Length_Tpi -> Fill( map_RecoLength[ tr_id_best ] ) ;
+	  if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) Length_Tp  -> Fill( map_RecoLength[ tr_id_best ] ) ;
+	}
       } //close pid
     } //close track
     
@@ -753,7 +802,11 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   purity_pi = 0 ;
   total_p = 0 ;
   reco_p =0 ; 
+  reco_track_mu = 0 ;
+  reco_track_pi = 0 ;
+  reco_track_p = 0 ;
 
+  
   clearVariables();
   // Declare trees and branches
   event_tree   = new TTree( "event_tree",    "Event tree: General information about the event" ) ;
