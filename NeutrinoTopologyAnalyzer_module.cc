@@ -198,6 +198,13 @@ private:
 
   int total_reco_p , reco_p ; 
 
+  // Information about TPC reconstructed particles
+  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLenght_mu_TPC_signal", "mu MC Lenght, TPC Signal" , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLenght_pi_TPC_signal", "pi MC Lenght, TPC Signal" , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLenght_p_TPC_signal" , "p MC Lenght, TPC Signal"  , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLenght_mu_TPC_miss"  , "mu MC Lenght, TPC Miss"   , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLenght_pi_TPC_miss"  , "pi MC Lenght, TPC Miss"   , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLenght_p_TPC_miss"   , "p MC Lenght, TPC Miss"    , 50, 0 , 200 ) ;
 
   // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
@@ -484,9 +491,20 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     //    if ( mapMC_reco_pdg[ it -> first ] == 2212 ) reco_track_p  += ( it -> second ) ;    
   }
 
+  for( it = map_IsReconstructed.begin(); it != map_IsReconstructed.end() ; ++it ){ 
+    // reconstructed in tpc 
+    if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 13   && ( it -> second ) != 0 ) h_MCLength_mu_TPC_signal -> Fill( mapTLength[ it -> first ] );
+    if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) != 0 ) h_MCLength_pi_TPC_signal -> Fill( mapTLength[ it -> first ] );
+    if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) != 0 ) h_MCLength_p_TPC_signal -> Fill( mapTLength[ it -> first ] );
+    // missed signal in tpc
+    if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 13   && ( it -> second ) == 0 ) h_MCLength_mu_TPC_miss -> Fill( mapTLength[ it -> first ] );
+    if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) == 0 ) h_MCLength_pi_TPC_miss -> Fill( mapTLength[ it -> first ] );
+    if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) == 0 ) h_MCLength_p_TPC_miss  -> Fill( mapTLength[ it -> first ] );
+  }
+
   if( eff_chi2_file.is_open() ) {
     eff_chi2_file << " ******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
-    eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right * \n" ;
+    eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right  * \n" ;
     eff_chi2_file << " *************************************************************************************** \n" ;
     eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
     eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi << "   vs   #MC pions   = " << true_pi << " \n" ;  
@@ -549,9 +567,55 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   c->SaveAs("Length_recoCandidates.root");
   c->Clear();
   
+  h_MCLength_mu_TPC_signal -> SetStats(0);
+  h_MCLength_mu_TPC_miss   -> SetStats(0);
 
-
+  h_MCLength_mu_TPC_signal -> SetLineColor(1);
+  h_MCLength_mu_TPC_miss   -> SetLineColor(2);
   
+  h_MCLength_mu_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
+  h_MCLength_mu_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
+
+  h_MCLength_mu_TPC_signal -> Draw();
+  h_MCLength_mu_TPC_miss   -> Draw("same");
+  
+  c->SaveAs("MCLength_mu_signalTPC.root") ;
+  c->Clear();
+
+  h_MCLength_pi_TPC_signal -> SetStats(0);
+  h_MCLength_pi_TPC_miss   -> SetStats(0);
+
+  h_MCLength_pi_TPC_signal -> SetLineColor(1);
+  h_MCLength_pi_TPC_miss   -> SetLineColor(2);
+  
+  h_MCLength_pi_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
+  h_MCLength_pi_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
+
+  h_MCLength_pi_TPC_signal -> Draw();
+  h_MCLength_pi_TPC_miss   -> Draw("same");
+  
+  c->SaveAs("MCLength_pi_signalTPC.root") ;
+  c->Clear();
+
+  h_MCLength_p_TPC_signal -> SetStats(0);
+  h_MCLength_p_TPC_miss   -> SetStats(0);
+
+  h_MCLength_p_TPC_signal -> SetLineColor(1);
+  h_MCLength_p_TPC_miss   -> SetLineColor(2);
+  
+  h_MCLength_p_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
+  h_MCLength_p_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
+
+  h_MCLength_p_TPC_signal -> Draw();
+  h_MCLength_p_TPC_miss   -> Draw("same");
+  
+  c->SaveAs("MCLength_p_signalTPC.root") ;
+  c->Clear();
+
+
+
+
+
 }
 
 void test::NeutrinoTopologyAnalyzer::StoreInformation( 
