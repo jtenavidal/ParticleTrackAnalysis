@@ -578,15 +578,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_mu_TPC_signal -> SetLineColor(1);
   h_MCLength_mu_TPC_miss   -> SetLineColor(2);
   
-  h_MCLength_mu_TPC_signal -> SetFillColor(kBlue);
-  h_MCLength_mu_TPC_miss   -> SetFillColor(kRed);
+  //h_MCLength_mu_TPC_signal -> SetFillColor(kBlue);
+  //h_MCLength_mu_TPC_miss   -> SetFillColor(kRed);
   
   h_MCLength_mu_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_mu_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_miss );
-  h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_signal );
-  h_MCLength_mu_TPC   -> Draw();
+  //h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_miss );
+  //h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_signal );
+  h_MCLength_mu_TPC_signal   -> Draw();
+  h_MCLength_mu_TPC_miss     -> Draw("same");
   
   c->SaveAs("MCLength_mu_signalTPC.root") ;
   c->Clear();
@@ -597,15 +598,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_pi_TPC_signal -> SetLineColor(1);
   h_MCLength_pi_TPC_miss   -> SetLineColor(2);
   
-  h_MCLength_pi_TPC_signal -> SetFillColor(kBlue);
-  h_MCLength_pi_TPC_miss   -> SetFillColor(kRed);
+  //h_MCLength_pi_TPC_signal -> SetFillColor(kBlue);
+  //h_MCLength_pi_TPC_miss   -> SetFillColor(kRed);
   
   h_MCLength_pi_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_pi_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_miss );
-  h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_signal );
-  h_MCLength_pi_TPC -> Draw();
+  //h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_miss );
+  //h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_signal );
+  h_MCLength_pi_TPC_signal -> Draw();
+  h_MCLength_pi_TPC_miss -> Draw("same");
   
   c->SaveAs("MCLength_pi_signalTPC.root") ;
   c->Clear();
@@ -616,15 +618,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_p_TPC_signal -> SetLineColor(1);
   h_MCLength_p_TPC_miss   -> SetLineColor(2);
 
-  h_MCLength_p_TPC_signal -> SetFillColor(kBlue);
-  h_MCLength_p_TPC_miss   -> SetFillColor(kRed);
+  //h_MCLength_p_TPC_signal -> SetFillColor(kBlue);
+  //h_MCLength_p_TPC_miss   -> SetFillColor(kRed);
   
   h_MCLength_p_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_p_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_miss );
-  h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_signal );
-  h_MCLength_p_TPC -> Draw();
+  //h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_miss );
+  //h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_signal );
+  h_MCLength_p_TPC_signal -> Draw();
+  h_MCLength_p_TPC_miss   -> Draw("same");
 
   c->SaveAs("MCLength_p_signalTPC.root") ;
   c->Clear();
