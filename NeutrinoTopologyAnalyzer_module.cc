@@ -42,6 +42,7 @@
 #include "TLorentzVector.h"
 #include "TH1D.h"
 #include "TH3D.h"
+#include "THStack.h"
 #include "TCanvas.h"
 #include "TLegend.h"
 #include "TLatex.h"
@@ -199,12 +200,16 @@ private:
   int total_reco_p , reco_p ; 
 
   // Information about TPC reconstructed particles
-  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLenght_mu_TPC_signal", "mu MC Lenght, TPC Signal" , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLenght_pi_TPC_signal", "pi MC Lenght, TPC Signal" , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLenght_p_TPC_signal" , "p MC Lenght, TPC Signal"  , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLenght_mu_TPC_miss"  , "mu MC Lenght, TPC Miss"   , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLenght_pi_TPC_miss"  , "pi MC Lenght, TPC Miss"   , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLenght_p_TPC_miss"   , "p MC Lenght, TPC Miss"    , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLenght_mu_TPC_signal", "mu MC Length, TPC Signal" , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLenght_pi_TPC_signal", "pi MC Length, TPC Signal" , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLenght_p_TPC_signal" , "p MC Length, TPC Signal"  , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLenght_mu_TPC_miss"  , "mu MC Length, TPC Miss"   , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLenght_pi_TPC_miss"  , "pi MC Length, TPC Miss"   , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLenght_p_TPC_miss"   , "p MC Length, TPC Miss"    , 50, 0 , 200 ) ;
+
+  THStack * h_MCLength_mu_TPC = new THStack("h_MCLength_mu_TPC", "Mu MC Length TPC");
+  THStack * h_MCLength_pi_TPC = new THStack("h_MCLength_pi_TPC", "Pi MC Length TPC");
+  THStack * h_MCLength_p_TPC  = new THStack("h_MCLength_p_TPC" , "P MC Length TPC");
 
   // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
@@ -573,11 +578,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_mu_TPC_signal -> SetLineColor(1);
   h_MCLength_mu_TPC_miss   -> SetLineColor(2);
   
+  h_MCLength_mu_TPC_signal -> SetFillColor(kBlue);
+  h_MCLength_mu_TPC_miss   -> SetFillColor(kRed);
+  
   h_MCLength_mu_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_mu_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  h_MCLength_mu_TPC_signal -> Draw();
-  h_MCLength_mu_TPC_miss   -> Draw("same");
+  h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_miss );
+  h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_signal );
+  h_MCLength_mu_TPC   -> Draw();
   
   c->SaveAs("MCLength_mu_signalTPC.root") ;
   c->Clear();
@@ -588,11 +597,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_pi_TPC_signal -> SetLineColor(1);
   h_MCLength_pi_TPC_miss   -> SetLineColor(2);
   
+  h_MCLength_pi_TPC_signal -> SetFillColor(kBlue);
+  h_MCLength_pi_TPC_miss   -> SetFillColor(kRed);
+  
   h_MCLength_pi_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_pi_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  h_MCLength_pi_TPC_signal -> Draw();
-  h_MCLength_pi_TPC_miss   -> Draw("same");
+  h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_miss );
+  h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_signal );
+  h_MCLength_pi_TPC -> Draw();
   
   c->SaveAs("MCLength_pi_signalTPC.root") ;
   c->Clear();
@@ -602,13 +615,17 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   h_MCLength_p_TPC_signal -> SetLineColor(1);
   h_MCLength_p_TPC_miss   -> SetLineColor(2);
+
+  h_MCLength_p_TPC_signal -> SetFillColor(kBlue);
+  h_MCLength_p_TPC_miss   -> SetFillColor(kRed);
   
   h_MCLength_p_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_p_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  h_MCLength_p_TPC_signal -> Draw();
-  h_MCLength_p_TPC_miss   -> Draw("same");
-  
+  h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_miss );
+  h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_signal );
+  h_MCLength_p_TPC -> Draw();
+
   c->SaveAs("MCLength_p_signalTPC.root") ;
   c->Clear();
 
