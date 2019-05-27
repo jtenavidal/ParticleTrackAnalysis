@@ -79,13 +79,16 @@ public:
   void analyze(art::Event const& e) override;
 
   // -> Added functions ( * )
-  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) ;
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;
   bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
   double EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) ;
   void IsReconstructed( int  const & best_id ) ;
-  
+  int FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
+		  art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
+		  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;  
+
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
   void beginJob() override;
@@ -164,6 +167,7 @@ private:
   std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters ; 
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
+  std::map< int , std::vector< int > > map_recoDaughters ; 
   std::map< int , int > map_IsReconstructed ; 
 
   // Efficiency calculation: just calorimetry information
@@ -422,26 +426,28 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_rvertex_contained = false ;
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
-	    //	    std::cout<< "\n RECO INFORMATION : " << std::endl;
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
-	    //    std::cout<< " Particle i = " << part_id_f << std::endl;
+	    int part_MCID_f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
 	    is_candidate = false ; // reset for each pfparticle
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
-	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f , j ) ;
+	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
 
-	    /*	if( is_candidate == true ) { // store daugher information for muons and pions
-		  		  //		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> Self() ) ;
-		  daughters.push_back( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ) ;
-		  if( particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() == 1 ){ // at the moment just look more if there is one track. Splitted -> pion track 
-		    for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
-		      daughters.push_back(particleMap[ particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ] -> NumDaughters() ) ;
-		    }
-		  }
-		  daughter_hiearchy.push_back(daughters);
-		  daughters.clear();
+	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
+	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
+		// secondary particles 
+		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
+		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
+		map_recoDaughters[ part_MCID_f ].push_back( part_MCID_2f ) ; //particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ) ;
+		for( int j3 = 0 ; j3 < particleMap[particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2]] -> NumDaughters() ; ++j3 ) {
+		  //daugheter secondary particles
+		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
+		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
+		  map_recoDaughters[part_MCID_2f].push_back( part_MCID_3f ) ;
 		}
-	    */}
+	      }	
+	    }
 	  }
+	}
       }// end if primary
     }// end loop over particles
   }
@@ -643,7 +649,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 void test::NeutrinoTopologyAnalyzer::StoreInformation( 
       art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
       art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
-      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f , int const & primary_daughter) {
+      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ){//, int const & primary_daughter) {
   /*
     1) Find muon/pion candidates
     2) Efficiency simple method
@@ -777,7 +783,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	}
 	          
       if( shower_f->has_length() ) { 
-	pfps_length[primary_daughter] = map_RecoLength[ tr_id_best ] ; 
+	pfps_length[tr_id_best] = map_RecoLength[ tr_id_best ] ; //primary_daughter 
       } else  {
 	map_RecoLength[ tr_id_best ]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
 	map_RecoLength[ tr_id_best ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
@@ -791,6 +797,51 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
   } // track vs shower
 }
 
+int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
+      art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
+      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) {
+  if ( findTracks.at( part_id_f ).size() != 0 ){
+    std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
+    art::FindManyP< recob::Hit > findHits (  trackHandle, e, RecoTrackLabel ) ;
+    // Loop over tracks found for track_f
+    for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
+        // Get track based variables
+      std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
+      // Get associated MCParticle ID using 3 different methods:
+      //    Which particle contributes the most energy to all the hits
+      //    Which particle contributes the reco charge to all the hits
+      //    Which particle is the biggest contributor to all the hits
+      tr_id_energy      = RecoUtils::TrueParticleIDFromTotalTrueEnergy(hit_f);
+      tr_id_charge      = RecoUtils::TrueParticleIDFromTotalRecoCharge(hit_f);
+      tr_id_hits        = RecoUtils::TrueParticleIDFromTotalRecoHits(hit_f);
+      // save the most common answer in tr_id_best: 
+      if( tr_id_energy == tr_id_charge && tr_id_energy == tr_id_hits ) tr_id_best = tr_id_energy ;
+      if( tr_id_energy == tr_id_charge && tr_id_energy != tr_id_hits ) tr_id_best = tr_id_energy ;
+      if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) tr_id_best = tr_id_energy ;
+      if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) tr_id_best = tr_id_charge ;
+      if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) {
+	if( tr_id_hits > 0 ) tr_id_best = tr_id_hits ;
+	else if( tr_id_energy > 0 ) tr_id_best = tr_id_energy ;
+	else if( tr_id_charge > 0 ) tr_id_best = tr_id_hits ;
+	else tr_id_best = 9999 ; // couldn't find id 
+      }
+    }
+  } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
+    art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
+    art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
+    for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
+      art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
+      std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
+      std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+      if( spacepoint_f.size() == 0 ) continue ; 
+      
+      std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
+      tr_id_best = ShowerTrackInfo.first ;
+      if( !ShowerTrackInfo.first ) tr_id_best = 9999 ; // default no match 
+    }
+  }// end shower
+  return tr_id_best ;
+}
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f )
 {
@@ -1009,7 +1060,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   Thas_primary_mu = false ;
   Thas_primary_pi = false ;  
   mapTPiDaughterPdg.clear();
-
+  map_recoDaughters.clear();
   // RECO INFO
   tr_id_best = 0;
   primary_vcontained = false ;
@@ -1032,7 +1083,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   error_vertex_reco = 0 ;
   daughters.clear() ;
   daughter_hiearchy.clear() ; 
-
+  
 
 }
 
