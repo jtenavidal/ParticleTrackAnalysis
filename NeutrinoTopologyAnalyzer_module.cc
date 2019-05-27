@@ -1,11 +1,11 @@
-////////////////////////////////////////////////////////////////////////
-// Class:       NeutrinoTopologyAnalyzer
-// Plugin Type: analyzer (art v3_00_00)
-// File:        NeutrinoTopologyAnalyzer_module.cc
-//
-// Generated at Mon Mar 25 06:08:16 2019 by Julia Tena Vidal using cetskelgen
-// from cetlib version v3_04_00.
-////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+// Class:       NeutrinoTopologyAnalyzer                                       //
+// Plugin Type: analyzer (art v3_00_00)                                        //
+// File:        NeutrinoTopologyAnalyzer_module.cc                             //
+//                                                                             //
+// Generated at Mon Mar 25 06:08:16 2019 by Julia Tena Vidal using cetskelgen  //
+// from cetlib version v3_04_00.                                               //
+/////////////////////////////////////////////////////////////////////////////////
 
 
 #include "art/Framework/Core/EDAnalyzer.h"
@@ -166,8 +166,9 @@ private:
   std::map< int , int > map_IsReconstructed ; 
 
   // Efficiency calculation: just calorimetry information
-  int reco_mu , reco_pi ;
-  int true_mu, true_pi ;
+  int reco_primary_mu , reco_primary_pi ;
+  int true_mu, true_pi, true_p ; // total pdg-particle in event. Includes secondaries 
+  int true_primary_mu, true_primary_pi ;
   int signal_mu, signal_pi ;
   int bg_mu_pi, bg_mu_p, bg_mu_others ; 
   int bg_pi_mu, bg_pi_p, bg_pi_others ; 
@@ -195,7 +196,7 @@ private:
   TH1D * Length_Tpi = new TH1D("Length_Tpi", " Length candidates for truth pions "   , 50 , 0 , 2000 );
   TH1D * Length_Tp  = new TH1D("Length_Tp",  " Length candidates for truth protons "   , 50 , 0 , 2000 );
 
-  int total_p , reco_p ; 
+  int total_reco_p , reco_p ; 
 
 
   // ------------- OLD CODE TO CHANGE
@@ -321,14 +322,17 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	mapTRescatter[trueParticle.TrackId()] = trueParticle.Rescatter();
 	map_IsReconstructed[trueParticle.TrackId()] = 0 ; // creates the map empty  
 
-	//	std::cout<< " particle t = " << t << " with pdg " << mapMC_reco_pdg[trueParticle.TrackId()] << std::endl;
+	// Counting total amount of muons, pions and protons 
+	if( TMath::Abs(trueParticle.PdgCode()) == 13 )  ++true_mu ;
+	if( trueParticle.PdgCode() == 211  )            ++true_pi ;
+	if( trueParticle.PdgCode() == 2212 )            ++true_p  ;
 
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
 
 	// negative muons and positive pions
-	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) { Thas_primary_mu = true ; ++true_mu ; }
-	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) { Thas_primary_pi = true ; ++true_pi ;}
+	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) { Thas_primary_mu = true ; ++true_primary_mu ; }
+	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) { Thas_primary_pi = true ; ++true_primary_pi ;}
 
 	// Study of mu^- decay. We expect a mu^- for numu CC interactions. If studying numubar CC interactions, change decay products.
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 13 ){
@@ -440,9 +444,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   eff_chi2_file.open("eff_chi2_information.txt");
 
   if( eff_chi2_file.is_open() ) {
+    eff_chi2_file << " Primary particles study " << std::endl;
     eff_chi2_file << " ******************** MUONS CALORIMETRY STUDY *********************** \n" ;
-    eff_chi2_file << " Number of reconstructed muons = " << reco_mu << "\n" ;
-    eff_chi2_file << " Number of true muons from MC = " << true_mu << "\n" ;
+    eff_chi2_file << " Number of reconstructed muons = " << reco_primary_mu << "\n" ;
+    eff_chi2_file << " Number of true muons from MC = " << true_primary_mu << "\n" ;
     eff_chi2_file << " Signal events ( true & reco ) = " << signal_mu << "\n" ;
     eff_chi2_file << " Background events : \n " ;
     eff_chi2_file << "     -- > True MC ID - pions " << bg_mu_pi << "\n" ; 
@@ -451,8 +456,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     eff_chi2_file << " EFFICIENCY =  " << eff_mu << "\n" ;
     eff_chi2_file << " PURITY =  " << purity_mu << "\n" ; 
     eff_chi2_file << " \n\n******************** PIONS CALORIMETRY STUDY *********************** \n" ;
-    eff_chi2_file << " Number of reconstructed pions = " << reco_pi << "\n" ;
-    eff_chi2_file << " Number of true pions from MC = " << true_pi << "\n" ;
+    eff_chi2_file << " Number of reconstructed pions = " << reco_primary_pi << "\n" ;
+    eff_chi2_file << " Number of true pions from MC = " << true_primary_pi << "\n" ;
     eff_chi2_file << " Signal events ( true & reco ) = " << signal_pi << "\n" ;
     eff_chi2_file << " Background events : \n " ;
     eff_chi2_file << "     -- > True MC ID - muons " << bg_pi_mu << "\n" ; 
@@ -461,9 +466,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     eff_chi2_file << " EFFICIENCY =  " << eff_pi << "\n" ;
     eff_chi2_file << " PURITY =  " << purity_pi << "\n" ; 
     eff_chi2_file << " \n\n******************** RECONSTRUCT PROTONS STUDY *********************** \n" ;
-    eff_chi2_file << " Number of reconstructed protons = " << total_p << "\n" ;
+    eff_chi2_file << " Number of reconstructed protons = " << total_reco_p << "\n" ;
     eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
-    eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_p * 100 << "\n" ;
+    eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_reco_p * 100 << "\n" ;
     
   }
 
@@ -485,7 +490,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     eff_chi2_file << " *************************************************************************************** \n" ;
     eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
     eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi << "   vs   #MC pions   = " << true_pi << " \n" ;  
-    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p  << "   vs   #MC protons = " << total_p << " \n" ;  
+    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p  << "   vs   #MC protons = " << true_p  << " \n" ;  
   }
 
   eff_chi2_file.close();
@@ -622,7 +627,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    if( mapMC_reco_pdg[ tr_id_best ] == 221  ) Chi2p_Tpi -> Fill( pid_f[k] ->Chi2Proton() ) ;
 	    if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) {
 	      Chi2p_Tp -> Fill( pid_f[k] ->Chi2Proton() ) ;
-	      ++total_p ;
+	      ++total_reco_p ;
 	      if( IsMuonPionCandidateChi2Proton( pid_f[k] ) == false ) ++reco_p ; 
 	    }
 
@@ -748,14 +753,14 @@ double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID
     return eff_mu;
   // reco information -> Need to call in reco loop! If not muon check if pion, avoid double-id 
   } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
-    ++reco_mu ;
+    ++reco_primary_mu ;
     if( true_pdg == 13 ) { ++signal_mu ;
     } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
     } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_mu_p ;
     } else { ++bg_mu_others ; }
 
   } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) {
-    ++reco_pi ;
+    ++reco_primary_pi ;
     if( true_pdg == 211 ) { ++signal_pi ;
     } else if( TMath::Abs(true_pdg) == 13  ) { ++bg_pi_mu ; // check for miss reco particles . was reco as pion is a muon
     } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_pi_p ;
@@ -763,10 +768,10 @@ double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID
 
   }
 
-  eff_mu = signal_mu / (double)true_mu ; 
-  purity_mu = signal_mu / (double)reco_mu ; 
-  eff_pi = signal_pi / (double)true_pi ; 
-  purity_pi = signal_pi / (double)reco_pi ; 
+  eff_mu = signal_mu / (double)true_primary_mu ; 
+  purity_mu = signal_mu / (double)reco_primary_mu ; 
+  eff_pi = signal_pi / (double)true_primary_pi ; 
+  purity_pi = signal_pi / (double)reco_primary_pi ; 
 
   if( particle == "pion" ) return eff_pi ; 
   if( particle == "purity pion" ) return purity_pi ; 
@@ -784,10 +789,14 @@ void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 void test::NeutrinoTopologyAnalyzer::beginJob( )
 {
   // don't initialize per event. 
-  reco_mu = 0 ;
-  reco_pi = 0 ;
+
   true_mu = 0 ;
   true_pi = 0 ;
+  true_p = 0 ; 
+  reco_primary_mu = 0 ;
+  reco_primary_pi = 0 ;
+  true_primary_mu = 0 ;
+  true_primary_pi = 0 ;
   signal_mu = 0 ;
   signal_pi = 0 ; 
   bg_mu_pi = 0 ;
@@ -800,7 +809,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   eff_pi = 0 ;
   purity_mu = 0 ;
   purity_pi = 0 ;
-  total_p = 0 ;
+  total_reco_p = 0 ; // number of reconstructed particles (p)
   reco_p =0 ; 
   reco_track_mu = 0 ;
   reco_track_pi = 0 ;
