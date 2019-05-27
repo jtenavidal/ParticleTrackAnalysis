@@ -200,12 +200,12 @@ private:
   int total_reco_p , reco_p ; 
 
   // Information about TPC reconstructed particles
-  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLenght_mu_TPC_signal", "mu MC Length, TPC Signal" , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLenght_pi_TPC_signal", "pi MC Length, TPC Signal" , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLenght_p_TPC_signal" , "p MC Length, TPC Signal"  , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLenght_mu_TPC_miss"  , "mu MC Length, TPC Miss"   , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLenght_pi_TPC_miss"  , "pi MC Length, TPC Miss"   , 50, 0 , 200 ) ;
-  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLenght_p_TPC_miss"   , "p MC Length, TPC Miss"    , 50, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLenght_mu_TPC_signal", "mu MC Length, TPC Signal" , 20, 0 , 250 ) ;
+  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLenght_pi_TPC_signal", "pi MC Length, TPC Signal" , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLenght_p_TPC_signal" , "p MC Length, TPC Signal"  , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLenght_mu_TPC_miss"  , "mu MC Length, TPC Miss"   , 20, 0 , 250 ) ;
+  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLenght_pi_TPC_miss"  , "pi MC Length, TPC Miss"   , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLenght_p_TPC_miss"   , "p MC Length, TPC Miss"    , 20, 0 , 200 ) ;
 
   THStack * h_MCLength_mu_TPC = new THStack("h_MCLength_mu_TPC", "Mu MC Length TPC");
   THStack * h_MCLength_pi_TPC = new THStack("h_MCLength_pi_TPC", "Pi MC Length TPC");
@@ -586,8 +586,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   //h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_miss );
   //h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_signal );
-  h_MCLength_mu_TPC_signal   -> Draw();
-  h_MCLength_mu_TPC_miss     -> Draw("same");
+ 
+  h_MCLength_mu_TPC_miss     -> Draw();
+  h_MCLength_mu_TPC_signal   -> Draw("same");
   
   c->SaveAs("MCLength_mu_signalTPC.root") ;
   c->Clear();
@@ -606,8 +607,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   //h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_miss );
   //h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_signal );
-  h_MCLength_pi_TPC_signal -> Draw();
-  h_MCLength_pi_TPC_miss -> Draw("same");
+  
+  h_MCLength_pi_TPC_miss -> Draw();
+  h_MCLength_pi_TPC_signal -> Draw("same");
   
   c->SaveAs("MCLength_pi_signalTPC.root") ;
   c->Clear();
@@ -626,8 +628,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   //h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_miss );
   //h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_signal );
-  h_MCLength_p_TPC_signal -> Draw();
-  h_MCLength_p_TPC_miss   -> Draw("same");
+  h_MCLength_p_TPC_miss   -> Draw();
+  h_MCLength_p_TPC_signal -> Draw("same");
 
   c->SaveAs("MCLength_p_signalTPC.root") ;
   c->Clear();
