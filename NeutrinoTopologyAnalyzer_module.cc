@@ -530,14 +530,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   }
   // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
-    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 13 ){
+    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 13 // check if primary and truth pdg code
+	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){ // check if contained 
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
 	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
     } 
-    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 211 ){
+    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 211 
+	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
 	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
@@ -545,7 +547,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       else h_recoDaughters_pi -> Fill( 0 ) ;
     } 
 
-    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 2212 ){
+    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 2212 
+	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
 	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_p -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_p -> Fill( map_recoDaughters[it->first].size() ) ;
