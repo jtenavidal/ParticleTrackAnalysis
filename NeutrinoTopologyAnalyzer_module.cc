@@ -525,7 +525,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 13 ){
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ; }
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
+	std::cout<< " is muon primary. #daughters = " << map_recoDaughters[it->first].size() << std::endl;
+      }
       else h_recoDaughters_mu -> Fill( 0 ) ;
     } 
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 211 ){
@@ -664,9 +666,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   c->SaveAs("MCLength_p_signalTPC.root") ;
   c->Clear();
 
-  h_recoDaughters_mu -> SetStats(0) ; 
   h_recoDaughters_pi -> SetStats(0) ; 
-  h_recoDaughters_p  -> SetStats(0) ; 
+  h_recoDaughters_p  -> SetStats(0) ;
 
   h_recoDaughters_mu -> SetLineColor(1) ; 
   h_recoDaughters_pi -> SetLineColor(2) ; 
@@ -674,10 +675,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     
   h_recoDaughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
   h_recoDaughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
-
-  h_recoDaughters_mu -> Scale( 1./h_recoDaughters_mu->GetEntries() ) ; 
-  h_recoDaughters_pi -> Scale( 1./h_recoDaughters_pi->GetEntries() ) ; 
-  h_recoDaughters_p  -> Scale( 1./h_recoDaughters_p->GetEntries() ) ; 
 
   h_recoDaughters_mu -> Draw() ; 
   h_recoDaughters_pi -> Draw("same") ; 
