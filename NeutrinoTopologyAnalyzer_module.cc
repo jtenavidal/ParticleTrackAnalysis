@@ -525,9 +525,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 13 ){
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ; }
+      else h_recoDaughters_mu -> Fill( 0 ) ;
     } 
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 211 ){
+      std::cout<<" is pion "<< std::endl;
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
     } 
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 2212 ){
@@ -672,6 +674,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     
   h_recoDaughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
   h_recoDaughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
+
+  h_recoDaughters_mu -> Scale( 1./h_recoDaughters_mu->GetEntries() ) ; 
+  h_recoDaughters_pi -> Scale( 1./h_recoDaughters_pi->GetEntries() ) ; 
+  h_recoDaughters_p  -> Scale( 1./h_recoDaughters_p->GetEntries() ) ; 
 
   h_recoDaughters_mu -> Draw() ; 
   h_recoDaughters_pi -> Draw("same") ; 
