@@ -216,9 +216,9 @@ private:
   THStack * h_MCLength_p_TPC  = new THStack("h_MCLength_p_TPC" , "P MC Length TPC");
 
   // Hiearchy information for a candidate signature
-  TH1D * h_recoDaughters_mu = new TH1D("recoDaughters_mu", " Total number of daughters for muons" , 20, 0, 5 ) ;
-  TH1D * h_recoDaughters_pi = new TH1D("recoDaughters_pi", " Total number of daughters for pions" , 20, 0, 5 ) ;
-  TH1D * h_recoDaughters_p = new TH1D("recoDaughters_p", " Total number of daughters for protons" , 20, 0, 5 ) ;
+  TH1D * h_recoDaughters_mu = new TH1D("recoDaughters_mu", " Total number of daughters for muons" , 3, -0.5, 3.5 ) ;
+  TH1D * h_recoDaughters_pi = new TH1D("recoDaughters_pi", " Total number of daughters for pions" , 3, -0.5, 3.5 ) ;
+  TH1D * h_recoDaughters_p = new TH1D("recoDaughters_p", " Total number of daughters for protons" , 3, -0.5, 3.5 ) ;
 
 
 
@@ -438,9 +438,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    is_candidate = false ; // reset for each pfparticle
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
-	    
+	    //	    std::cout<< "j is " << j << " with pdg " << mapMC_reco_pdg[part_MCID_f] << "   -- MC ID = " << part_MCID_f << std::endl;
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
-	    map_RecoHiearchy[part_MCID_f] = 1 ; // reconstructed as primary 
+	      map_RecoHiearchy[part_MCID_f] = 1 ; // reconstructed as primary 
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
@@ -525,18 +525,28 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 13 ){
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
-	std::cout<< " is muon primary. #daughters = " << map_recoDaughters[it->first].size() << std::endl;
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
+	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
+	else h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
     } 
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 211 ){
-      std::cout<<" is pion "<< std::endl;
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
+	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
+	else h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
+      }
+      else h_recoDaughters_pi -> Fill( 0 ) ;
     } 
+
     if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 2212 ){
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_p  -> Fill( map_recoDaughters[it->first].size() ) ;
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
+	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_p -> Fill( 3 ) ; // 3 means more than 2. 
+	else h_recoDaughters_p -> Fill( map_recoDaughters[it->first].size() ) ;
+      }
+      else h_recoDaughters_p -> Fill( 0 ) ;
     } 
+
   }
 
   if( eff_chi2_file.is_open() ) {
