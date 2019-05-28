@@ -221,7 +221,11 @@ private:
   // Hiearchy information for a candidate signature
   TH1D * h_recoDaughters_mu = new TH1D("recoDaughters_mu", " Total number of daughters for muons" , 4, -0.5, 3.5 ) ;
   TH1D * h_recoDaughters_pi = new TH1D("recoDaughters_pi", " Total number of daughters for pions" , 4, -0.5, 3.5 ) ;
-  TH1D * h_recoDaughters_p = new TH1D("recoDaughters_p", " Total number of daughters for protons" , 4, -0.5, 3.5 ) ;
+  TH1D * h_recoDaughters_p  = new TH1D("recoDaughters_p", " Total number of daughters for protons" , 4, -0.5, 3.5 ) ;
+
+  TH1D * h_reco3Daughters_mu = new TH1D("reco3Daughters_mu", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
+  TH1D * h_reco3Daughters_pi = new TH1D("reco3Daughters_pi", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
+  TH1D * h_reco3Daughters_p  = new TH1D("reco3Daughters_p", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
 
 
 
@@ -537,6 +541,13 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	else h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
+     
+      // Loop over ID secondaries
+      for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
+	if( map_recoDaughters.find(map_recoDaughters[it->first][i2]) != map_recoDaughters.end() ){
+	  h_reco3Daughters_mu -> Fill( map_recoDaughters[map_recoDaughters[it->first][i2] ].size() ) ;}
+        else { h_reco3Daughters_mu -> Fill(0);}
+      }
     } 
     if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 211 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
@@ -700,6 +711,23 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_recoDaughters_p  -> Draw("same") ; 
 
   c->SaveAs("Daughters_primary.root") ; 
+  c->Clear();
+
+  h_reco3Daughters_pi -> SetStats(0) ; 
+  h_reco3Daughters_p  -> SetStats(0) ;
+
+  h_reco3Daughters_mu -> SetLineColor(1) ; 
+  h_reco3Daughters_pi -> SetLineColor(2) ; 
+  h_reco3Daughters_p  -> SetLineColor(4) ;
+    
+  h_reco3Daughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
+  h_reco3Daughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
+
+  h_reco3Daughters_mu -> Draw() ; 
+  h_reco3Daughters_pi -> Draw("same") ; 
+  h_reco3Daughters_p  -> Draw("same") ; 
+
+  c->SaveAs("Daughters_3.root") ; 
   c->Clear();
 
 }
