@@ -88,6 +88,9 @@ public:
   int FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
 		  art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
 		  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;  
+  std::vector< bool > MCIsContained( simb::MCParticle const & trueParticle ) ;
+  std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
+
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -163,7 +166,7 @@ private:
   
   // muon - pion candidates stored information :
   bool is_candidate ;
-  std::map< int , bool > map_RecoVContained, map_RecoEContained ; 
+  std::map< int , std::vector<bool> > map_RecoContained ; 
   std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters ; 
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
@@ -441,18 +444,21 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    //	    std::cout<< "j is " << j << " with pdg " << mapMC_reco_pdg[part_MCID_f] << "   -- MC ID = " << part_MCID_f << std::endl;
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
 	      map_RecoHiearchy[part_MCID_f] = 1 ; // reconstructed as primary 
+	      map_RecoContained[part_MCID_f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
 		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 		map_recoDaughters[ part_MCID_f ].push_back( part_MCID_2f ) ; //particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ) ;
 		map_RecoHiearchy[part_MCID_2f] = 2 ; 
+		map_RecoContained[part_MCID_2f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_2f ) ;
 		for( int j3 = 0 ; j3 < particleMap[particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2]] -> NumDaughters() ; ++j3 ) {
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		  map_recoDaughters[part_MCID_2f].push_back( part_MCID_3f ) ;
 		  map_RecoHiearchy[part_MCID_3f] = 3 ; 
+		  map_RecoContained[part_MCID_3f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_3f ) ;
 		}
 	      }	
 	    }
@@ -522,7 +528,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) == 0 ) h_MCLength_pi_TPC_miss -> Fill( mapTLength[ it -> first ] );
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) == 0 ) h_MCLength_p_TPC_miss  -> Fill( mapTLength[ it -> first ] );
   }
-
+  // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 13 ){
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
@@ -532,7 +538,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       else h_recoDaughters_mu -> Fill( 0 ) ;
     } 
     if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 211 ){
-      std::cout<< " FOUND PRIMARY PION " << std::endl;
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
 	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
@@ -966,6 +971,81 @@ double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID
   return eff_mu;
 }
 
+std::vector< bool > test::NeutrinoTopologyAnalyzer::MCIsContained( simb::MCParticle const & trueParticle ) {
+  // Checks if true track is contained in fiducial. Not looking for showers as we are interested in muon/pion candidates. Truth info does not contain showers
+  bool vertex_contained = true , end_contained = true ;
+  std::vector< bool > contained_info ; 
+
+  if( ( trueParticle.Trajectory().X( 0 ) > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+      || ( trueParticle.Trajectory().X( 0 ) < (-CoordinateOffSetX + SelectedBorderX)) 
+      || ( trueParticle.Trajectory().Y( 0 ) > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+      || ( trueParticle.Trajectory().Y( 0 ) < (-CoordinateOffSetY + SelectedBorderY)) 
+      || ( trueParticle.Trajectory().Z( 0 ) > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+      || ( trueParticle.Trajectory().Z( 0 ) < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+  if( ( trueParticle.EndX() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+      || ( trueParticle.EndX() < (-CoordinateOffSetX + SelectedBorderX)) 
+      || ( trueParticle.EndY() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+      || ( trueParticle.EndY() < (-CoordinateOffSetY + SelectedBorderY)) 
+      || ( trueParticle.EndZ() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+      || ( trueParticle.EndZ() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+  contained_info.push_back( vertex_contained ) ; 
+  contained_info.push_back( end_contained ) ; 
+  return contained_info ; 
+}
+
+
+std::vector< bool > test::NeutrinoTopologyAnalyzer::IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) {
+  bool vertex_contained = true , end_contained = true ;
+  std::vector< bool > contained_info ; 
+
+  if ( findTracks.at( part_id_f ).size()!=0 ){
+    std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
+    art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, RecoPIDLabel );
+    
+    for( unsigned int n = 0 ; n < track_f.size() ; ++n ){      
+      if( ( track_f[n]->Start().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( track_f[n]->Start().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( track_f[n]->Start().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( track_f[n]->Start().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( track_f[n]->Start().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( track_f[n]->Start().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+      if( ( track_f[n]->End().X() > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( track_f[n]->End().X() < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( track_f[n]->End().Y() > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( track_f[n]->End().Y() < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( track_f[n]->End().Z() > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( track_f[n]->End().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+      
+    } //close track  	  
+  } else if( showerHandle.isValid() && showerHandle->size() ) { // if no track look in showers 
+    art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
+
+    for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
+      art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
+      std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
+      if( spacepoint_f.size() == 0 ) continue ;
+      if( ( spacepoint_f[0]->XYZ()[0] > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( spacepoint_f[0]->XYZ()[0] < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( spacepoint_f[0]->XYZ()[1] > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( spacepoint_f[0]->XYZ()[1] < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( spacepoint_f[0]->XYZ()[2] > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( spacepoint_f[0]->XYZ()[2] < (-CoordinateOffSetZ + SelectedBorderZ))) vertex_contained = false ;
+      if( ( spacepoint_f[0]->XYZ()[ spacepoint_f.size()-1 ] > (DetectorHalfLengthX - CoordinateOffSetX - SelectedBorderX)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] < (-CoordinateOffSetX + SelectedBorderX)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] > (DetectorHalfLengthY - CoordinateOffSetY - SelectedBorderY)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] < (-CoordinateOffSetY + SelectedBorderY)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] > (DetectorHalfLengthZ - CoordinateOffSetZ - SelectedBorderZ)) 
+	  || ( spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] < (-CoordinateOffSetZ + SelectedBorderZ))) end_contained = false ;
+    }	
+  } 
+  contained_info.push_back( vertex_contained ) ; 
+  contained_info.push_back( end_contained ) ; 
+  return contained_info ; 
+}
+
+
+
+
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 {
   // Implementation of required member function here.
@@ -1112,7 +1192,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   mapTPiDaughterPdg.clear();
   map_recoDaughters.clear();
   map_RecoHiearchy.clear();
-
+  map_RecoContained.clear();
   // RECO INFO
   tr_id_best = 0;
   primary_vcontained = false ;
