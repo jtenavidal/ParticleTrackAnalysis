@@ -168,7 +168,7 @@ private:
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_recoDaughters ; 
-  std::map< int , int > map_IsReconstructed ; 
+  std::map< int , int > map_IsReconstructed, map_RecoHiearchy ; 
 
   // Efficiency calculation: just calorimetry information
   int reco_primary_mu , reco_primary_pi ;
@@ -214,6 +214,13 @@ private:
   THStack * h_MCLength_mu_TPC = new THStack("h_MCLength_mu_TPC", "Mu MC Length TPC");
   THStack * h_MCLength_pi_TPC = new THStack("h_MCLength_pi_TPC", "Pi MC Length TPC");
   THStack * h_MCLength_p_TPC  = new THStack("h_MCLength_p_TPC" , "P MC Length TPC");
+
+  // Hiearchy information for a candidate signature
+  TH1D * h_recoDaughters_mu = new TH1D("recoDaughters_mu", " Total number of daughters for muons" , 20, 0, 5 ) ;
+  TH1D * h_recoDaughters_pi = new TH1D("recoDaughters_pi", " Total number of daughters for pions" , 20, 0, 5 ) ;
+  TH1D * h_recoDaughters_p = new TH1D("recoDaughters_p", " Total number of daughters for protons" , 20, 0, 5 ) ;
+
+
 
   // ------------- OLD CODE TO CHANGE
   int r_pdg_primary[10000] ;
@@ -431,18 +438,21 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    is_candidate = false ; // reset for each pfparticle
 	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
-
+	    
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
+	    map_RecoHiearchy[part_MCID_f] = 1 ; // reconstructed as primary 
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
 		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 		map_recoDaughters[ part_MCID_f ].push_back( part_MCID_2f ) ; //particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ) ;
+		map_RecoHiearchy[part_MCID_2f] = 2 ; 
 		for( int j3 = 0 ; j3 < particleMap[particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2]] -> NumDaughters() ; ++j3 ) {
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		  map_recoDaughters[part_MCID_2f].push_back( part_MCID_3f ) ;
+		  map_RecoHiearchy[part_MCID_3f] = 3 ; 
 		}
 	      }	
 	    }
@@ -511,6 +521,18 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 13   && ( it -> second ) == 0 ) h_MCLength_mu_TPC_miss -> Fill( mapTLength[ it -> first ] );
     if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) == 0 ) h_MCLength_pi_TPC_miss -> Fill( mapTLength[ it -> first ] );
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) == 0 ) h_MCLength_p_TPC_miss  -> Fill( mapTLength[ it -> first ] );
+  }
+
+  for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
+    if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 13 ){
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
+    } 
+    if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 211 ){
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
+    } 
+    if( it -> first == 1 && mapMC_reco_pdg[ it -> first ] == 2212 ){
+      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() )  h_recoDaughters_p  -> Fill( map_recoDaughters[it->first].size() ) ;
+    } 
   }
 
   if( eff_chi2_file.is_open() ) {
@@ -640,9 +662,23 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   c->SaveAs("MCLength_p_signalTPC.root") ;
   c->Clear();
 
+  h_recoDaughters_mu -> SetStats(0) ; 
+  h_recoDaughters_pi -> SetStats(0) ; 
+  h_recoDaughters_p  -> SetStats(0) ; 
 
+  h_recoDaughters_mu -> SetLineColor(1) ; 
+  h_recoDaughters_pi -> SetLineColor(2) ; 
+  h_recoDaughters_p  -> SetLineColor(4) ;
+    
+  h_recoDaughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
+  h_recoDaughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
 
+  h_recoDaughters_mu -> Draw() ; 
+  h_recoDaughters_pi -> Draw("same") ; 
+  h_recoDaughters_p  -> Draw("same") ; 
 
+  c->SaveAs("Daughters_primary.root") ; 
+  c->Clear();
 
 }
 
@@ -1061,6 +1097,8 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   Thas_primary_pi = false ;  
   mapTPiDaughterPdg.clear();
   map_recoDaughters.clear();
+  map_RecoHiearchy.clear();
+
   // RECO INFO
   tr_id_best = 0;
   primary_vcontained = false ;
