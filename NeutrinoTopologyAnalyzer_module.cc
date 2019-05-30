@@ -202,11 +202,6 @@ private:
   TH1D * Chi2p_Tpi = new TH1D("Chi2p_Tpi", " CHI2 under PROTON HYPOTESIS FOR PIONS"   , 50 , 0 , 200 );
   TH1D * Chi2p_Tp  = new TH1D("Chi2p_Tp",  " CHI2 under PROTON HYPOTESIS FOR PROTONS" , 50 , 0 , 200 );
 
-  // for reconstructed info
-  TH1D * Length_Tmu = new TH1D("Length_Tmu", " Length candidates for truth muons "   , 50 , 0 , 400 );
-  TH1D * Length_Tpi = new TH1D("Length_Tpi", " Length candidates for truth pions "   , 50 , 0 , 400 );
-  TH1D * Length_Tp  = new TH1D("Length_Tp",  " Length candidates for truth protons "   , 50 , 0 , 400 );
-
   int total_reco_p , reco_p ; 
 
   // Information about TPC reconstructed particles
@@ -232,21 +227,13 @@ private:
 
   // reconstructed information
   // For the time being I will just fill the muon ones. No signal events for pions
-  TH1D * h_recoSLength_mu = new TH1D("recoSLength_mu", " Signal Muon reconstructed length ", 50, 0, 400 ) ;
-  TH1D * h_recoSLength_pi = new TH1D("recoSLength_pi", " Signal Pion reconstructed length ", 50, 0, 400 ) ;
-  TH1D * h_recoSLength_p  = new TH1D("recoSLength_p",  " Signal Proton reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoLength_mu = new TH1D("recoLength_mu", " Candidate true Muon reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoLength_pi = new TH1D("recoLength_pi", " Candidate true Pion reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoLength_p  = new TH1D("recoLength_p",  " Candidate true Proton reconstructed length ", 50, 0, 400 ) ;
 
-  TH1D * h_recoSMomentum_mu = new TH1D("recoSMomentum_mu", " Signal Muon reconstructed momentum ", 50, 0, 4 ) ;
-  TH1D * h_recoSMomentum_pi = new TH1D("recoSMomentum_pi", " Signal Pion reconstructed momentum ", 50, 0, 4 ) ;
-  TH1D * h_recoSMomentum_p  = new TH1D("recoSMomentum_p",  " Signal Proton reconstructed momentum ", 50, 0, 4 ) ;
-
-  TH1D * h_recoBGLength_mu = new TH1D("recoBGLength_mu", " BG Muon reconstructed length ", 50, 0, 400 ) ;
-  TH1D * h_recoBGLength_pi = new TH1D("recoBGLength_pi", " BG Pion reconstructed length ", 50, 0, 400 ) ;
-  TH1D * h_recoBGLength_p  = new TH1D("recoBGLength_p",  " BG Proton reconstructed length ", 50, 0, 400 ) ;
-
-  TH1D * h_recoBGMomentum_mu = new TH1D("recoSMomentum_mu", " BG Muon reconstructed momentum ", 50, 0, 4 ) ;
-  TH1D * h_recoBGMomentum_pi = new TH1D("recoBGMomentum_pi", " BG Pion reconstructed momentum ", 50, 0, 4 ) ;
-  TH1D * h_recoBGMomentum_p  = new TH1D("recoBGMomentum_p",  " BG Proton reconstructed momentum ", 50, 0, 4 ) ;
+  TH1D * h_recoKE_mu = new TH1D("recoKE_mu", " Candidate true Muon reconstructed KE ", 50, 0, 4 ) ;
+  TH1D * h_recoKE_pi = new TH1D("recoKE_pi", " Candidate true Pion reconstructed KE ", 50, 0, 4 ) ;
+  TH1D * h_recoKE_p  = new TH1D("recoKE_p",  " Candidate true Proton reconstructed KE ", 50, 0, 4 ) ;
 
   
   };
@@ -667,9 +654,9 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	} //close calo
 
 	if( is_candidate == true ) {
-	  if( TMath::Abs(mapMC_reco_pdg[ part_id_f ]) == 13   ) Length_Tmu -> Fill( map_RecoLength[ part_id_f ] ) ;
-	  if( TMath::Abs(mapMC_reco_pdg[ part_id_f ]) == 211  ) Length_Tpi -> Fill( map_RecoLength[ part_id_f ] ) ;
-	  if( mapMC_reco_pdg[ part_id_f ] == 2212 ) Length_Tp  -> Fill( map_RecoLength[ part_id_f ] ) ;
+	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 13   ) h_recoLength_mu -> Fill( map_RecoLength[ part_id_f ] ) ;
+	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 211  ) h_recoLength_pi -> Fill( map_RecoLength[ part_id_f ] ) ;
+	  if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) h_recoLength_p  -> Fill( map_RecoLength[ part_id_f ] ) ;
 	}
       } //close pid
     } //close track
@@ -1097,19 +1084,19 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   c->SaveAs("pion_finalstate.root") ;
   c->Clear();
 
-  Length_Tmu -> SetStats( 0 ) ;
-  Length_Tpi -> SetStats( 0 ) ;
-  Length_Tp -> SetStats( 0 ) ; 
+  h_recoLength_mu -> SetStats( 0 ) ;
+  h_recoLength_pi -> SetStats( 0 ) ;
+  h_recoLength_p -> SetStats( 0 ) ; 
   
-  Length_Tmu -> SetLineColor( 1 ) ;
-  Length_Tpi -> SetLineColor( 2 ) ;
-  Length_Tp -> SetLineColor( 4 ) ;
+  h_recoLength_mu -> SetLineColor( 1 ) ;
+  h_recoLength_pi -> SetLineColor( 2 ) ;
+  h_recoLength_p -> SetLineColor( 4 ) ;
   
-  Length_Tmu -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
+  h_recoLength_mu -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
   
-  Length_Tmu -> Draw( ) ;
-  Length_Tpi -> Draw( "same" ) ;
-  Length_Tp -> Draw( "same" ) ;
+  h_recoLength_mu -> Draw( ) ;
+  h_recoLength_pi -> Draw( "same" ) ;
+  h_recoLength_p -> Draw( "same" ) ;
 
   c->SaveAs("Length_recoCandidates.root");
   c->Clear();
