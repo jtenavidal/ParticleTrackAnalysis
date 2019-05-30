@@ -99,7 +99,7 @@ private:
   int event_id ; 
 
   // Event tree information
-  bool is_reconstructed, has_reco_tracks, has_reco_showers ; 
+  bool is_reconstructed ; 
   int has_reco_daughters ;
 
   // Truth information
@@ -112,7 +112,7 @@ private:
   std::map< int , std::vector< int > > ShowerMothers ;
 
   // Reco information
-  bool primary_vcontained, primary_econtained ;
+  bool primary_vcontained, primary_econtained , has_reco_tracks, has_reco_showers ;
   int r_pdg_primary, r_nu_daughters ;
   int rnu_hits ;
   double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
@@ -361,7 +361,7 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		if( tr_id_energy != tr_id_charge && tr_id_energy == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_energy] ;
 		if( tr_id_energy != tr_id_charge && tr_id_charge == tr_id_hits ) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_charge] ;
 		if( tr_id_energy != tr_id_charge && tr_id_energy != tr_id_hits && tr_id_charge != tr_id_hits) pfps_truePDG[primary_daughter] = mapMC_reco_pdg[tr_id_hits] ;
-
+		
 		// save information 
 		r_chi2_mu[primary_daughter] = pid_f[k]->Chi2Muon() ;
 		r_chi2_pi[primary_daughter] = pid_f[k]->Chi2Pion() ;
@@ -369,6 +369,11 @@ void TrackID::MyAnalysis::StoreInformation( art::Event const & e, art::Handle< s
 		r_PIDA[primary_daughter]    = pid_f[k]->PIDA();
 		r_missenergy[primary_daughter] = pid_f[k]->MissingE();
 		r_KineticEnergy[primary_daughter] = cal_f[m]->KineticEnergy();
+		
+		std::cout<< " pdg -= " << mapMC_reco_pdg[tr_id_energy] << std::endl;
+		std::cout<< " chi2mu = " << r_chi2_mu[primary_daughter] << std::endl;
+		std::cout<< " chi2pi = " << r_chi2_pi[primary_daughter] << std::endl;
+		std::cout<< " chi2p = " << r_chi2_p[primary_daughter] << std::endl;
 		
 		for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint()+1 ; ++l ) {
 		  r_track_x[l+rnu_hits] = track_f[n]->TrajectoryPoint( l ).position.X();
