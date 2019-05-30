@@ -1385,7 +1385,9 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_PandoraPDG.clear();
   map_RecoDaughters.clear();
   map_RecoHiearchy.clear();
-
+  map_RecoKEnergy.clear();
+  map_RecoLength.clear();
+  map_RecoHits.clear();
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
