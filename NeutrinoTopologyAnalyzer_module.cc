@@ -167,7 +167,7 @@ private:
   // muon - pion candidates stored information :
   bool is_candidate ;
   std::map< int , std::vector<bool> > map_RecoContained ; 
-  std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters ; 
+  std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters, map_PandoraPDG ; 
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_recoDaughters ; 
@@ -276,7 +276,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 {
   clearVariables();
   event_id = e.id().event();
+  std::cout<< " ***********************************************************" << event_id <<std::endl;
   std::cout<< " Event ID = " << event_id <<std::endl;
+  std::cout<< " ***********************************************************" << event_id <<std::endl;
 
   if( !e.isRealData()){
     /**************************************************************************************************
@@ -353,16 +355,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	map_IsReconstructed[trueParticle.TrackId()] = 0 ; // creates the map empty  
 
 	// Counting total amount of muons, pions and protons 
-	if( TMath::Abs(trueParticle.PdgCode()) == 13 )  ++true_mu ;
-	if( trueParticle.PdgCode() == 211  )            ++true_pi ;
-	if( trueParticle.PdgCode() == 2212 )            ++true_p  ;
+	if( TMath::Abs(trueParticle.PdgCode()) == 13 )    ++true_mu ;
+	if( TMath::Abs(trueParticle.PdgCode()) == 211  )  ++true_pi ;
+	if( trueParticle.PdgCode() == 2212 )              ++true_p  ;
 
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
 
-	// negative muons and positive pions
+	// muons and pions
 	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 13  ) { Thas_primary_mu = true ; ++true_primary_mu ; }
-	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 211 ) { Thas_primary_pi = true ; ++true_primary_pi ;}
+	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 211 ) { Thas_primary_pi = true ; ++true_primary_pi ;}
 
 	// Study of mu^- decay. We expect a mu^- for numu CC interactions. If studying numubar CC interactions, change decay products.
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 13 ){
@@ -373,7 +375,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	}
 
 	// Study of pi+ elastic and inelastic scattering : final products pdg
-	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 211 ){
+	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && TMath::Abs(mapMC_reco_pdg[trueParticle.Mother()]) == 211 ){
 	  mapTPiDaughterPdg[trueParticle.PdgCode()] += 1 ;
 	  TFinalStatePi -> Fill ( trueParticle.PdgCode() ) ;
 	}
@@ -442,12 +444,14 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
 	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
 	    int part_MCID_f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
-	    is_candidate = false ; // reset for each pfparticle
-	    pfps_type[j] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
+	    is_candidate = false ; // reset for each pfparticle daughter of the neutrino
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
-	    //	    std::cout<< "j is " << j << " with pdg " << mapMC_reco_pdg[part_MCID_f] << "   -- MC ID = " << part_MCID_f << std::endl;
+	    std::cout<< "j is " << j << " reco id = " << part_id_f <<  " with pdg " << mapMC_reco_pdg[part_MCID_f] << "   -- MC ID = " << part_MCID_f << " pandora pdg = " << map_PandoraPDG[part_MCID_f] << std::endl;
+	    std::cout<< " is candidate ? = " << is_candidate << std::endl;
+
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
 	      map_RecoHiearchy[part_MCID_f] = 1 ; // reconstructed as primary 
+	      map_PandoraPDG[part_MCID_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	      map_RecoContained[part_MCID_f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
@@ -455,14 +459,22 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 		map_recoDaughters[ part_MCID_f ].push_back( part_MCID_2f ) ; //particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ) ;
 		map_RecoHiearchy[part_MCID_2f] = 2 ; 
+		map_PandoraPDG[part_MCID_2f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ;
 		map_RecoContained[part_MCID_2f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_2f ) ;
+		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
+		std::cout<< "j2 is " << j2 << " reco 2id = " << part_id_2f <<  " with pdg " << mapMC_reco_pdg[part_MCID_2f] << "   -- MC ID = " << part_MCID_2f << " pandora pdg = " << map_PandoraPDG[part_MCID_2f] << std::endl;
+
 		for( int j3 = 0 ; j3 < particleMap[particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2]] -> NumDaughters() ; ++j3 ) {
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		  map_recoDaughters[part_MCID_2f].push_back( part_MCID_3f ) ;
 		  map_RecoHiearchy[part_MCID_3f] = 3 ; 
+		  map_PandoraPDG[part_MCID_3f] = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]] ->PdgCode() ; 
 		  map_RecoContained[part_MCID_3f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_3f ) ;
+		  StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
+		  std::cout<< "j3 is " << j3 << " reco 3id = " << part_id_3f <<  " with pdg " << mapMC_reco_pdg[part_MCID_3f] << "   -- MC ID = " << part_MCID_3f <<" pandora pdg = " << map_PandoraPDG[part_MCID_3f] << std::endl;
+
 		}
 	      }	
 	    }
@@ -514,8 +526,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   // it->second returns the number of tracks/showers reconstructed. Default 0 
   std::map<int,int>::iterator it ;
   for( it = map_IsReconstructed.begin(); it != map_IsReconstructed.end() ; ++it ){ 
-    if ( mapMC_reco_pdg[ it -> first ] == 13   && ( it -> second ) != 0 ) ++reco_track_mu ;
-    if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) != 0 ) ++reco_track_pi ;
+    if ( TMath::Abs( mapMC_reco_pdg[ it -> first ] ) == 13   && ( it -> second ) != 0 ) ++reco_track_mu ;
+    if ( TMath::Abs( mapMC_reco_pdg[ it -> first ] ) == 211  && ( it -> second ) != 0 ) ++reco_track_pi ;
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) != 0 ) ++reco_track_p  ;
     //    if ( mapMC_reco_pdg[ it -> first ] == 13   ) reco_track_mu += ( it -> second ) ;
     //    if ( mapMC_reco_pdg[ it -> first ] == 211  ) reco_track_pi += ( it -> second ) ;
@@ -525,16 +537,26 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   for( it = map_IsReconstructed.begin(); it != map_IsReconstructed.end() ; ++it ){ 
     // reconstructed in tpc 
     if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 13   && ( it -> second ) != 0 ) h_MCLength_mu_TPC_signal -> Fill( mapTLength[ it -> first ] );
-    if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) != 0 ) h_MCLength_pi_TPC_signal -> Fill( mapTLength[ it -> first ] );
+    if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 211  && ( it -> second ) != 0 ) h_MCLength_pi_TPC_signal -> Fill( mapTLength[ it -> first ] );
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) != 0 ) h_MCLength_p_TPC_signal -> Fill( mapTLength[ it -> first ] );
     // missed signal in tpc
     if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 13   && ( it -> second ) == 0 ) h_MCLength_mu_TPC_miss -> Fill( mapTLength[ it -> first ] );
-    if ( mapMC_reco_pdg[ it -> first ] == 211  && ( it -> second ) == 0 ) h_MCLength_pi_TPC_miss -> Fill( mapTLength[ it -> first ] );
+    if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 211  && ( it -> second ) == 0 ) h_MCLength_pi_TPC_miss -> Fill( mapTLength[ it -> first ] );
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) == 0 ) h_MCLength_p_TPC_miss  -> Fill( mapTLength[ it -> first ] );
   }
   // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
-    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 13 // check if primary and truth pdg code
+    /*    std::cout << " ----------------------------------- " << std::endl;
+    std::cout << " loading maps " << std::endl;
+    std::cout << " id particle " << it->first << std::endl;
+    std::cout << " process hiearchy " << it->second << std::endl;
+    std::cout << " pdg " << mapMC_reco_pdg[ it -> first ] << std::endl;
+    std::cout << " Pandora PDG = " << map_PandoraPDG[ it->first ] <<std::endl;
+    */
+    for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
+      std::cout<< " daughter is = " << map_recoDaughters[it->first][i2] << std::endl;
+    }
+    if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 13 // check if primary and truth pdg code
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){ // check if contained 
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
 	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
@@ -549,13 +571,19 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
         else { h_reco3Daughters_mu -> Fill(0);}
       }
     } 
-    if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 211 
+    if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 211 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
 	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_pi -> Fill( 0 ) ;
+      // Loop over ID secondaries
+      for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
+	if( map_recoDaughters.find(map_recoDaughters[it->first][i2]) != map_recoDaughters.end() ){
+	  h_reco3Daughters_pi -> Fill( map_recoDaughters[map_recoDaughters[it->first][i2] ].size() ) ;}
+        else { h_reco3Daughters_pi -> Fill(0);}
+      }
     } 
 
     if( it -> second == 1 && mapMC_reco_pdg[ it -> first ] == 2212 
@@ -565,12 +593,18 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	else h_recoDaughters_p -> Fill( map_recoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_p -> Fill( 0 ) ;
+      // Loop over ID secondaries
+      for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
+	if( map_recoDaughters.find(map_recoDaughters[it->first][i2]) != map_recoDaughters.end() ){
+	  h_reco3Daughters_p -> Fill( map_recoDaughters[map_recoDaughters[it->first][i2] ].size() ) ;}
+        else { h_reco3Daughters_p -> Fill(0);}
+      }
     } 
 
   }
 
   if( eff_chi2_file.is_open() ) {
-    eff_chi2_file << " ******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
+    eff_chi2_file << " \n\n******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
     eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right  * \n" ;
     eff_chi2_file << " *************************************************************************************** \n" ;
     eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
@@ -640,14 +674,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_mu_TPC_signal -> SetLineColor(1);
   h_MCLength_mu_TPC_miss   -> SetLineColor(2);
   
-  //h_MCLength_mu_TPC_signal -> SetFillColor(kBlue);
-  //h_MCLength_mu_TPC_miss   -> SetFillColor(kRed);
-  
   h_MCLength_mu_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_mu_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
-
-  //h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_miss );
-  //h_MCLength_mu_TPC -> Add( h_MCLength_mu_TPC_signal );
  
   h_MCLength_mu_TPC_miss     -> Draw();
   h_MCLength_mu_TPC_signal   -> Draw("same");
@@ -661,14 +689,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_pi_TPC_signal -> SetLineColor(1);
   h_MCLength_pi_TPC_miss   -> SetLineColor(2);
   
-  //h_MCLength_pi_TPC_signal -> SetFillColor(kBlue);
-  //h_MCLength_pi_TPC_miss   -> SetFillColor(kRed);
-  
   h_MCLength_pi_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_pi_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
-
-  //h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_miss );
-  //h_MCLength_pi_TPC -> Add( h_MCLength_pi_TPC_signal );
   
   h_MCLength_pi_TPC_miss -> Draw();
   h_MCLength_pi_TPC_signal -> Draw("same");
@@ -682,14 +704,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   h_MCLength_p_TPC_signal -> SetLineColor(1);
   h_MCLength_p_TPC_miss   -> SetLineColor(2);
 
-  //h_MCLength_p_TPC_signal -> SetFillColor(kBlue);
-  //h_MCLength_p_TPC_miss   -> SetFillColor(kRed);
-  
   h_MCLength_p_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
   h_MCLength_p_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
 
-  //h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_miss );
-  //h_MCLength_p_TPC -> Add( h_MCLength_p_TPC_signal );
   h_MCLength_p_TPC_miss   -> Draw();
   h_MCLength_p_TPC_signal -> Draw("same");
 
@@ -767,17 +784,15 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	if( !pid_f[k]->PlaneID().isValid) continue ;
 	if( pid_f[k]->PlaneID().Plane != 2 ) continue ; // only look at collection plane for dEdx information
 
-	// looks for muons /pions or daughters of muons /pions candidates || is_candidate == false  
-	if( IsMuonPionCandidateChi2( pid_f[k] ) == 0 ) is_candidate = false ;
-        else is_candidate = true ;
+	// looks for muons /pions or daughters of muons /pions candidates
+	// only checks for primary particle. If it's not a candidate we don't store the information for the primary neither the daughters
+	if( is_candidate == false ) is_candidate = IsMuonPionCandidateChi2( pid_f[k] ) ; 
 	
 	//Loop over calo information also in collection plane
 	for ( unsigned int m = 0 ; m < cal_f.size() ; ++m ) {
 	  if( !cal_f[m] ) continue ;
 	  if( !cal_f[m]->PlaneID().isValid) continue ;
 	  if( cal_f[m]->PlaneID().Plane == 2 ) {    
-
-	    // save information -- add pid methods here !
 
        	    // Get associated MCParticle ID using 3 different methods:
 	    //    Which particle contributes the most energy to all the hits
@@ -801,18 +816,23 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 
 	    IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
 
-	    if( mapMC_reco_pdg[ tr_id_best ] == 13   ) Chi2p_Tmu -> Fill( pid_f[k] ->Chi2Proton() ) ;
-	    if( mapMC_reco_pdg[ tr_id_best ] == 221  ) Chi2p_Tpi -> Fill( pid_f[k] ->Chi2Proton() ) ;
+	    if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 13   ) Chi2p_Tmu -> Fill( pid_f[k] ->Chi2Proton() ) ;
+	    if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 221  ) Chi2p_Tpi -> Fill( pid_f[k] ->Chi2Proton() ) ;
 	    if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) {
-	      Chi2p_Tp -> Fill( pid_f[k] ->Chi2Proton() ) ;
+	      Chi2p_Tp -> Fill( pid_f[k] -> Chi2Proton() ) ;
 	      ++total_reco_p ;
-	      if( IsMuonPionCandidateChi2Proton( pid_f[k] ) == false ) ++reco_p ; 
+	      if( IsMuonPionCandidateChi2Proton( pid_f[k] ) == false )         ++reco_p ; 
+	      if( pid_f[k] -> Chi2Proton() < 100 && pid_f[k] -> Chi2Proton() > 70 
+		  && pid_f[k] -> Chi2Proton() < 2 * pid_f[k] -> Chi2Muon() 
+		  && pid_f[k] -> Chi2Proton() < 2 * pid_f[k] -> Chi2Pion() )   ++reco_p ;
 	    }
 
 	    if( is_candidate == true ) {
+	      // If the same track is broken into different ones, we add the information
+	      // PROBLEM: Using truth information to join tracks... 
 	      map_RecoHits[ tr_id_best ] += track_f[n]->LastValidPoint() + 1 ;
 	      map_RecoLength[ tr_id_best ] += track_f[n]->Length() ;
-	      map_RecoKEnergy[ tr_id_best ] += cal_f[m]->KineticEnergy();
+	      map_RecoKEnergy[ tr_id_best ] += cal_f[m]->KineticEnergy(); 
 
 	      for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint() + 1 ; ++l ) {
 		map_RecoXPosition[ tr_id_best ].push_back( track_f[n]->TrajectoryPoint( l ).position.X() ) ; 
@@ -830,16 +850,14 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	      if( cal_f[m]->XYZ()[l].X() == map_RecoXPosition[ tr_id_best ][t] 
 		  && cal_f[m]->XYZ()[l].Y() == map_RecoYPosition[ tr_id_best ][t] 
 		  && cal_f[m]->XYZ()[l].Z() == map_RecoZPosition[ tr_id_best ][t]  ){
-		  
-                  map_RecodEdx[ tr_id_best ].push_back( cal_f[m]->dEdx()[l] ) ; 
-	     
+		map_RecodEdx[ tr_id_best ].push_back( cal_f[m]->dEdx()[l] ) ; 
 	      }
 	    }
 	  }
 	} //close calo
 	if( is_candidate == true ) {
-	  if( mapMC_reco_pdg[ tr_id_best ] == 13   ) Length_Tmu -> Fill( map_RecoLength[ tr_id_best ] ) ;
-	  if( mapMC_reco_pdg[ tr_id_best ] == 211  ) Length_Tpi -> Fill( map_RecoLength[ tr_id_best ] ) ;
+	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 13   ) Length_Tmu -> Fill( map_RecoLength[ tr_id_best ] ) ;
+	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 211  ) Length_Tpi -> Fill( map_RecoLength[ tr_id_best ] ) ;
 	  if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) Length_Tp  -> Fill( map_RecoLength[ tr_id_best ] ) ;
 	}
       } //close pid
@@ -931,8 +949,16 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f )
 {
+
+  // This may increase the efficieny to find candidates. Adding a transition region between muon proton cut. Considering the value of chi2candidate 
+  //if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 50 && ( pid_f -> Chi2Muon() < 50 || pid_f -> Chi2Pion() < 50 ) ) return true ;
+
+  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70 
+      && ( pid_f -> Chi2Proton() < 2 * pid_f -> Chi2Muon() || pid_f -> Chi2Proton() < 2 * pid_f -> Chi2Pion() ) )   return false ;
+  // Consistent cut based on chi2 under proton hipotesis. Unlikely to have chi2 values higher than 100 if it's a proton. 
   if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ; // remove this line for pure Chi2 method 
 
+  // Use Chi2 under muon pion and proton hipotesis 
   if( ( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() ) || ( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() ) ) return true ;
 	 
   return false ; 
@@ -968,8 +994,23 @@ void test::NeutrinoTopologyAnalyzer::IsReconstructed( int  const & best_id )  {
 double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) {
   // True information -> Calculated in the MC loop 
 
-  // check muons by proton pdg
-  if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) {
+  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70 
+      && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Muon() ) {
+    ++reco_primary_mu ;
+    if( TMath::Abs(true_pdg) == 13 ) { ++signal_mu ;
+    } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
+    } else if( true_pdg == 2212 ) { ++bg_mu_p ;
+    } else { ++bg_mu_others ; }
+        
+  } else if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 50 
+	     && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Pion() ) {
+    ++reco_primary_pi ;
+    if( TMath::Abs(true_pdg) == 211 ) { ++signal_pi ;
+    } else if( TMath::Abs(true_pdg) == 13  ) { ++bg_pi_mu ; // check for miss reco particles . was reco as pion is a muon
+    } else if( true_pdg == 2212 ) { ++bg_pi_p ;
+    } else { ++bg_mu_others ; }
+
+  }else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) {
     if( particle == "pion" ) return eff_pi ; 
     if( particle == "purity pion" ) return purity_pi ; 
     if( particle == "purity muon" ) return purity_mu ; 
@@ -977,16 +1018,16 @@ double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID
   // reco information -> Need to call in reco loop! If not muon check if pion, avoid double-id 
   } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
     ++reco_primary_mu ;
-    if( true_pdg == 13 ) { ++signal_mu ;
+    if( TMath::Abs(true_pdg) == 13 ) { ++signal_mu ;
     } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
-    } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_mu_p ;
+    } else if( true_pdg == 2212 ) { ++bg_mu_p ;
     } else { ++bg_mu_others ; }
 
   } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) {
     ++reco_primary_pi ;
-    if( true_pdg == 211 ) { ++signal_pi ;
+    if( TMath::Abs(true_pdg) == 211 ) { ++signal_pi ;
     } else if( TMath::Abs(true_pdg) == 13  ) { ++bg_pi_mu ; // check for miss reco particles . was reco as pion is a muon
-    } else if( TMath::Abs(true_pdg) == 2212 ) { ++bg_pi_p ;
+    } else if( true_pdg == 2212 ) { ++bg_pi_p ;
     } else { ++bg_mu_others ; }
 
   }
@@ -1224,6 +1265,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_recoDaughters.clear();
   map_RecoHiearchy.clear();
   map_RecoContained.clear();
+  map_PandoraPDG.clear();
   // RECO INFO
   tr_id_best = 0;
   primary_vcontained = false ;
