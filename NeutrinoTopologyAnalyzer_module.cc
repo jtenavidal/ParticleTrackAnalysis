@@ -235,6 +235,21 @@ private:
   TH1D * h_recoKE_pi = new TH1D("recoKE_pi", " Candidate true Pion reconstructed KE ", 50, 0, 4 ) ;
   TH1D * h_recoKE_p  = new TH1D("recoKE_p",  " Candidate true Proton reconstructed KE ", 50, 0, 4 ) ;
 
+  TH1D * h_recoLength_mu_noD = new TH1D("recoLength_mu_noD", " Candidate true Muon reconstructed length with no daughters", 50, 0, 400 ) ;
+  TH1D * h_recoLength_pi_noD = new TH1D("recoLength_pi_noD", " Candidate true Pion reconstructed length with no daughters", 50, 0, 400 ) ;
+  TH1D * h_recoLength_p_noD  = new TH1D("recoLength_p_noD",  " Candidate true Proton reconstructed length with no daughters", 50, 0, 400 ) ;
+
+  TH1D * h_recoKE_mu_noD = new TH1D("recoKE_mu_noD", " Candidate true Muon reconstructed KE with no daughters", 50, 0, 4 ) ;
+  TH1D * h_recoKE_pi_noD = new TH1D("recoKE_pi_noD", " Candidate true Pion reconstructed KE with no daughters", 50, 0, 4 ) ;
+  TH1D * h_recoKE_p_noD  = new TH1D("recoKE_p_noD",  " Candidate true Proton reconstructed KE with no daughters", 50, 0, 4 ) ;
+
+  TH1D * h_recoLength_mu_wD = new TH1D("recoLength_mu_wD", " Candidate true Muon reconstructed length with daughters", 50, 0, 400 ) ;
+  TH1D * h_recoLength_pi_wD = new TH1D("recoLength_pi_wD", " Candidate true Pion reconstructed length with daughters", 50, 0, 400 ) ;
+  TH1D * h_recoLength_p_wD  = new TH1D("recoLength_p_wD",  " Candidate true Proton reconstructed length with daughters", 50, 0, 400 ) ;
+
+  TH1D * h_recoKE_mu_wD = new TH1D("recoKE_mu_wD", " Candidate true Muon reconstructed KE with daughters", 50, 0, 4 ) ;
+  TH1D * h_recoKE_pi_wD = new TH1D("recoKE_pi_wD", " Candidate true Pion reconstructed KE with daughters", 50, 0, 4 ) ;
+  TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 4 ) ;
   
   };
 
@@ -539,9 +554,35 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
         else { h_reco3Daughters_p -> Fill(0);}
       }
     } 
-
   }
-   
+  
+  // Filling histograms lenght and KE vs number of daughters
+  std::map<int,double>::iterator itD ;
+  for( itD = map_RecoLength.begin() ; itD != map_RecoLength.end() ; ++itD ) {
+    if( map_RecoDaughters[itD->first].size() == 0 ) {
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 13   ) h_recoLength_mu_noD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 211  ) h_recoLength_pi_noD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 2212 ) h_recoLength_p_noD  -> Fill( itD->second ) ; 
+    } else {
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 13   ) h_recoLength_mu_wD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 211  ) h_recoLength_pi_wD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 2212 ) h_recoLength_p_wD  -> Fill( itD->second ) ; 
+    }
+  }
+
+  for( itD = map_RecoKEnergy.begin() ; itD != map_RecoKEnergy.end() ; ++itD ) {
+    if( map_RecoDaughters[itD->first].size() == 0 ) {
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 13   ) h_recoKE_mu_noD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 211  ) h_recoKE_pi_noD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 2212 ) h_recoKE_p_noD  -> Fill( itD->second ) ; 
+    } else {
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 13   ) h_recoKE_mu_wD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 211  ) h_recoKE_pi_wD -> Fill( itD->second ) ; 
+      if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 2212 ) h_recoKE_p_wD  -> Fill( itD->second ) ; 
+    }
+  }
+  
+ 
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
 
@@ -654,9 +695,18 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	} //close calo
 
 	if( is_candidate == true ) {
-	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 13   ) h_recoLength_mu -> Fill( map_RecoLength[ part_id_f ] ) ;
-	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 211  ) h_recoLength_pi -> Fill( map_RecoLength[ part_id_f ] ) ;
-	  if( mapMC_reco_pdg[ tr_id_best ] == 2212 ) h_recoLength_p  -> Fill( map_RecoLength[ part_id_f ] ) ;
+	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 13   ) {
+	    h_recoLength_mu -> Fill( map_RecoLength[ part_id_f ] ) ;
+	    h_recoKE_mu -> Fill( map_RecoKEnergy[ part_id_f] ) ;
+	  }
+	  if( TMath::Abs(mapMC_reco_pdg[ tr_id_best ]) == 211  ) {
+	    h_recoLength_pi -> Fill( map_RecoLength[ part_id_f ] ) ;
+	    h_recoKE_pi -> Fill( map_RecoKEnergy[ part_id_f] ) ;
+	  }
+	  if( mapMC_reco_pdg[ tr_id_best ] == 2212 ){
+	    h_recoLength_p  -> Fill( map_RecoLength[ part_id_f ] ) ;
+	    h_recoKE_p -> Fill( map_RecoKEnergy[ part_id_f] ) ;
+	  }
 	}
       } //close pid
     } //close track
@@ -1052,7 +1102,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
 
   // PRINT HISTOGRAMS
-
+  //**********************************************************************//  
   Chi2p_Tmu -> SetStats(0);
   Chi2p_Tmu ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
   Chi2p_Tmu ->GetYaxis()->SetTitle(" Events " ) ;
@@ -1083,7 +1133,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   c->SaveAs("pion_finalstate.root") ;
   c->Clear();
-
+  //**********************************************************************//  
   h_recoLength_mu -> SetStats( 0 ) ;
   h_recoLength_pi -> SetStats( 0 ) ;
   h_recoLength_p -> SetStats( 0 ) ; 
@@ -1100,7 +1150,94 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   c->SaveAs("Length_recoCandidates.root");
   c->Clear();
+  //**********************************************************************//  
+  h_recoKE_mu -> SetStats( 0 ) ;
+  h_recoKE_pi -> SetStats( 0 ) ;
+  h_recoKE_p -> SetStats( 0 ) ; 
   
+  h_recoKE_mu -> SetLineColor( 1 ) ;
+  h_recoKE_pi -> SetLineColor( 2 ) ;
+  h_recoKE_p -> SetLineColor( 4 ) ;
+  
+  h_recoKE_mu -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
+  
+  h_recoKE_mu -> Draw( ) ;
+  h_recoKE_pi -> Draw( "same" ) ;
+  h_recoKE_p -> Draw( "same" ) ;
+
+  c->SaveAs("KE_recoCandidates.root");
+  c->Clear();
+  //**********************************************************************//  
+  h_recoKE_mu_noD -> SetStats( 0 ) ;
+  h_recoKE_pi_noD -> SetStats( 0 ) ;
+  h_recoKE_p_noD -> SetStats( 0 ) ; 
+  
+  h_recoKE_mu_noD -> SetLineColor( 1 ) ;
+  h_recoKE_pi_noD -> SetLineColor( 2 ) ;
+  h_recoKE_p_noD -> SetLineColor( 4 ) ;
+  
+  h_recoKE_mu_noD -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
+  
+  h_recoKE_mu_noD -> Draw( ) ;
+  h_recoKE_pi_noD -> Draw( "same" ) ;
+  h_recoKE_p_noD -> Draw( "same" ) ;
+
+  c->SaveAs("KE_recoCandidates_nodaughters.root");
+  c->Clear();
+
+  //**********************************************************************//  
+  h_recoLength_mu_noD -> SetStats( 0 ) ;
+  h_recoLength_pi_noD -> SetStats( 0 ) ;
+  h_recoLength_p_noD -> SetStats( 0 ) ; 
+  
+  h_recoLength_mu_noD -> SetLineColor( 1 ) ;
+  h_recoLength_pi_noD -> SetLineColor( 2 ) ;
+  h_recoLength_p_noD -> SetLineColor( 4 ) ;
+  
+  h_recoLength_mu_noD -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
+  
+  h_recoLength_mu_noD -> Draw( ) ;
+  h_recoLength_pi_noD -> Draw( "same" ) ;
+  h_recoLength_p_noD -> Draw( "same" ) ;
+
+  c->SaveAs("Length_recoCandidates_noD.root");
+  c->Clear();
+  //**********************************************************************//  
+  h_recoKE_mu_wD -> SetStats( 0 ) ;
+  h_recoKE_pi_wD -> SetStats( 0 ) ;
+  h_recoKE_p_wD -> SetStats( 0 ) ; 
+  
+  h_recoKE_mu_wD -> SetLineColor( 1 ) ;
+  h_recoKE_pi_wD -> SetLineColor( 2 ) ;
+  h_recoKE_p_wD -> SetLineColor( 4 ) ;
+  
+  h_recoKE_mu_wD -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
+  
+  h_recoKE_mu_wD -> Draw( ) ;
+  h_recoKE_pi_wD -> Draw( "same" ) ;
+  h_recoKE_p_wD -> Draw( "same" ) ;
+
+  c->SaveAs("KE_recoCandidates_wD.root");
+  c->Clear();
+
+  //**********************************************************************//  
+  h_recoLength_mu_wD -> SetStats( 0 ) ;
+  h_recoLength_pi_wD -> SetStats( 0 ) ;
+  h_recoLength_p_wD -> SetStats( 0 ) ; 
+  
+  h_recoLength_mu_wD -> SetLineColor( 1 ) ;
+  h_recoLength_pi_wD -> SetLineColor( 2 ) ;
+  h_recoLength_p_wD -> SetLineColor( 4 ) ;
+  
+  h_recoLength_mu_wD -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
+  
+  h_recoLength_mu_wD -> Draw( ) ;
+  h_recoLength_pi_wD -> Draw( "same" ) ;
+  h_recoLength_p_wD -> Draw( "same" ) ;
+
+  c->SaveAs("Length_recoCandidates_wD.root");
+  c->Clear();
+  //**********************************************************************//  
   h_MCLength_mu_TPC_signal -> SetStats(0);
   h_MCLength_mu_TPC_miss   -> SetStats(0);
 
@@ -1115,7 +1252,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   
   c->SaveAs("MCLength_mu_signalTPC.root") ;
   c->Clear();
-
+  //**********************************************************************//  
   h_MCLength_pi_TPC_signal -> SetStats(0);
   h_MCLength_pi_TPC_miss   -> SetStats(0);
 
@@ -1130,7 +1267,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   
   c->SaveAs("MCLength_pi_signalTPC.root") ;
   c->Clear();
-
+  //**********************************************************************//  
   h_MCLength_p_TPC_signal -> SetStats(0);
   h_MCLength_p_TPC_miss   -> SetStats(0);
 
@@ -1145,7 +1282,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   c->SaveAs("MCLength_p_signalTPC.root") ;
   c->Clear();
-
+  //**********************************************************************//  
   h_recoDaughters_pi -> SetStats(0) ; 
   h_recoDaughters_p  -> SetStats(0) ;
 
@@ -1162,7 +1299,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   c->SaveAs("Daughters_primary.root") ; 
   c->Clear();
-
+  //**********************************************************************//  
   h_reco3Daughters_pi -> SetStats(0) ; 
   h_reco3Daughters_p  -> SetStats(0) ;
 
@@ -1179,7 +1316,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   c->SaveAs("Daughters_3.root") ; 
   c->Clear();
-
+  //**********************************************************************//  
+  
   
   delete mcparticle_tree ;
   delete recoevent_tree ; 
