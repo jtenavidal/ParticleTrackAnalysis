@@ -463,39 +463,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   }
   error_vertex_reco = sqrt( error_vertex_reco ) ;
 
-  std::ofstream eff_chi2_file ; 
-  
-  eff_chi2_file.open("eff_chi2_information.txt");
-
-  if( eff_chi2_file.is_open() ) {
-    eff_chi2_file << " Primary particles study " << std::endl;
-    eff_chi2_file << " ******************** MUONS CALORIMETRY STUDY *********************** \n" ;
-    eff_chi2_file << " Number of reconstructed muons = " << reco_primary_mu << "\n" ;
-    eff_chi2_file << " Number of true muons from MC = " << true_primary_mu << "\n" ;
-    eff_chi2_file << " Signal events ( true & reco ) = " << signal_mu << "\n" ;
-    eff_chi2_file << " Background events : \n " ;
-    eff_chi2_file << "     -- > True MC ID - pions " << bg_mu_pi << "\n" ; 
-    eff_chi2_file << "     -- > True MC ID - proton " << bg_mu_p << "\n" ; 
-    eff_chi2_file << "     -- > True MC ID - other " << bg_mu_others << "\n" ; 
-    eff_chi2_file << " EFFICIENCY =  " << eff_mu << "\n" ;
-    eff_chi2_file << " PURITY =  " << purity_mu << "\n" ; 
-    eff_chi2_file << " \n\n******************** PIONS CALORIMETRY STUDY *********************** \n" ;
-    eff_chi2_file << " Number of reconstructed pions = " << reco_primary_pi << "\n" ;
-    eff_chi2_file << " Number of true pions from MC = " << true_primary_pi << "\n" ;
-    eff_chi2_file << " Signal events ( true & reco ) = " << signal_pi << "\n" ;
-    eff_chi2_file << " Background events : \n " ;
-    eff_chi2_file << "     -- > True MC ID - muons " << bg_pi_mu << "\n" ; 
-    eff_chi2_file << "     -- > True MC ID - proton " << bg_pi_p << "\n" ; 
-    eff_chi2_file << "     -- > True MC ID - other " << bg_pi_others << "\n" ; 
-    eff_chi2_file << " EFFICIENCY =  " << eff_pi << "\n" ;
-    eff_chi2_file << " PURITY =  " << purity_pi << "\n" ; 
-    eff_chi2_file << " \n\n******************** RECONSTRUCT PROTONS STUDY *********************** \n" ;
-    eff_chi2_file << " Number of reconstructed protons = " << total_reco_p << "\n" ;
-    eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
-    eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_reco_p * 100 << "\n" ;
-    
-  }
-
   // Loop the map to get the pdg of the reconstructed particles. This is per event  
   // it->second returns the number of tracks/showers reconstructed. Default 0 
   std::map<int,int>::iterator it ;
@@ -566,150 +533,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     } 
 
   }
-
-  if( eff_chi2_file.is_open() ) {
-    eff_chi2_file << " \n\n******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
-    eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right  * \n" ;
-    eff_chi2_file << " *************************************************************************************** \n" ;
-    eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
-    eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi << "   vs   #MC pions   = " << true_pi << " \n" ;  
-    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p  << "   vs   #MC protons = " << true_p  << " \n" ;  
-  }
-
-  eff_chi2_file.close();
    
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
-
-
-  // PRINT HISTOGRAMS
-
-  Chi2p_Tmu -> SetStats(0);
-  Chi2p_Tmu ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
-  Chi2p_Tmu ->GetYaxis()->SetTitle(" Events " ) ;
-  
-  Chi2p_Tp -> SetStats(0);
-  Chi2p_Tp ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
-  Chi2p_Tp ->GetYaxis()->SetTitle(" Events " ) ;
-  
-  l->SetBorderSize(0);
-  l->AddEntry( Chi2p_Tmu,      " True Muon",    "l" );
-  l->AddEntry( Chi2p_Tpi,      " True Pion",    "l" );
-  l->AddEntry( Chi2p_Tp,       " True Proton ",           "l" );
-    
-  Chi2p_Tmu->SetLineColor(2);
-  Chi2p_Tpi->SetLineColor(4);
-  
-  Chi2p_Tmu->Draw();
-  Chi2p_Tpi->Draw("same");
-  Chi2p_Tp->Draw("same");
-  l->Draw();
-
-  c->SaveAs("chi2_test.root");
-  c->Clear();
-
-  TFinalStatePi -> SetStats(0); 
-  TFinalStatePi -> GetXaxis() -> SetTitle(" pdg rescatter" ) ; 
-  TFinalStatePi -> Draw();
-
-  c->SaveAs("pion_finalstate.root") ;
-  c->Clear();
-
-  Length_Tmu -> SetStats( 0 ) ;
-  Length_Tpi -> SetStats( 0 ) ;
-  Length_Tp -> SetStats( 0 ) ; 
-  
-  Length_Tmu -> SetLineColor( 1 ) ;
-  Length_Tpi -> SetLineColor( 2 ) ;
-  Length_Tp -> SetLineColor( 4 ) ;
-  
-  Length_Tmu -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
-  
-  Length_Tmu -> Draw( ) ;
-  Length_Tpi -> Draw( "same" ) ;
-  Length_Tp -> Draw( "same" ) ;
-
-  c->SaveAs("Length_recoCandidates.root");
-  c->Clear();
-  
-  h_MCLength_mu_TPC_signal -> SetStats(0);
-  h_MCLength_mu_TPC_miss   -> SetStats(0);
-
-  h_MCLength_mu_TPC_signal -> SetLineColor(1);
-  h_MCLength_mu_TPC_miss   -> SetLineColor(2);
-  
-  h_MCLength_mu_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
-  h_MCLength_mu_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
- 
-  h_MCLength_mu_TPC_miss     -> Draw();
-  h_MCLength_mu_TPC_signal   -> Draw("same");
-  
-  c->SaveAs("MCLength_mu_signalTPC.root") ;
-  c->Clear();
-
-  h_MCLength_pi_TPC_signal -> SetStats(0);
-  h_MCLength_pi_TPC_miss   -> SetStats(0);
-
-  h_MCLength_pi_TPC_signal -> SetLineColor(1);
-  h_MCLength_pi_TPC_miss   -> SetLineColor(2);
-  
-  h_MCLength_pi_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
-  h_MCLength_pi_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
-  
-  h_MCLength_pi_TPC_miss -> Draw();
-  h_MCLength_pi_TPC_signal -> Draw("same");
-  
-  c->SaveAs("MCLength_pi_signalTPC.root") ;
-  c->Clear();
-
-  h_MCLength_p_TPC_signal -> SetStats(0);
-  h_MCLength_p_TPC_miss   -> SetStats(0);
-
-  h_MCLength_p_TPC_signal -> SetLineColor(1);
-  h_MCLength_p_TPC_miss   -> SetLineColor(2);
-
-  h_MCLength_p_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
-  h_MCLength_p_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
-
-  h_MCLength_p_TPC_miss   -> Draw();
-  h_MCLength_p_TPC_signal -> Draw("same");
-
-  c->SaveAs("MCLength_p_signalTPC.root") ;
-  c->Clear();
-
-  h_recoDaughters_pi -> SetStats(0) ; 
-  h_recoDaughters_p  -> SetStats(0) ;
-
-  h_recoDaughters_mu -> SetLineColor(1) ; 
-  h_recoDaughters_pi -> SetLineColor(2) ; 
-  h_recoDaughters_p  -> SetLineColor(4) ;
-    
-  h_recoDaughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
-  h_recoDaughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
-
-  h_recoDaughters_mu -> Draw() ; 
-  h_recoDaughters_pi -> Draw("same") ; 
-  h_recoDaughters_p  -> Draw("same") ; 
-
-  c->SaveAs("Daughters_primary.root") ; 
-  c->Clear();
-
-  h_reco3Daughters_pi -> SetStats(0) ; 
-  h_reco3Daughters_p  -> SetStats(0) ;
-
-  h_reco3Daughters_mu -> SetLineColor(1) ; 
-  h_reco3Daughters_pi -> SetLineColor(2) ; 
-  h_reco3Daughters_p  -> SetLineColor(4) ;
-    
-  h_reco3Daughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
-  h_reco3Daughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
-
-  h_reco3Daughters_mu -> Draw() ; 
-  h_reco3Daughters_pi -> Draw("same") ; 
-  h_reco3Daughters_p  -> Draw("same") ; 
-
-  c->SaveAs("Daughters_3.root") ; 
-  c->Clear();
 
 }
 
@@ -1183,10 +1009,186 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   // Write and close files. Other comments also fit here 
   TFile file("output_eventtree.root" , "RECREATE" );
   mcparticle_tree ->Write();
-  recoevent_tree ->Write();
+  recoevent_tree  ->Write();
   
   file.Write();
   file.Close();
+
+  std::ofstream eff_chi2_file ; 
+  
+  eff_chi2_file.open("eff_chi2_information.txt");
+
+  if( eff_chi2_file.is_open() ) {
+    eff_chi2_file << " Primary particles study " << std::endl;
+    eff_chi2_file << " ******************** MUONS CALORIMETRY STUDY *********************** \n" ;
+    eff_chi2_file << " Number of reconstructed muons = " << reco_primary_mu << "\n" ;
+    eff_chi2_file << " Number of true muons from MC = " << true_primary_mu << "\n" ;
+    eff_chi2_file << " Signal events ( true & reco ) = " << signal_mu << "\n" ;
+    eff_chi2_file << " Background events : \n " ;
+    eff_chi2_file << "     -- > True MC ID - pions " << bg_mu_pi << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - proton " << bg_mu_p << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - other " << bg_mu_others << "\n" ; 
+    eff_chi2_file << " EFFICIENCY =  " << eff_mu << "\n" ;
+    eff_chi2_file << " PURITY =  " << purity_mu << "\n" ; 
+    eff_chi2_file << " \n\n******************** PIONS CALORIMETRY STUDY *********************** \n" ;
+    eff_chi2_file << " Number of reconstructed pions = " << reco_primary_pi << "\n" ;
+    eff_chi2_file << " Number of true pions from MC = " << true_primary_pi << "\n" ;
+    eff_chi2_file << " Signal events ( true & reco ) = " << signal_pi << "\n" ;
+    eff_chi2_file << " Background events : \n " ;
+    eff_chi2_file << "     -- > True MC ID - muons " << bg_pi_mu << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - proton " << bg_pi_p << "\n" ; 
+    eff_chi2_file << "     -- > True MC ID - other " << bg_pi_others << "\n" ; 
+    eff_chi2_file << " EFFICIENCY =  " << eff_pi << "\n" ;
+    eff_chi2_file << " PURITY =  " << purity_pi << "\n" ; 
+    eff_chi2_file << " \n\n******************** RECONSTRUCT PROTONS STUDY *********************** \n" ;
+    eff_chi2_file << " Number of reconstructed protons = " << total_reco_p << "\n" ;
+    eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
+    eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_reco_p * 100 << "\n" ;
+    
+  }
+
+
+  if( eff_chi2_file.is_open() ) {
+    eff_chi2_file << " \n\n******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
+    eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right  * \n" ;
+    eff_chi2_file << " *************************************************************************************** \n" ;
+    eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
+    eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi << "   vs   #MC pions   = " << true_pi << " \n" ;  
+    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p  << "   vs   #MC protons = " << true_p  << " \n" ;  
+  }
+
+  eff_chi2_file.close();
+
+
+  // PRINT HISTOGRAMS
+
+  Chi2p_Tmu -> SetStats(0);
+  Chi2p_Tmu ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
+  Chi2p_Tmu ->GetYaxis()->SetTitle(" Events " ) ;
+  
+  Chi2p_Tp -> SetStats(0);
+  Chi2p_Tp ->GetXaxis()->SetTitle(" chi2 under proton hypotesis " ) ;
+  Chi2p_Tp ->GetYaxis()->SetTitle(" Events " ) ;
+  
+  l->SetBorderSize(0);
+  l->AddEntry( Chi2p_Tmu,      " True Muon",    "l" );
+  l->AddEntry( Chi2p_Tpi,      " True Pion",    "l" );
+  l->AddEntry( Chi2p_Tp,       " True Proton ",           "l" );
+    
+  Chi2p_Tmu->SetLineColor(2);
+  Chi2p_Tpi->SetLineColor(4);
+  
+  Chi2p_Tmu->Draw();
+  Chi2p_Tpi->Draw("same");
+  Chi2p_Tp->Draw("same");
+  l->Draw();
+
+  c->SaveAs("chi2_test.root");
+  c->Clear();
+
+  TFinalStatePi -> SetStats(0); 
+  TFinalStatePi -> GetXaxis() -> SetTitle(" pdg rescatter" ) ; 
+  TFinalStatePi -> Draw();
+
+  c->SaveAs("pion_finalstate.root") ;
+  c->Clear();
+
+  Length_Tmu -> SetStats( 0 ) ;
+  Length_Tpi -> SetStats( 0 ) ;
+  Length_Tp -> SetStats( 0 ) ; 
+  
+  Length_Tmu -> SetLineColor( 1 ) ;
+  Length_Tpi -> SetLineColor( 2 ) ;
+  Length_Tp -> SetLineColor( 4 ) ;
+  
+  Length_Tmu -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
+  
+  Length_Tmu -> Draw( ) ;
+  Length_Tpi -> Draw( "same" ) ;
+  Length_Tp -> Draw( "same" ) ;
+
+  c->SaveAs("Length_recoCandidates.root");
+  c->Clear();
+  
+  h_MCLength_mu_TPC_signal -> SetStats(0);
+  h_MCLength_mu_TPC_miss   -> SetStats(0);
+
+  h_MCLength_mu_TPC_signal -> SetLineColor(1);
+  h_MCLength_mu_TPC_miss   -> SetLineColor(2);
+  
+  h_MCLength_mu_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
+  h_MCLength_mu_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
+ 
+  h_MCLength_mu_TPC_miss     -> Draw();
+  h_MCLength_mu_TPC_signal   -> Draw("same");
+  
+  c->SaveAs("MCLength_mu_signalTPC.root") ;
+  c->Clear();
+
+  h_MCLength_pi_TPC_signal -> SetStats(0);
+  h_MCLength_pi_TPC_miss   -> SetStats(0);
+
+  h_MCLength_pi_TPC_signal -> SetLineColor(1);
+  h_MCLength_pi_TPC_miss   -> SetLineColor(2);
+  
+  h_MCLength_pi_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
+  h_MCLength_pi_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
+  
+  h_MCLength_pi_TPC_miss -> Draw();
+  h_MCLength_pi_TPC_signal -> Draw("same");
+  
+  c->SaveAs("MCLength_pi_signalTPC.root") ;
+  c->Clear();
+
+  h_MCLength_p_TPC_signal -> SetStats(0);
+  h_MCLength_p_TPC_miss   -> SetStats(0);
+
+  h_MCLength_p_TPC_signal -> SetLineColor(1);
+  h_MCLength_p_TPC_miss   -> SetLineColor(2);
+
+  h_MCLength_p_TPC_signal -> GetXaxis() -> SetTitle( "Length[cm]");
+  h_MCLength_p_TPC_signal -> GetYaxis() -> SetTitle( "Entries[#]");
+
+  h_MCLength_p_TPC_miss   -> Draw();
+  h_MCLength_p_TPC_signal -> Draw("same");
+
+  c->SaveAs("MCLength_p_signalTPC.root") ;
+  c->Clear();
+
+  h_recoDaughters_pi -> SetStats(0) ; 
+  h_recoDaughters_p  -> SetStats(0) ;
+
+  h_recoDaughters_mu -> SetLineColor(1) ; 
+  h_recoDaughters_pi -> SetLineColor(2) ; 
+  h_recoDaughters_p  -> SetLineColor(4) ;
+    
+  h_recoDaughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
+  h_recoDaughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
+
+  h_recoDaughters_mu -> Draw() ; 
+  h_recoDaughters_pi -> Draw("same") ; 
+  h_recoDaughters_p  -> Draw("same") ; 
+
+  c->SaveAs("Daughters_primary.root") ; 
+  c->Clear();
+
+  h_reco3Daughters_pi -> SetStats(0) ; 
+  h_reco3Daughters_p  -> SetStats(0) ;
+
+  h_reco3Daughters_mu -> SetLineColor(1) ; 
+  h_reco3Daughters_pi -> SetLineColor(2) ; 
+  h_reco3Daughters_p  -> SetLineColor(4) ;
+    
+  h_reco3Daughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
+  h_reco3Daughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
+
+  h_reco3Daughters_mu -> Draw() ; 
+  h_reco3Daughters_pi -> Draw("same") ; 
+  h_reco3Daughters_p  -> Draw("same") ; 
+
+  c->SaveAs("Daughters_3.root") ; 
+  c->Clear();
+
   
   delete mcparticle_tree ;
   delete recoevent_tree ; 
