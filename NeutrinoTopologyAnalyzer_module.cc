@@ -168,10 +168,10 @@ private:
   bool is_candidate ;
   std::map< int , int > map_MCID_RecoID ;
   std::map< int , std::vector<bool> > map_RecoContained ; 
-  std::map< int , int > map_RecoHits, map_RecoPrimary, map_RecoDaughters, map_PandoraPDG ; 
+  std::map< int , int > map_RecoHits, map_RecoPrimary, map_PandoraPDG ; 
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
-  std::map< int , std::vector< int > > map_recoDaughters ; 
+  std::map< int , std::vector< int > > map_RecoDaughters ; 
   std::map< int , int > map_RecoHiearchy ; 
 
   // Efficiency calculation: just calorimetry information
@@ -201,9 +201,9 @@ private:
   TH1D * Chi2p_Tp  = new TH1D("Chi2p_Tp",  " CHI2 under PROTON HYPOTESIS FOR PROTONS" , 50 , 0 , 200 );
 
   // for reconstructed info
-  TH1D * Length_Tmu = new TH1D("Length_Tmu", " Length candidates for truth muons "   , 50 , 0 , 2000 );
-  TH1D * Length_Tpi = new TH1D("Length_Tpi", " Length candidates for truth pions "   , 50 , 0 , 2000 );
-  TH1D * Length_Tp  = new TH1D("Length_Tp",  " Length candidates for truth protons "   , 50 , 0 , 2000 );
+  TH1D * Length_Tmu = new TH1D("Length_Tmu", " Length candidates for truth muons "   , 50 , 0 , 400 );
+  TH1D * Length_Tpi = new TH1D("Length_Tpi", " Length candidates for truth pions "   , 50 , 0 , 400 );
+  TH1D * Length_Tp  = new TH1D("Length_Tp",  " Length candidates for truth protons "   , 50 , 0 , 400 );
 
   int total_reco_p , reco_p ; 
 
@@ -228,32 +228,7 @@ private:
   TH1D * h_reco3Daughters_pi = new TH1D("reco3Daughters_pi", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
   TH1D * h_reco3Daughters_p  = new TH1D("reco3Daughters_p", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
 
-
-
-  // ------------- OLD CODE TO CHANGE
-  int r_pdg_primary[10000] ;
-  int rnu_hits[10000] ;
-  int rtrack_hits;
-  
-  std::vector< int > daughters ;
-  std::vector< std::vector< int > > daughter_hiearchy ; 
-
-  // need to reconfigure 
-  double r_chi2_mu[10], r_chi2_pi[10], r_chi2_p[10], r_PIDA[10] ;
-  double r_missenergy[10], r_KineticEnergy[10], r_Range[10] ;
-  float rLength ;
-  double r_track_x[100000], r_track_y[100000], r_track_z[100000], r_track_dEdx[100000];
-  std::vector< float > r_dEdx_ID, r_dEdx_total ; 
-  std::vector< std::vector< float >  > r_dEdx_ID_all ; 
-  
-  // -> Breakdown particles in event from Pandora
-  int pfps_truePDG[1000] ;
-  int event_vcontained[1000], event_econtained[1000] ; 
-  int pfps_hits[1000] , pfps_type[1000] ;
-  float pfps_length[1000] ; 
-  double pfps_dir_start_x[1000], pfps_dir_start_y[1000], pfps_dir_start_z[1000], pfps_dir_end_x[1000] , pfps_dir_end_y[1000] , pfps_dir_end_z[1000],pfps_start_x[1000] , pfps_start_y[1000] , pfps_start_z[1000] , pfps_end_x[1000], pfps_end_y[1000] , pfps_end_z[1000] ;
-  
-};
+  };
 
 
 test::NeutrinoTopologyAnalyzer::NeutrinoTopologyAnalyzer(fhicl::ParameterSet const& p)
@@ -458,7 +433,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
 		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 		map_MCID_RecoID[part_id_2f] = part_MCID_2f ; 
-		map_recoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
+		map_RecoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
 		map_RecoHiearchy[part_id_2f] = 2 ; 
 		map_PandoraPDG[part_id_2f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ;
 		map_RecoContained[part_id_2f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_2f ) ;
@@ -469,7 +444,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		  map_MCID_RecoID[part_id_3f] = part_MCID_3f ; 
-		  map_recoDaughters[part_id_2f].push_back( part_id_3f ) ;
+		  map_RecoDaughters[part_id_2f].push_back( part_id_3f ) ;
 		  map_RecoHiearchy[part_id_3f] = 3 ; 
 		  map_PandoraPDG[part_id_3f] = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]] ->PdgCode() ; 
 		  map_RecoContained[part_id_3f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_3f ) ;
@@ -547,45 +522,45 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 // check if primary and truth pdg code
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){ // check if contained 
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
-	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
-	else h_recoDaughters_mu -> Fill( map_recoDaughters[it->first].size() ) ;
+      if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
+	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
+	else h_recoDaughters_mu -> Fill( map_RecoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
      
       // Loop over ID secondaries
-      for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
-	if( map_recoDaughters.find(map_recoDaughters[it->first][i2]) != map_recoDaughters.end() ){
-	  h_reco3Daughters_mu -> Fill( map_recoDaughters[map_recoDaughters[it->first][i2] ].size() ) ;}
+      for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	if( map_RecoDaughters.find(map_RecoDaughters[it->first][i2]) != map_RecoDaughters.end() ){
+	  h_reco3Daughters_mu -> Fill( map_RecoDaughters[map_RecoDaughters[it->first][i2] ].size() ) ;}
         else { h_reco3Daughters_mu -> Fill(0);}
       }
     } 
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
-	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
-	else h_recoDaughters_pi -> Fill( map_recoDaughters[it->first].size() ) ;
+      if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
+	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
+	else h_recoDaughters_pi -> Fill( map_RecoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_pi -> Fill( 0 ) ;
       // Loop over ID secondaries
-      for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
-	if( map_recoDaughters.find(map_recoDaughters[it->first][i2]) != map_recoDaughters.end() ){
-	  h_reco3Daughters_pi -> Fill( map_recoDaughters[map_recoDaughters[it->first][i2] ].size() ) ;}
+      for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	if( map_RecoDaughters.find(map_RecoDaughters[it->first][i2]) != map_RecoDaughters.end() ){
+	  h_reco3Daughters_pi -> Fill( map_RecoDaughters[map_RecoDaughters[it->first][i2] ].size() ) ;}
         else { h_reco3Daughters_pi -> Fill(0);}
       }
     } 
 
     if( it -> second == 1 && mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ] == 2212 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
-      if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
-	if( map_recoDaughters[it->first].size() > 2) h_recoDaughters_p -> Fill( 3 ) ; // 3 means more than 2. 
-	else h_recoDaughters_p -> Fill( map_recoDaughters[it->first].size() ) ;
+      if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
+	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_p -> Fill( 3 ) ; // 3 means more than 2. 
+	else h_recoDaughters_p -> Fill( map_RecoDaughters[it->first].size() ) ;
       }
       else h_recoDaughters_p -> Fill( 0 ) ;
       // Loop over ID secondaries
-      for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
-	if( map_recoDaughters.find(map_recoDaughters[it->first][i2]) != map_recoDaughters.end() ){
-	  h_reco3Daughters_p -> Fill( map_recoDaughters[map_recoDaughters[it->first][i2] ].size() ) ;}
+      for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	if( map_RecoDaughters.find(map_RecoDaughters[it->first][i2]) != map_RecoDaughters.end() ){
+	  h_reco3Daughters_p -> Fill( map_RecoDaughters[map_RecoDaughters[it->first][i2] ].size() ) ;}
         else { h_reco3Daughters_p -> Fill(0);}
       }
     } 
@@ -1181,9 +1156,21 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   recoevent_tree -> Branch( "numb_nu_reco",             &numb_nu_reco,        "numb_nu_reco/I");
   recoevent_tree -> Branch( "nu_reco_vertex",           &nu_reco_vertex,      "nu_reco_vertex[3]/D");
   recoevent_tree -> Branch( "error_vertex_reco",        &error_vertex_reco,   "error_vertex_reco/D");
-  recoevent_tree -> Branch( "daughter_hiearchy" , "std::vector< std::vector< int > >", &daughter_hiearchy);
-
-
+  recoevent_tree -> Branch( "map_MCID_RecoID",          "std::map<int,int>",  &map_MCID_RecoID);
+  recoevent_tree -> Branch( "mapMC_reco_pdg",           "std::map<int,int>",  &mapMC_reco_pdg);
+  recoevent_tree -> Branch( "map_RecoContained",        "std::map<int,std::vector<bool>>",  &map_RecoContained);
+  recoevent_tree -> Branch( "map_RecoHits",             "std::map<int,int>",  &map_RecoHits);
+  recoevent_tree -> Branch( "map_RecoPrimary",          "std::map<int,int>",  &map_RecoPrimary);
+  recoevent_tree -> Branch( "map_RecoDaughters",        "std::map<int,std::vector<int>>",  &map_RecoDaughters);
+  recoevent_tree -> Branch( "map_PandoraPDG",           "std::map<int,int>",  &map_PandoraPDG);
+  recoevent_tree -> Branch( "map_RecoLength",           "std::map<int,double>",  &map_RecoLength);
+  recoevent_tree -> Branch( "map_RecoKEnergy",          "std::map<int,double>",  &map_RecoKEnergy);
+  recoevent_tree -> Branch( "map_RecoXPosition",        "std::map<int,std::vector<double>>",  &map_RecoXPosition);
+  recoevent_tree -> Branch( "map_RecoYPosition",        "std::map<int,std::vector<double>>",  &map_RecoYPosition);
+  recoevent_tree -> Branch( "map_RecoZPosition",        "std::map<int,std::vector<double>>",  &map_RecoZPosition);
+  recoevent_tree -> Branch( "map_RecodEdx",             "std::map<int,std::vector<double>>",  &map_RecodEdx);
+  recoevent_tree -> Branch( "map_RecoHiearchy",        "std::map<int,int>",  &map_RecoHiearchy);
+   
   //set directory
   mcparticle_tree -> SetDirectory(0);
   recoevent_tree -> SetDirectory(0);
@@ -1219,9 +1206,6 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   SelectedBorderY = 15 ;
   SelectedBorderZ = 15 ; //47.5 ;
 
-
-  // Clear variables
-
   // event tree variables 
   event_id = 0 ;
   is_reconstructed   =  false ; 
@@ -1251,23 +1235,11 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   Thas_primary_mu = false ;
   Thas_primary_pi = false ;  
   mapTPiDaughterPdg.clear();
-  map_recoDaughters.clear();
-  map_RecoHiearchy.clear();
-  map_RecoContained.clear();
-  map_PandoraPDG.clear();
-  map_MCID_RecoID.clear();
 
   // RECO INFO
   tr_id_best = 0;
-  primary_vcontained = false ;
-  primary_econtained = false ;
   is_candidate = false ; 
-  for ( int i = 0 ; i < 10000 ; ++i ){
-    r_pdg_primary[i] = 0 ;
-    rnu_hits[i] = 0;
-  }
-
-  rtrack_hits = 0 ;
+  
   nu_reconstructed = false ;
   nu_rvertex_contained = true ; 
   numb_nu_reco = 0 ;
@@ -1276,10 +1248,13 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
     nu_reco_vertex[i] = 0 ;
   }
 
-  error_vertex_reco = 0 ;
-  daughters.clear() ;
-  daughter_hiearchy.clear() ; 
-  
+  error_vertex_reco = 0 ; 
+
+  map_MCID_RecoID.clear();
+  map_RecoContained.clear();
+  map_PandoraPDG.clear();
+  map_RecoDaughters.clear();
+  map_RecoHiearchy.clear();
 
 }
 
