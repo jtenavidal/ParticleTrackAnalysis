@@ -81,6 +81,8 @@ public:
   // -> Added functions ( * )
   void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;
   bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f );
+  bool IsMuonChi2( art::Ptr<anab::ParticleID> const & pid_f );
+  bool IsPionChi2( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
   double EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) ;
@@ -228,6 +230,25 @@ private:
   TH1D * h_reco3Daughters_pi = new TH1D("reco3Daughters_pi", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
   TH1D * h_reco3Daughters_p  = new TH1D("reco3Daughters_p", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
 
+  // reconstructed information
+  // For the time being I will just fill the muon ones. No signal events for pions
+  TH1D * h_recoSLength_mu = new TH1D("recoSLength_mu", " Signal Muon reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoSLength_pi = new TH1D("recoSLength_pi", " Signal Pion reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoSLength_p  = new TH1D("recoSLength_p",  " Signal Proton reconstructed length ", 50, 0, 400 ) ;
+
+  TH1D * h_recoSMomentum_mu = new TH1D("recoSMomentum_mu", " Signal Muon reconstructed momentum ", 50, 0, 4 ) ;
+  TH1D * h_recoSMomentum_pi = new TH1D("recoSMomentum_pi", " Signal Pion reconstructed momentum ", 50, 0, 4 ) ;
+  TH1D * h_recoSMomentum_p  = new TH1D("recoSMomentum_p",  " Signal Proton reconstructed momentum ", 50, 0, 4 ) ;
+
+  TH1D * h_recoBGLength_mu = new TH1D("recoBGLength_mu", " BG Muon reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoBGLength_pi = new TH1D("recoBGLength_pi", " BG Pion reconstructed length ", 50, 0, 400 ) ;
+  TH1D * h_recoBGLength_p  = new TH1D("recoBGLength_p",  " BG Proton reconstructed length ", 50, 0, 400 ) ;
+
+  TH1D * h_recoBGMomentum_mu = new TH1D("recoSMomentum_mu", " BG Muon reconstructed momentum ", 50, 0, 4 ) ;
+  TH1D * h_recoBGMomentum_pi = new TH1D("recoBGMomentum_pi", " BG Pion reconstructed momentum ", 50, 0, 4 ) ;
+  TH1D * h_recoBGMomentum_p  = new TH1D("recoBGMomentum_p",  " BG Proton reconstructed momentum ", 50, 0, 4 ) ;
+
+  
   };
 
 
@@ -737,20 +758,25 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
   return tr_id_best ;
 }
 
+
+bool test::NeutrinoTopologyAnalyzer::IsMuonChi2( art::Ptr<anab::ParticleID> const & pid_f ) {
+  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Muon() ) return true ; 
+  else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ;
+  else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) return true ; 
+  return false ;
+}
+
+bool test::NeutrinoTopologyAnalyzer::IsPionChi2( art::Ptr<anab::ParticleID> const & pid_f ) {
+  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Pion() ) return true ; 
+  else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ;
+  else if( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) return true ; 
+  return false ;
+}
+
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f )
 {
 
-  // This may increase the efficieny to find candidates. Adding a transition region between muon proton cut. Considering the value of chi2candidate 
-  //if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 50 && ( pid_f -> Chi2Muon() < 50 || pid_f -> Chi2Pion() < 50 ) ) return true ;
-
-  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70 
-      && ( pid_f -> Chi2Proton() < 2 * pid_f -> Chi2Muon() || pid_f -> Chi2Proton() < 2 * pid_f -> Chi2Pion() ) )   return false ;
-  // Consistent cut based on chi2 under proton hipotesis. Unlikely to have chi2 values higher than 100 if it's a proton. 
-  if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ; // remove this line for pure Chi2 method 
-
-  // Use Chi2 under muon pion and proton hipotesis 
-  if( ( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() ) || ( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() ) ) return true ;
-	 
+  if( IsMuonChi2( pid_f ) == true || IsPionChi2( pid_f ) == true ) return true ;
   return false ; 
 }
 
@@ -781,39 +807,17 @@ void test::NeutrinoTopologyAnalyzer::IsReconstructed( int  const & best_id )  {
   }
 }
 
+
 double test::NeutrinoTopologyAnalyzer::EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) {
   // True information -> Calculated in the MC loop 
-
-  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70 
-      && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Muon() ) {
+  if( IsMuonChi2( pid_f ) == true ) {
     ++reco_primary_mu ;
     if( TMath::Abs(true_pdg) == 13 ) { ++signal_mu ;
     } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
     } else if( true_pdg == 2212 ) { ++bg_mu_p ;
     } else { ++bg_mu_others ; }
         
-  } else if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 50 
-	     && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Pion() ) {
-    ++reco_primary_pi ;
-    if( TMath::Abs(true_pdg) == 211 ) { ++signal_pi ;
-    } else if( TMath::Abs(true_pdg) == 13  ) { ++bg_pi_mu ; // check for miss reco particles . was reco as pion is a muon
-    } else if( true_pdg == 2212 ) { ++bg_pi_p ;
-    } else { ++bg_mu_others ; }
-
-  }else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) {
-    if( particle == "pion" ) return eff_pi ; 
-    if( particle == "purity pion" ) return purity_pi ; 
-    if( particle == "purity muon" ) return purity_mu ; 
-    return eff_mu;
-  // reco information -> Need to call in reco loop! If not muon check if pion, avoid double-id 
-  } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) {
-    ++reco_primary_mu ;
-    if( TMath::Abs(true_pdg) == 13 ) { ++signal_mu ;
-    } else if( TMath::Abs(true_pdg) == 211  ) { ++bg_mu_pi ;
-    } else if( true_pdg == 2212 ) { ++bg_mu_p ;
-    } else { ++bg_mu_others ; }
-
-  } else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) {
+  } else if( IsPionChi2( pid_f ) == true ) {
     ++reco_primary_pi ;
     if( TMath::Abs(true_pdg) == 211 ) { ++signal_pi ;
     } else if( TMath::Abs(true_pdg) == 13  ) { ++bg_pi_mu ; // check for miss reco particles . was reco as pion is a muon
