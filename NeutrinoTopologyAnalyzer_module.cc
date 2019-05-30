@@ -231,25 +231,25 @@ private:
   TH1D * h_recoLength_pi = new TH1D("recoLength_pi", " Candidate true Pion reconstructed length ", 50, 0, 400 ) ;
   TH1D * h_recoLength_p  = new TH1D("recoLength_p",  " Candidate true Proton reconstructed length ", 50, 0, 400 ) ;
 
-  TH1D * h_recoKE_mu = new TH1D("recoKE_mu", " Candidate true Muon reconstructed KE ", 50, 0, 4 ) ;
-  TH1D * h_recoKE_pi = new TH1D("recoKE_pi", " Candidate true Pion reconstructed KE ", 50, 0, 4 ) ;
-  TH1D * h_recoKE_p  = new TH1D("recoKE_p",  " Candidate true Proton reconstructed KE ", 50, 0, 4 ) ;
+  TH1D * h_recoKE_mu = new TH1D("recoKE_mu", " Candidate true Muon reconstructed KE ", 50, 0, 2000 ) ;
+  TH1D * h_recoKE_pi = new TH1D("recoKE_pi", " Candidate true Pion reconstructed KE ", 50, 0, 2000 ) ;
+  TH1D * h_recoKE_p  = new TH1D("recoKE_p",  " Candidate true Proton reconstructed KE ", 50, 0, 2000 ) ;
 
   TH1D * h_recoLength_mu_noD = new TH1D("recoLength_mu_noD", " Candidate true Muon reconstructed length with no daughters", 50, 0, 400 ) ;
   TH1D * h_recoLength_pi_noD = new TH1D("recoLength_pi_noD", " Candidate true Pion reconstructed length with no daughters", 50, 0, 400 ) ;
   TH1D * h_recoLength_p_noD  = new TH1D("recoLength_p_noD",  " Candidate true Proton reconstructed length with no daughters", 50, 0, 400 ) ;
 
-  TH1D * h_recoKE_mu_noD = new TH1D("recoKE_mu_noD", " Candidate true Muon reconstructed KE with no daughters", 50, 0, 4 ) ;
-  TH1D * h_recoKE_pi_noD = new TH1D("recoKE_pi_noD", " Candidate true Pion reconstructed KE with no daughters", 50, 0, 4 ) ;
-  TH1D * h_recoKE_p_noD  = new TH1D("recoKE_p_noD",  " Candidate true Proton reconstructed KE with no daughters", 50, 0, 4 ) ;
+  TH1D * h_recoKE_mu_noD = new TH1D("recoKE_mu_noD", " Candidate true Muon reconstructed KE with no daughters", 50, 0, 2000 ) ;
+  TH1D * h_recoKE_pi_noD = new TH1D("recoKE_pi_noD", " Candidate true Pion reconstructed KE with no daughters", 50, 0, 2000 ) ;
+  TH1D * h_recoKE_p_noD  = new TH1D("recoKE_p_noD",  " Candidate true Proton reconstructed KE with no daughters", 50, 0, 2000 ) ;
 
   TH1D * h_recoLength_mu_wD = new TH1D("recoLength_mu_wD", " Candidate true Muon reconstructed length with daughters", 50, 0, 400 ) ;
   TH1D * h_recoLength_pi_wD = new TH1D("recoLength_pi_wD", " Candidate true Pion reconstructed length with daughters", 50, 0, 400 ) ;
   TH1D * h_recoLength_p_wD  = new TH1D("recoLength_p_wD",  " Candidate true Proton reconstructed length with daughters", 50, 0, 400 ) ;
 
-  TH1D * h_recoKE_mu_wD = new TH1D("recoKE_mu_wD", " Candidate true Muon reconstructed KE with daughters", 50, 0, 4 ) ;
-  TH1D * h_recoKE_pi_wD = new TH1D("recoKE_pi_wD", " Candidate true Pion reconstructed KE with daughters", 50, 0, 4 ) ;
-  TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 4 ) ;
+  TH1D * h_recoKE_mu_wD = new TH1D("recoKE_mu_wD", " Candidate true Muon reconstructed KE with daughters", 50, 0, 2000 ) ;
+  TH1D * h_recoKE_pi_wD = new TH1D("recoKE_pi_wD", " Candidate true Pion reconstructed KE with daughters", 50, 0, 2000 ) ;
+  TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 2000 ) ;
   
   };
 
@@ -671,7 +671,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	      map_RecoHits[ part_id_f ] += track_f[n]->LastValidPoint() + 1 ;
 	      map_RecoLength[ part_id_f ] += track_f[n]->Length() ;
 	      map_RecoKEnergy[ part_id_f ] += cal_f[m]->KineticEnergy(); 
-
 	      for( unsigned int l = 0 ; l < track_f[n]->LastValidPoint() + 1 ; ++l ) {
 		map_RecoXPosition[ part_id_f ].push_back( track_f[n]->TrajectoryPoint( l ).position.X() ) ; 
 		map_RecoYPosition[ part_id_f ].push_back( track_f[n]->TrajectoryPoint( l ).position.Y() ) ; 
