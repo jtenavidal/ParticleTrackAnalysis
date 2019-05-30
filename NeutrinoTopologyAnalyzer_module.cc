@@ -140,7 +140,7 @@ private:
   bool is_cc ; 
 
   // Truth information of primary particles 
-  std::map < int, int > mapTDaughters, mapTRescatter, mapTPrimary, mapTPiDaughterPdg; 
+  std::map < int, int >  map_IsReconstructed, mapTDaughters, mapTRescatter, mapTPrimary, mapTPiDaughterPdg; 
   std::map < int, double > mapTLength;
   //  std::map < int, bool > mapTPrimary ;
   bool Thas_primary_mu, Thas_primary_pi, Tmuon_decay, Tdecay_e, Tdecay_nue, Tdecay_numu ; 
@@ -172,7 +172,7 @@ private:
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_recoDaughters ; 
-  std::map< int , int > map_IsReconstructed, map_RecoHiearchy ; 
+  std::map< int , int > map_RecoHiearchy ; 
 
   // Efficiency calculation: just calorimetry information
   int reco_primary_mu , reco_primary_pi ;
@@ -420,10 +420,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     is_reconstructed = true ; 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-      
-      if( pfparticle->IsPrimary() == 1 ) { //found primary particle => NEUTRINO
-	// Get vertex association
-	numb_nu_reco += 1 ;
+      if( pfparticle->IsPrimary() == 1 && pfparticle->NumDaughters() != 0 ) { //found primary particle => NEUTRINO real candidate. Has daughers!
+	// Get vertex association 
+	numb_nu_reco += 1 ; // now checking number of neutrinos with daughters
 	if( !nu_reconstructed ) { // only looking for one neutrino event -> Check why there can be more than one  
 	  nu_reconstructed = true ; 
 	  
@@ -447,38 +446,34 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    int part_MCID_f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
 	    is_candidate = false ; // reset for each pfparticle daughter of the neutrino
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
-	    std::cout<< "j is " << j << " reco id = " << part_id_f <<  " with pdg " << mapMC_reco_pdg[part_MCID_f] << "   -- MC ID = " << part_MCID_f << std::endl;
-	    std::cout<< " is candidate ? = " << is_candidate << std::endl;
-	    
+	      
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
 	      map_MCID_RecoID[part_id_f] = part_MCID_f ; 
 	      map_RecoHiearchy[part_id_f] = 1 ; // reconstructed as primary 
 	      map_PandoraPDG[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	      map_RecoContained[part_id_f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
-	      std::cout<< "      pandora pdg = " << map_PandoraPDG[part_id_f] << std::endl;
-
+	    
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
 		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
-		map_recoDaughters[ part_id_f ].push_back( part_id_2f ) ; //particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2] ) ;
+		map_MCID_RecoID[part_id_2f] = part_MCID_2f ; 
+		map_recoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
 		map_RecoHiearchy[part_id_2f] = 2 ; 
 		map_PandoraPDG[part_id_2f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ;
 		map_RecoContained[part_id_2f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_2f ) ;
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
-		std::cout<< "j2 is " << j2 << " reco 2id = " << part_id_2f <<  " with pdg " << mapMC_reco_pdg[part_MCID_2f] << "   -- MC ID = " << part_MCID_2f << " pandora pdg = " << map_PandoraPDG[part_id_2f] << std::endl;
-
+	
 		for( int j3 = 0 ; j3 < particleMap[particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2]] -> NumDaughters() ; ++j3 ) {
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
+		  map_MCID_RecoID[part_id_3f] = part_MCID_3f ; 
 		  map_recoDaughters[part_id_2f].push_back( part_id_3f ) ;
 		  map_RecoHiearchy[part_id_3f] = 3 ; 
 		  map_PandoraPDG[part_id_3f] = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]] ->PdgCode() ; 
 		  map_RecoContained[part_id_3f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_3f ) ;
 		  StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
-		  std::cout<< "j3 is " << j3 << " reco 3id = " << part_id_3f <<  " with pdg " << mapMC_reco_pdg[part_MCID_3f] << "   -- MC ID = " << part_MCID_3f <<" pandora pdg = " << map_PandoraPDG[part_id_3f] << std::endl;
-
 		}
 	      }	
 	    }
@@ -550,16 +545,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   }
   // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
-    /*    std::cout << " ----------------------------------- " << std::endl;
-    std::cout << " loading maps " << std::endl;
-    std::cout << " id particle " << it->first << std::endl;
-    std::cout << " process hiearchy " << it->second << std::endl;
-    std::cout << " pdg " << mapMC_reco_pdg[ it -> first ] << std::endl;
-    std::cout << " Pandora PDG = " << map_PandoraPDG[ it->first ] <<std::endl;
-    
-    for( unsigned int i2 = 0 ; i2 < map_recoDaughters[it->first].size() ; ++i2 ){
-      std::cout<< " daughter is = " << map_recoDaughters[it->first][i2] << std::endl;
-    }*/
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 // check if primary and truth pdg code
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){ // check if contained 
       if( map_recoDaughters.find( it -> first ) != map_recoDaughters.end() ) { 
@@ -775,7 +760,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     // Loop over tracks found for track_f
     for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
       has_reco_tracks = true ; 
-      //      rLength   += track_f[n]->Length() ; // This must change now
       // Get track based variables
       std::vector< art::Ptr<recob::Hit> > hit_f        = findHits.at(track_f[n]->ID()); 
       std::vector< art::Ptr<anab::Calorimetry> > cal_f = findCalorimetry.at(track_f[n]->ID());
@@ -815,7 +799,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	      if( tr_id_hits > 0 ) tr_id_best = tr_id_hits ;
 	      else if( tr_id_energy > 0 ) tr_id_best = tr_id_energy ;
 	      else if( tr_id_charge > 0 ) tr_id_best = tr_id_hits ;
-	      else tr_id_best = 9999 ; // couldn't find id 
+	      else tr_id_best = -9999 ; // couldn't find id 
 	    }
 
 	    IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
@@ -859,6 +843,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    }
 	  }
 	} //close calo
+
 	if( is_candidate == true ) {
 	  if( TMath::Abs(mapMC_reco_pdg[ part_id_f ]) == 13   ) Length_Tmu -> Fill( map_RecoLength[ part_id_f ] ) ;
 	  if( TMath::Abs(mapMC_reco_pdg[ part_id_f ]) == 211  ) Length_Tpi -> Fill( map_RecoLength[ part_id_f ] ) ;
@@ -931,7 +916,7 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
 	if( tr_id_hits > 0 ) tr_id_best = tr_id_hits ;
 	else if( tr_id_energy > 0 ) tr_id_best = tr_id_energy ;
 	else if( tr_id_charge > 0 ) tr_id_best = tr_id_hits ;
-	else tr_id_best = 9999 ; // couldn't find id 
+	else tr_id_best = -9999 ; // couldn't find id 
       }
     }
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
@@ -945,7 +930,7 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
       
       std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
       tr_id_best = ShowerTrackInfo.first ;
-      if( !ShowerTrackInfo.first ) tr_id_best = 9999 ; // default no match 
+      if( !ShowerTrackInfo.first ) tr_id_best = -9999 ; // default no match 
     }
   }// end shower
   return tr_id_best ;
