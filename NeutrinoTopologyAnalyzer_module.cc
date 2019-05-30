@@ -1129,7 +1129,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   TFinalStatePi -> SetStats(0); 
   TFinalStatePi -> GetXaxis() -> SetTitle(" pdg rescatter" ) ; 
   TFinalStatePi -> Draw();
-
+  l->Clear();
   c->SaveAs("pion_finalstate.root") ;
   c->Clear();
   //**********************************************************************//  
@@ -1142,11 +1142,17 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_p -> SetLineColor( 4 ) ;
   
   h_recoLength_mu -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
+
+  
+  l->SetBorderSize(0);
+  l->AddEntry(  h_recoLength_mu,  " True Muon, reco length",    "l" );
+  l->AddEntry(  h_recoLength_pi,  " True Muon, reco length",    "l" );
+  l->AddEntry(  h_recoLength_p,  " True Muon, reco length",    "l" );
   
   h_recoLength_mu -> Draw( ) ;
   h_recoLength_pi -> Draw( "same" ) ;
   h_recoLength_p -> Draw( "same" ) ;
-
+  l->Draw();
   c->SaveAs("Length_recoCandidates.root");
   c->Clear();
   //**********************************************************************//  
@@ -1163,7 +1169,12 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_mu -> Draw( ) ;
   h_recoKE_pi -> Draw( "same" ) ;
   h_recoKE_p -> Draw( "same" ) ;
-
+  
+  l->AddEntry(  h_recoKE_mu,  " True Muon, reco KE",    "l" );
+  l->AddEntry(  h_recoKE_pi,  " True Muon, reco KE",    "l" );
+  l->AddEntry(  h_recoKE_pi,  " True Muon, reco KE",    "l" );
+  l->Draw();
+  l->Clear();
   c->SaveAs("KE_recoCandidates.root");
   c->Clear();
   //**********************************************************************//  
@@ -1181,6 +1192,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_pi_noD -> Draw( "same" ) ;
   h_recoKE_p_noD -> Draw( "same" ) ;
 
+  l->AddEntry(  h_recoKE_mu_noD,  " True Muon, reco KE",    "l" );
+  l->AddEntry(  h_recoKE_pi_noD,  " True Muon, reco KE",    "l" );
+  l->AddEntry(  h_recoKE_pi_noD,  " True Muon, reco KE",    "l" );
+  l->Draw();
+  l->Clear();
   c->SaveAs("KE_recoCandidates_nodaughters.root");
   c->Clear();
 
@@ -1198,7 +1214,12 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_mu_noD -> Draw( ) ;
   h_recoLength_pi_noD -> Draw( "same" ) ;
   h_recoLength_p_noD -> Draw( "same" ) ;
-
+  l->AddEntry(  h_recoLength_mu_noD,  " True Muon, reco Length",    "l" );
+  l->AddEntry(  h_recoLength_pi_noD,  " True Muon, reco Length",    "l" );
+  l->AddEntry(  h_recoLength_pi_noD,  " True Muon, reco Length",    "l" );
+  l->Draw();
+  l->Clear();
+  
   c->SaveAs("Length_recoCandidates_noD.root");
   c->Clear();
   //**********************************************************************//  
@@ -1215,7 +1236,12 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_mu_wD -> Draw( ) ;
   h_recoKE_pi_wD -> Draw( "same" ) ;
   h_recoKE_p_wD -> Draw( "same" ) ;
-
+  l->AddEntry(  h_recoKE_mu_wD,  " True Muon, reco KE",    "l" );
+  l->AddEntry(  h_recoKE_pi_wD,  " True Muon, reco KE",    "l" );
+  l->AddEntry(  h_recoKE_pi_wD,  " True Muon, reco KE",    "l" );
+  l->Draw();
+  l->Clear();
+  
   c->SaveAs("KE_recoCandidates_wD.root");
   c->Clear();
 
@@ -1233,7 +1259,13 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_mu_wD -> Draw( ) ;
   h_recoLength_pi_wD -> Draw( "same" ) ;
   h_recoLength_p_wD -> Draw( "same" ) ;
-
+  l->AddEntry(  h_recoLength_mu_wD,  " True Muon, reco Length",    "l" );
+  l->AddEntry(  h_recoLength_pi_wD,  " True Muon, reco Length",    "l" );
+  l->AddEntry(  h_recoLength_pi_wD,  " True Muon, reco Length",    "l" );
+  l->Draw();
+  l->Clear();
+  
+  
   c->SaveAs("Length_recoCandidates_wD.root");
   c->Clear();
   //**********************************************************************//  
