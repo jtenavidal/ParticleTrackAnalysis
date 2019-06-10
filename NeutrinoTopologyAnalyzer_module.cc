@@ -255,7 +255,11 @@ private:
   TH1D * h_recoKE_pi_wD = new TH1D("recoKE_pi_wD", " Candidate true Pion reconstructed KE with daughters", 50, 0, 1000) ;
   TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 1000) ;
 
-  };
+  THStack * h_MichaelLength = new THStack("MichaelLength", "MichaelLength");
+  TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael KE reco " , 50, 0, 1000 );
+  TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael KE miss " , 50, 0, 1000 );
+  
+};
 
 
 test::NeutrinoTopologyAnalyzer::NeutrinoTopologyAnalyzer(fhicl::ParameterSet const& p)
@@ -563,7 +567,18 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
         else { h_reco3Daughters_mu -> Fill(0);}
       }
     } 
+    // Michael electron length study
 
+    if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 
+	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
+      if( Tmuon_decay == true ){
+	if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() )
+	  h_MichaelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	else h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+      } 
+    }
+
+    // pion study 
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
@@ -1492,9 +1507,27 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
  
   c->SaveAs("Daughters_3.root") ; 
   c->Clear();
+  l->Clear();
   //**********************************************************************//  
+  h_MichaelLength_reco->SetFillColor(4);
+  h_MichaelLength_miss->SetFillColor(2);
   
+  l->AddEntry(h_MichaelLength_reco, "MichaelLength reco") ;
+  l->AddEntry(h_MichaelLength_miss, "MichaelLength miss") ;
+
+  h_MichaelLength_reco -> GetXaxis() -> SetTitle( "True #e^{-} KE" ) ; 
+  h_MichaelLength_reco -> GetYaxis() -> SetTitle( "#events" ) ; 
+
+  h_MichaelLength->Add(h_MichaelLength_reco);
+  h_MichaelLength->Add(h_MichaelLength_miss);
   
+  h_MichaelLength->Draw();
+
+  c->SaveAs("MichaelLength.root");
+  c->Clear();
+  l->Clear();
+  //**********************************************************************//  
+
   delete mcparticle_tree ;
   delete recoevent_tree ; 
 }
