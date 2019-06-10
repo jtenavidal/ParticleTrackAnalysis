@@ -256,8 +256,8 @@ private:
   TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 1000) ;
 
   THStack * h_MichaelLength = new THStack("MichaelLength", "MichaelLength");
-  TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael KE reco " , 50, 0, 1000 );
-  TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael KE miss " , 50, 0, 1000 );
+  TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael KE reco " , 20, 0, 500 );
+  TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael KE miss " , 20, 0, 500 );
   
 };
 
