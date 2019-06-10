@@ -1122,9 +1122,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   Chi2p_Tpi->Scale(1/Chi2p_Tpi->GetEntries());
   Chi2p_Tp->Scale(1/Chi2p_Tp->GetEntries());
   
-  Chi2p_Tmu->Draw();
-  Chi2p_Tpi->Draw("same");
-  Chi2p_Tp->Draw("same");
+  Chi2p_Tmu->Draw("HIST");
+  Chi2p_Tpi->Draw("same HIST");
+  Chi2p_Tp->Draw("same HIST");
   l->Draw();
 
   c->SaveAs("chi2_test.root");
@@ -1132,7 +1132,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   TFinalStatePi -> SetStats(0); 
   TFinalStatePi -> GetXaxis() -> SetTitle(" pdg rescatter" ) ; 
-  TFinalStatePi -> Draw();
+  TFinalStatePi -> Draw("HIST");
   c->SaveAs("pion_finalstate.root") ;
   l->Clear();
   c->Clear();
@@ -1156,9 +1156,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_pi -> Scale(1/h_recoLength_pi->GetEntries());
   h_recoLength_p ->  Scale(1/h_recoLength_p->GetEntries());
   
-  h_recoLength_mu -> Draw( ) ;
-  h_recoLength_pi -> Draw( "same" ) ;
-  h_recoLength_p -> Draw( "same" ) ;
+  h_recoLength_mu -> Draw( "HIST" ) ;
+  h_recoLength_pi -> Draw( "same HIST" ) ;
+  h_recoLength_p -> Draw( "same HIST" ) ;
   c->SaveAs("Length_recoCandidates.root");
   l->Draw();
   c->Clear();
@@ -1173,9 +1173,13 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   
   h_recoKE_mu -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
   
-  h_recoKE_mu -> Draw( ) ;
-  h_recoKE_pi -> Draw( "same" ) ;
-  h_recoKE_p -> Draw( "same" ) ;
+  h_recoKE_mu -> Scale(1/h_recoKE_mu->GetEntries());
+  h_recoKE_pi -> Scale(1/h_recoKE_pi->GetEntries());
+  h_recoKE_p -> Scale(1/h_recoKE_p->GetEntries());
+  
+  h_recoKE_mu -> Draw("HIST" ) ;
+  h_recoKE_pi -> Draw( "same HIST" ) ;
+  h_recoKE_p -> Draw( "same HIST" ) ;
   
   l->AddEntry(  h_recoKE_mu,  " True Muon, reco KE",    "l" );
   l->AddEntry(  h_recoKE_pi,  " True Muon, reco KE",    "l" );
@@ -1199,9 +1203,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_pi_noD -> Scale(1/h_recoKE_pi_noD->GetEntries());
   h_recoKE_p_noD -> Scale(1/h_recoKE_p_noD->GetEntries());
 
-  h_recoKE_mu_noD -> Draw( ) ;
-  h_recoKE_pi_noD -> Draw( "same" ) ;
-  h_recoKE_p_noD -> Draw( "same" ) ;
+  h_recoKE_mu_noD -> Draw("HIST" ) ;
+  h_recoKE_pi_noD -> Draw( "same HIST" ) ;
+  h_recoKE_p_noD -> Draw( "same HIST" ) ;
 
   l->AddEntry(  h_recoKE_mu_noD,  " True Muon, reco KE",    "l" );
   l->AddEntry(  h_recoKE_pi_noD,  " True Muon, reco KE",    "l" );
@@ -1226,8 +1230,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_pi_noD -> Scale(1/h_recoLength_pi_noD->GetEntries());
   h_recoLength_p_noD -> Scale(1/h_recoLength_p_noD->GetEntries());
   
-  h_recoLength_mu_noD -> Draw( ) ;
-  h_recoLength_pi_noD -> Draw( "same" ) ;
+  h_recoLength_mu_noD -> Draw( "HIST") ;
+  h_recoLength_pi_noD -> Draw( "same HIST" ) ;
   h_recoLength_p_noD -> Draw( "same" ) ;
 
   l->AddEntry(  h_recoLength_mu_noD,  " True Muon, reco Length",    "l" );
@@ -1252,9 +1256,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_pi_wD -> Scale(1./h_recoKE_pi_wD->GetEntries());
   h_recoKE_p_wD -> Scale(1./h_recoKE_p_wD->GetEntries());
 
-  h_recoKE_mu_wD -> Draw( ) ;
-  h_recoKE_pi_wD -> Draw( "same" ) ;
-  h_recoKE_p_wD -> Draw( "same" ) ;
+  h_recoKE_mu_wD -> Draw("HIST" ) ;
+  h_recoKE_pi_wD -> Draw( "same HIST" ) ;
+  h_recoKE_p_wD -> Draw( "same HIST" ) ;
   l->AddEntry(  h_recoKE_mu_wD,  " True Muon, reco KE",    "l" );
   l->AddEntry(  h_recoKE_pi_wD,  " True Muon, reco KE",    "l" );
   l->AddEntry(  h_recoKE_pi_wD,  " True Muon, reco KE",    "l" );
@@ -1278,9 +1282,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_pi_wD -> Scale(1/h_recoLength_pi_wD->GetEntries());
   h_recoLength_p_wD -> Scale(1/h_recoLength_pi_wD->GetEntries());
 
-  h_recoLength_mu_wD -> Draw( ) ;
-  h_recoLength_pi_wD -> Draw( "same" ) ;
-  h_recoLength_p_wD -> Draw( "same" ) ;
+  h_recoLength_mu_wD -> Draw("HIST" ) ;
+  h_recoLength_pi_wD -> Draw( "same HIST" ) ;
+  h_recoLength_p_wD -> Draw( "same HIST" ) ;
   l->AddEntry(  h_recoLength_mu_wD,  " True Muon, reco Length",    "l" );
   l->AddEntry(  h_recoLength_pi_wD,  " True Muon, reco Length",    "l" );
   l->AddEntry(  h_recoLength_pi_wD,  " True Muon, reco Length",    "l" );
@@ -1304,8 +1308,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   l->AddEntry(h_MCLength_mu_TPC_signal, "mu, TPC signal");
   l->AddEntry(h_MCLength_mu_TPC_miss, "mu, TPC miss");
 
-  h_MCLength_mu_TPC_miss     -> Draw();
-  h_MCLength_mu_TPC_signal   -> Draw("same");
+  h_MCLength_mu_TPC_miss     -> Draw("HIST");
+  h_MCLength_mu_TPC_signal   -> Draw("same HIST");
   l->Draw();
    
   c->SaveAs("MCLength_mu_signalTPC.root") ;
@@ -1327,8 +1331,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   l->AddEntry(h_MCLength_pi_TPC_signal, "pi, TPC signal");
   l->AddEntry(h_MCLength_pi_TPC_miss, "pi, TPC miss");
   
-  h_MCLength_pi_TPC_miss -> Draw();
-  h_MCLength_pi_TPC_signal -> Draw("same");
+  h_MCLength_pi_TPC_miss -> Draw("HIST");
+  h_MCLength_pi_TPC_signal -> Draw("same HIST");
   l->Draw();
    
   c->SaveAs("MCLength_pi_signalTPC.root") ;
@@ -1350,8 +1354,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   l->AddEntry(h_MCLength_p_TPC_signal, "p, TPC signal");
   l->AddEntry(h_MCLength_p_TPC_miss, "p, TPC miss");
 
-  h_MCLength_p_TPC_miss   -> Draw();
-  h_MCLength_p_TPC_signal -> Draw("same");
+  h_MCLength_p_TPC_miss   -> Draw("HIST");
+  h_MCLength_p_TPC_signal -> Draw("same HIST");
   l->Draw();
  
   c->SaveAs("MCLength_p_signalTPC.root") ;
@@ -1372,9 +1376,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoDaughters_pi -> Scale(1/h_recoDaughters_pi->GetEntries());
   h_recoDaughters_p  -> Scale(1/h_recoDaughters_p->GetEntries());
 
-  h_recoDaughters_mu -> Draw() ; 
-  h_recoDaughters_pi -> Draw("same") ; 
-  h_recoDaughters_p  -> Draw("same") ; 
+  h_recoDaughters_mu -> Draw("HIST") ; 
+  h_recoDaughters_pi -> Draw("same HIST") ; 
+  h_recoDaughters_p  -> Draw("same HIST") ; 
   l->Draw();
   c->SaveAs("Daughters_primary.root") ; 
   c->Clear();
@@ -1397,9 +1401,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_reco3Daughters_pi -> Scale(1/h_reco3Daughters_pi->GetEntries());
   h_reco3Daughters_p  -> Scale(1/h_reco3Daughters_p->GetEntries());
 
-  h_reco3Daughters_mu -> Draw() ; 
-  h_reco3Daughters_pi -> Draw("same") ; 
-  h_reco3Daughters_p  -> Draw("same") ; 
+  h_reco3Daughters_mu -> Draw("HIST") ; 
+  h_reco3Daughters_pi -> Draw("same HIST") ; 
+  h_reco3Daughters_p  -> Draw("same HIST") ; 
   l->Draw();
  
   c->SaveAs("Daughters_3.root") ; 
