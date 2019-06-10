@@ -32,6 +32,24 @@
 ******************** DECAY MUON- STUDY *********************** 
  Number of true mu- (primary) = 419
  Number of decaying mu- = 74
+ Number of events in which true decay + mu- has daughters = 16
+                         Pandora-PDG code daugher Track    = 0
+                         Pandora-PDG code daugher Shower   = 16
+                         Particle-PDG code Electron        = 6
+                         Particle-PDG code Photon          = 2
+                         Particle-PDG code Muon            = 2
+                         Particle-PDG code Pion            = 0
+                         Particle-PDG code Proton          = 4
+                         Particle-PDG code Other           = 2
+ Number of events in which false decay + mu- has daughters = 13
+                         Pandora-PDG code daugher Track    = 0
+                         Pandora-PDG code daugher Shower   = 13
+                         Particle-PDG code Electron        = 0
+                         Particle-PDG code Photon          = 2
+                         Particle-PDG code Muon            = 4
+                         Particle-PDG code Pion            = 0
+                         Particle-PDG code Proton          = 6
+                         Particle-PDG code Other           = 1
  
 
 ******************** STUDY PANDORA RECONSTRUCTION ************************************* 

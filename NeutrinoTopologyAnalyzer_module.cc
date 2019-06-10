@@ -159,7 +159,9 @@ private:
   int numb_nu_reco ;
   double nu_reco_vertex[3] ;
   double error_vertex_reco ;
-  
+  bool Tmuon_recodecay, Tmuon_absorbed ;
+  int T_recodecay, T_recoabsorbed ;
+  int mu_daughterPDG_tr, mu_daughterPDG_shw;
   // reco - true id matching variables. tr_id_best -> best of the three methods
   int tr_id_best, tr_id_energy, tr_id_charge, tr_id_hits;
 
@@ -175,7 +177,7 @@ private:
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_RecoDaughters ; 
   std::map< int , int > map_RecoHiearchy ; 
-
+  
   // Efficiency calculation: just calorimetry information
   int reco_primary_mu , reco_primary_pi ;
   int true_mu, true_pi, true_p ; // total pdg-particle in event. Includes secondaries 
@@ -188,7 +190,9 @@ private:
 
   // Is reconstructed information ( look if particles are reconstructed by pandora )
   int reco_track_mu, reco_track_pi, reco_track_p ; 
-  
+  int recoDec_MuDaughTr, recoDec_MuDaughShw, recoAbs_MuDaughTr, recoAbs_MuDaughShw ; 
+  int mu_recoDecDaughEl, mu_recoDecDaughPh, mu_recoDecDaughMu, mu_recoDecDaughPi, mu_recoDecDaughP, mu_recoDecDaughOth ;
+  int mu_recoAbsDaughEl, mu_recoAbsDaughPh, mu_recoAbsDaughMu, mu_recoAbsDaughPi, mu_recoAbsDaughP, mu_recoAbsDaughOth ;
 
   /******************************************
    * HISTOGRAMS FOR STUDIES                 *   
@@ -250,7 +254,7 @@ private:
   TH1D * h_recoKE_mu_wD = new TH1D("recoKE_mu_wD", " Candidate true Muon reconstructed KE with daughters", 50, 0, 1000) ;
   TH1D * h_recoKE_pi_wD = new TH1D("recoKE_pi_wD", " Candidate true Pion reconstructed KE with daughters", 50, 0, 1000) ;
   TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 1000) ;
-  
+
   };
 
 
@@ -423,6 +427,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     is_reconstructed = true ; 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
+
       if( pfparticle->IsPrimary() == 1 && pfparticle->NumDaughters() != 0 ) { //found primary particle => NEUTRINO real candidate. Has daughers!
 	// Get vertex association 
 	numb_nu_reco += 1 ; // now checking number of neutrinos with daughters
@@ -445,12 +450,13 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      || ( vtx_assn[0]->position().Z() < (-CoordinateOffSetZ + SelectedBorderZ))) nu_rvertex_contained = false ;
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
-	    int part_id_f = particleMap[ pfparticle->Daughters()[j] ] -> Self() ;
+	    int part_id_f = pfparticle->Daughters()[j] ;
 	    int part_MCID_f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
 	    is_candidate = false ; // reset for each pfparticle daughter of the neutrino
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
 	      
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
+	      std::cout<<" is candidate " << std::endl;
 	      map_MCID_RecoID[part_id_f] = part_MCID_f ; 
 	      map_RecoHiearchy[part_id_f] = 1 ; // reconstructed as primary 
 	      map_PandoraPDG[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
@@ -463,7 +469,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		map_MCID_RecoID[part_id_2f] = part_MCID_2f ; 
 		map_RecoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
 		map_RecoHiearchy[part_id_2f] = 2 ; 
-		map_PandoraPDG[part_id_2f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ;
+		map_PandoraPDG[part_id_2f] = particleMap[ part_id_2f ] -> PdgCode() ;
 		map_RecoContained[part_id_2f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_2f ) ;
 		StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 	
@@ -474,7 +480,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		  map_MCID_RecoID[part_id_3f] = part_MCID_3f ; 
 		  map_RecoDaughters[part_id_2f].push_back( part_id_3f ) ;
 		  map_RecoHiearchy[part_id_3f] = 3 ; 
-		  map_PandoraPDG[part_id_3f] = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]] ->PdgCode() ; 
+		  map_PandoraPDG[part_id_3f] = particleMap[ part_id_3f ] ->PdgCode() ; 
 		  map_RecoContained[part_id_3f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_3f ) ;
 		  StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		}
@@ -520,6 +526,33 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
 	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_mu -> Fill( map_RecoDaughters[it->first].size() ) ;
+	if( Tmuon_decay == true && map_RecoDaughters[it->first].size() > 0 ) {
+	  Tmuon_recodecay = true ;
+	  ++T_recodecay ;
+	  for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoDec_MuDaughTr;
+	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoDec_MuDaughShw;
+	    if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++mu_recoDecDaughEl ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++mu_recoDecDaughPh ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++mu_recoDecDaughMu ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoDecDaughPi ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
+	    else ++mu_recoDecDaughOth ; 
+	  }
+	} else if( Tmuon_decay == false && map_RecoDaughters[it->first].size() > 0 ) {
+	  Tmuon_absorbed = true ; 
+	  ++T_recoabsorbed ; 
+	  for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoAbs_MuDaughTr;
+	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoAbs_MuDaughShw;
+	    if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++mu_recoAbsDaughEl ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++mu_recoAbsDaughPh ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++mu_recoAbsDaughMu ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoAbsDaughPi ;
+	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoAbsDaughP ;
+	    else  ++mu_recoAbsDaughOth ;
+	  }
+	}
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
      
@@ -530,6 +563,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
         else { h_reco3Daughters_mu -> Fill(0);}
       }
     } 
+
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
@@ -717,6 +751,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
     // Need to call with id! 
+    //    std::cout<<" shower" << std::endl;
     has_reco_showers = true ; 
     art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
@@ -990,8 +1025,25 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   reco_track_mu = 0 ;
   reco_track_pi = 0 ;
   reco_track_p = 0 ;
+  T_recodecay = 0 ;
+  T_recoabsorbed = 0 ;  
+  recoDec_MuDaughTr = 0 ;
+  recoDec_MuDaughShw = 0 ;
+  recoAbs_MuDaughTr = 0 ; 
+  recoAbs_MuDaughShw = 0 ; 
+  mu_recoDecDaughEl = 0 ;
+  mu_recoDecDaughPh = 0 ; 
+  mu_recoDecDaughMu = 0 ; 
+  mu_recoDecDaughPi = 0 ; 
+  mu_recoDecDaughP = 0 ; 
+  mu_recoDecDaughOth = 0 ;
+  mu_recoAbsDaughEl = 0 ;
+  mu_recoAbsDaughPh = 0 ;
+  mu_recoAbsDaughPi = 0 ;
+  mu_recoAbsDaughMu = 0 ;
+  mu_recoAbsDaughP = 0 ;
+  mu_recoAbsDaughOth = 0 ;
 
-  
   clearVariables();
   // Declare trees and branches
   event_tree   = new TTree( "event_tree",    "Event tree: General information about the event" ) ;
@@ -1094,6 +1146,24 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " \n\n******************** DECAY MUON- STUDY *********************** \n" ;
     eff_chi2_file << " Number of true mu- (primary) = " << T_mum << "\n" ; 
     eff_chi2_file << " Number of decaying mu- = " << T_decay << "\n" ; 
+    eff_chi2_file << " Number of events in which true decay + mu- has daughters = " << T_recodecay << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoDec_MuDaughTr << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoDec_MuDaughShw << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoDecDaughEl << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoDecDaughPh << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoDecDaughMu << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoDecDaughPi << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Proton          = " << mu_recoDecDaughP << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Other           = " << mu_recoDecDaughOth << "\n" ; 
+    eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoAbs_MuDaughTr << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoAbs_MuDaughShw << "\n" ;
+    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoAbsDaughEl << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoAbsDaughPh << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoAbsDaughMu << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoAbsDaughPi << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Proton          = " << mu_recoAbsDaughP << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Other           = " << mu_recoAbsDaughOth << "\n" ; 
 
   }
 
@@ -1472,11 +1542,13 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   Thas_primary_mu = false ;
   Thas_primary_pi = false ;  
   mapTPiDaughterPdg.clear();
-
+ 
+ 
   // RECO INFO
   tr_id_best = 0;
   is_candidate = false ; 
-  
+  Tmuon_recodecay = false;
+  Tmuon_absorbed = false ;              
   nu_reconstructed = false ;
   nu_rvertex_contained = true ; 
   numb_nu_reco = 0 ;
