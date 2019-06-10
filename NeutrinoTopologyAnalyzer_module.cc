@@ -137,7 +137,7 @@ private:
   std::map<int, const simb::MCParticle*> trueParticles ; 
 
   // neutrino information
-  int Tnu_PDG, T_interaction ;
+  int Tnu_PDG, T_interaction, T_decay, T_mum ;
   double t_vertex[3], t_momentum[3], t_vertex_energy ;
   bool is_cc ; 
 
@@ -355,6 +355,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	// Counting total amount of muons, pions and protons 
 	if( TMath::Abs(trueParticle.PdgCode()) == 13 )    ++true_mu ;
+	if( trueParticle.PdgCode() == 13 )                ++T_mum ;
 	if( TMath::Abs(trueParticle.PdgCode()) == 211  )  ++true_pi ;
 	if( trueParticle.PdgCode() == 2212 )              ++true_p  ;
 
@@ -370,8 +371,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  if( trueParticle.PdgCode() == 11 ) Tdecay_e = true ;
 	  if( trueParticle.PdgCode() == -12 ) Tdecay_nue = true ;
 	  if( trueParticle.PdgCode() == 14 ) Tdecay_numu = true ;
-	  if( Tdecay_e && Tdecay_nue && Tdecay_numu ) Tmuon_decay = true ;
+	  if( Tdecay_e && Tdecay_nue && Tdecay_numu ) { 
+	    Tmuon_decay = true ;
+	    ++T_decay;
+	  }
 	}
+
 
 	// Study of pi+ elastic and inelastic scattering : final products pdg
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && TMath::Abs(mapMC_reco_pdg[trueParticle.Mother()]) == 211 ){
@@ -962,6 +967,8 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   true_mu = 0 ;
   true_pi = 0 ;
   true_p = 0 ; 
+  T_mum = 0 ;
+  T_decay = 0 ;
   reco_primary_mu = 0 ;
   reco_primary_pi = 0 ;
   true_primary_mu = 0 ;
@@ -1084,7 +1091,10 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " Number of reconstructed protons = " << total_reco_p << "\n" ;
     eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
     eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_reco_p * 100 << "\n" ;
-    
+    eff_chi2_file << " \n\n******************** DECAY MUON- STUDY *********************** \n" ;
+    eff_chi2_file << " Number of true mu- (primary) = " << T_mum << "\n" ; 
+    eff_chi2_file << " Number of decaying mu- = " << T_decay << "\n" ; 
+
   }
 
 
@@ -1375,6 +1385,10 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoDaughters_mu -> Scale(1/h_recoDaughters_mu->GetEntries());
   h_recoDaughters_pi -> Scale(1/h_recoDaughters_pi->GetEntries());
   h_recoDaughters_p  -> Scale(1/h_recoDaughters_p->GetEntries());
+
+  l->AddEntry(h_recoDaughters_mu,"mu reco daughters");
+  l->AddEntry(h_recoDaughters_pi,"pi reco daughters");
+  l->AddEntry(h_recoDaughters_p,"p reco daughters");
 
   h_recoDaughters_mu -> Draw("HIST") ; 
   h_recoDaughters_pi -> Draw("same HIST") ; 

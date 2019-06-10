@@ -1,37 +1,42 @@
  Primary particles study 
  ******************** MUONS CALORIMETRY STUDY *********************** 
- Number of reconstructed muons = 1866
- Number of true muons from MC = 1695
- Signal events ( true & reco ) = 1429
+ Number of reconstructed muons = 469
+ Number of true muons from MC = 422
+ Signal events ( true & reco ) = 350
  Background events : 
-      -- > True MC ID - pions 220
-     -- > True MC ID - proton 193
-     -- > True MC ID - other 24
- EFFICIENCY =  0.843068
- PURITY =  0.765809
+      -- > True MC ID - pions 62
+     -- > True MC ID - proton 51
+     -- > True MC ID - other 6
+ EFFICIENCY =  0.829384
+ PURITY =  0.746269
  
 
 ******************** PIONS CALORIMETRY STUDY *********************** 
- Number of reconstructed pions = 25
- Number of true pions from MC = 457
- Signal events ( true & reco ) = 6
+ Number of reconstructed pions = 5
+ Number of true pions from MC = 120
+ Signal events ( true & reco ) = 0
  Background events : 
-      -- > True MC ID - muons 9
-     -- > True MC ID - proton 10
+      -- > True MC ID - muons 2
+     -- > True MC ID - proton 3
      -- > True MC ID - other 0
- EFFICIENCY =  0.0131291
- PURITY =  0.24
+ EFFICIENCY =  0
+ PURITY =  0
  
 
 ******************** RECONSTRUCT PROTONS STUDY *********************** 
- Number of reconstructed protons = 938
- Number of reco p reconstructed as protons = 799
- % reconstructed  = 85.1812
+ Number of reconstructed protons = 231
+ Number of reco p reconstructed as protons = 196
+ % reconstructed  = 84.8485
+ 
+
+******************** DECAY MUON- STUDY *********************** 
+ Number of true mu- (primary) = 419
+ Number of decaying mu- = 74
  
 
 ******************** STUDY PANDORA RECONSTRUCTION ************************************* 
  * Looking at if particle is reconstructed, I don't care if we reconstruct them right  * 
  *************************************************************************************** 
-  # True muon leaves signal in TPC   : 1468   vs   #MC muons   = 1940 
-  # True pion leaves signal in TPC   : 349   vs   #MC pions   = 606 
-  # True proton leaves signal in TPC : 1859   vs   #MC protons = 9856 
+  # True muon leaves signal in TPC   : 351   vs   #MC muons   = 489 
+  # True pion leaves signal in TPC   : 101   vs   #MC pions   = 174 
+  # True proton leaves signal in TPC : 470   vs   #MC protons = 2675 
