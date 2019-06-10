@@ -567,16 +567,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
         else { h_reco3Daughters_mu -> Fill(0);}
       }
     } 
-    // Michael electron length study
-
-    if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 
-	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
-      if( Tmuon_decay == true ){
-	if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() )
-	  h_MichaelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
-	else h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
-      } 
-    }
 
     // pion study 
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211 
@@ -609,7 +599,17 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       }
     } 
   }
-  
+    // Michael electron length study
+  for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
+    if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 
+	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
+      if( Tmuon_decay == true ){
+	if( map_RecoDaughters[it->first].size() > 0 )
+	  h_MichaelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	else h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+      } 
+    }
+  }
   // Filling histograms lenght and KE vs number of daughters
   std::map<int,double>::iterator itD ;
   for( itD = map_RecoLength.begin() ; itD != map_RecoLength.end() ; ++itD ) {
