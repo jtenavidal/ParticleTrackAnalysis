@@ -92,7 +92,9 @@ public:
 		  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;  
   std::vector< bool > MCIsContained( simb::MCParticle const & trueParticle ) ;
   std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
-
+  double FindMaxCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
+  double FindMinCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
+  void SaveTrack( std::string const & path , const unsigned int & primary_reco_id );
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -256,9 +258,9 @@ private:
   TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 1000) ;
 
   THStack * h_MichaelLength = new THStack("MichaelLength", "MichaelLength");
-  TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael KE reco " , 20, 0, 500 );
-  TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael KE miss " , 20, 0, 500 );
-  
+  TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael Length reco " , 20, 0, 500 );
+  TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael Length miss " , 20, 0, 500 );
+
 };
 
 
@@ -460,7 +462,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    StoreInformation( e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
 	      
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
-	      std::cout<<" is candidate " << std::endl;
+	      //	      std::cout<<" is candidate " << std::endl;
 	      map_MCID_RecoID[part_id_f] = part_MCID_f ; 
 	      map_RecoHiearchy[part_id_f] = 1 ; // reconstructed as primary 
 	      map_PandoraPDG[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
@@ -542,6 +544,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoDecDaughPi ;
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
 	    else ++mu_recoDecDaughOth ; 
+	    SaveTrack( "storing_event_michael", it->first );
 	  }
 	} else if( Tmuon_decay == false && map_RecoDaughters[it->first].size() > 0 ) {
 	  Tmuon_absorbed = true ; 
@@ -604,13 +607,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( Tmuon_decay == true ){
-	if( map_RecoDaughters[it->first].size() > 0 )
+	if( map_RecoDaughters[it->first].size() > 0 ){
 	  h_MichaelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
-	else h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	}else {
+	    h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	}
       } 
     }
   }
-  // Filling histograms lenght and KE vs number of daughters
+  // Filling histograms length and KE vs number of daughters
   std::map<int,double>::iterator itD ;
   for( itD = map_RecoLength.begin() ; itD != map_RecoLength.end() ; ++itD ) {
     if( map_RecoDaughters[itD->first].size() == 0 ) {
@@ -1001,6 +1006,144 @@ std::vector< bool > test::NeutrinoTopologyAnalyzer::IsContained( art::Event cons
 }
 
 
+
+double test::NeutrinoTopologyAnalyzer::FindMaxCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) {
+  double max_coordinate = -600 ;
+  if( coordinate_id == 0 ) {
+    for( unsigned int i = 0 ; i < map_RecoXPosition[primary_reco_id].size() ; ++i ){
+      if ( map_RecoXPosition[primary_reco_id][i] > max_coordinate ) max_coordinate = map_RecoXPosition[primary_reco_id][i] ;
+    }
+  } else if (coordinate_id == 1) {
+    for( unsigned int i = 0 ; i < map_RecoYPosition[primary_reco_id].size() ; ++i ){
+      if ( map_RecoYPosition[primary_reco_id][i] > max_coordinate ) max_coordinate = map_RecoYPosition[primary_reco_id][i] ;
+    }
+  } else if (coordinate_id == 2) {
+    for( unsigned int i = 0 ; i < map_RecoZPosition[primary_reco_id].size() ; ++i ){
+      if ( map_RecoZPosition[primary_reco_id][i] > max_coordinate ) max_coordinate = map_RecoZPosition[primary_reco_id][i] ;
+    }
+  }
+  return max_coordinate ;
+}
+
+double test::NeutrinoTopologyAnalyzer::FindMinCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) {
+  double min_coordinate = 600 ;
+  if( coordinate_id == 0 ) {
+    for( unsigned int i = 0 ; i < map_RecoXPosition[primary_reco_id].size() ; ++i ){
+      if ( map_RecoXPosition[primary_reco_id][i] < min_coordinate ) min_coordinate = map_RecoXPosition[primary_reco_id][i] ;
+    }
+  } else if (coordinate_id == 1) {
+    for( unsigned int i = 0 ; i < map_RecoYPosition[primary_reco_id].size() ; ++i ){
+      if ( map_RecoYPosition[primary_reco_id][i] < min_coordinate ) min_coordinate = map_RecoYPosition[primary_reco_id][i] ;
+    }
+  } else if (coordinate_id == 2) {
+    for( unsigned int i = 0 ; i < map_RecoZPosition[primary_reco_id].size() ; ++i ){
+      if ( map_RecoZPosition[primary_reco_id][i] < min_coordinate ) min_coordinate = map_RecoZPosition[primary_reco_id][i] ;
+    }
+  }
+  return min_coordinate ;
+}
+
+
+void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const unsigned int & primary_reco_id ) {
+  int bins = int(map_RecoHits[primary_reco_id]/10) ;
+  if( map_RecoHits[primary_reco_id] < 100 ) bins = map_RecoHits[primary_reco_id];
+  std::string title ;
+  int secondary_id = -999 ; 
+  int terciary_id = -999 ; 
+  
+  // check if daughters
+  for( unsigned int i = 0; i < map_RecoDaughters[primary_reco_id].size() ; ++i ){
+    if( map_RecoHiearchy[map_RecoDaughters[primary_reco_id][i]] == 2 ) secondary_id = map_RecoDaughters[primary_reco_id][i];
+    if( map_RecoHiearchy[map_RecoDaughters[primary_reco_id][i]] == 3 ) terciary_id = map_RecoDaughters[primary_reco_id][i];    
+  }
+  
+  double min_x, min_y, min_z, max_x, max_y, max_z ;
+  // Find minimum and maximum coordinates for the priamry 
+  min_x = FindMinCoordinate( primary_reco_id, 0 ) ;
+  min_y = FindMinCoordinate( primary_reco_id, 1 ) ;
+  min_z = FindMinCoordinate( primary_reco_id, 2 ) ;
+  max_x = FindMaxCoordinate( primary_reco_id, 0 ) ;
+  max_y = FindMaxCoordinate( primary_reco_id, 1 ) ;
+  max_z = FindMaxCoordinate( primary_reco_id, 2 ) ;
+  
+  //If secondary reevaluate
+  if( secondary_id > 0 ){
+    if( FindMinCoordinate( secondary_id, 0 ) < min_x ) min_x = FindMinCoordinate( secondary_id, 0 ) ;
+    if( FindMinCoordinate( secondary_id, 1 ) < min_y ) min_y = FindMinCoordinate( secondary_id, 1 ) ;
+    if( FindMinCoordinate( secondary_id, 2 ) < min_z ) min_z = FindMinCoordinate( secondary_id, 2 ) ;
+    if( FindMaxCoordinate( secondary_id, 0 ) > max_x ) max_x = FindMaxCoordinate( secondary_id, 0 ) ;
+    if( FindMaxCoordinate( secondary_id, 1 ) > max_y ) max_y = FindMaxCoordinate( secondary_id, 1 ) ;
+    if( FindMaxCoordinate( secondary_id, 2 ) > max_z ) max_z = FindMaxCoordinate( secondary_id, 2 ) ;
+    bins = int( (map_RecoHits[primary_reco_id]+map_RecoHits[secondary_id])/10 ) ;
+  }
+  //If terciary reevaluate
+  if( terciary_id > 0 ){
+    if( FindMinCoordinate( terciary_id, 0 ) < min_x ) min_x = FindMinCoordinate( terciary_id, 0 ) ;
+    if( FindMinCoordinate( terciary_id, 1 ) < min_y ) min_y = FindMinCoordinate( terciary_id, 1 ) ;
+    if( FindMinCoordinate( terciary_id, 2 ) < min_z ) min_z = FindMinCoordinate( terciary_id, 2 ) ;
+    if( FindMaxCoordinate( terciary_id, 0 ) > max_x ) max_x = FindMaxCoordinate( terciary_id, 0 ) ;
+    if( FindMaxCoordinate( terciary_id, 1 ) > max_y ) max_y = FindMaxCoordinate( terciary_id, 1 ) ;
+    if( FindMaxCoordinate( terciary_id, 2 ) > max_z ) max_z = FindMaxCoordinate( terciary_id, 2 ) ;
+    bins = int( (map_RecoHits[primary_reco_id]+map_RecoHits[secondary_id]+map_RecoHits[terciary_id])/10 ) ;
+  }
+  // final check with neutrino vertex
+  if ( min_x > nu_reco_vertex[0] ) min_x = nu_reco_vertex[0] ;
+  if ( min_y > nu_reco_vertex[1] ) min_y = nu_reco_vertex[1] ;
+  if ( min_z > nu_reco_vertex[2] ) min_z = nu_reco_vertex[2] ;
+  if ( max_x < nu_reco_vertex[0] ) max_x = nu_reco_vertex[0] ;
+  if ( max_y < nu_reco_vertex[1] ) max_y = nu_reco_vertex[1] ;
+  if ( max_z < nu_reco_vertex[2] ) max_z = nu_reco_vertex[2] ;
+
+
+  TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
+
+  TH3D * h_track_primary = new TH3D("h_track_primary", " Particle Track ", bins, min_x, max_x, bins, min_y, max_y, bins, min_z, max_z );
+  h_track_primary->SetFillColor(4);
+
+  TH3D * h_RecoVertex = (TH3D * ) h_track_primary ->Clone();
+
+  if( secondary_id > 0 ) {
+    TH3D * h_track_secondary = (TH3D * ) h_track_primary ->Clone();
+    h_track_secondary -> SetFillColor(2);
+    leg->AddEntry(h_track_secondary, "PDG code secondary = " ); //+ std::to_string(mapMC_reco_pdg[map_MCID_RecoID[secondary_id]]).c_str());
+  }
+
+  if( terciary_id > 0 ) {
+    TH3D * h_track_terciary = (TH3D * ) h_track_primary ->Clone();
+    h_track_terciary -> SetFillColor(9);
+    leg->AddEntry(h_track_terciary, "PDG code terciary = " ); //+ std::to_string(mapMC_reco_pdg[map_MCID_RecoID[terciary_id]]).c_str()); 
+  }
+
+  for( int i = 0; i < map_RecoHits[primary_reco_id]; ++i ){
+    h_track_primary-> Fill(map_RecoXPosition[primary_reco_id][i], map_RecoYPosition[primary_reco_id][i], map_RecoZPosition[primary_reco_id][i] ) ; }
+
+  if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 13 ) { leg->AddEntry(h_track_primary, "Primary #mu^{-}") ;}
+  if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 211 ) { leg->AddEntry(h_track_primary, "Primary #pi^{-}") ;}
+
+  h_track_primary->SetTitle( "Stored_Track event" ) ;
+
+  TCanvas *c = new TCanvas();
+  gStyle->SetPalette(55);
+  gStyle->SetNumberContours(250);
+  h_track_primary->SetLineColor(4);
+  h_track_primary->GetXaxis()->SetTitle("X [cm]");
+  h_track_primary->GetYaxis()->SetTitle("Y [cm]");
+  h_track_primary->GetZaxis()->SetTitle("Z [cm]");
+  leg->AddEntry( h_track_primary, " Track 3D trajectory ");
+  h_track_primary->Draw("BOX2Z");
+
+  h_RecoVertex->Fill( nu_reco_vertex[0], nu_reco_vertex[1], nu_reco_vertex[2]) ;
+  h_RecoVertex->SetLineColor(1) ;
+  h_RecoVertex->SetLineWidth(3) ;
+  h_RecoVertex->SetFillColor(kRed);
+  h_RecoVertex->SetFillStyle(3001);
+  h_RecoVertex->Draw("BOX same") ;
+  leg->AddEntry(h_RecoVertex, "Reconstructed vertex position" );
+
+  leg->Draw();
+  c->SaveAs((path+".root").c_str());
+  c->Clear();
+}
 
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
@@ -1526,6 +1669,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   c->SaveAs("MichaelLength.root");
   c->Clear();
   l->Clear();
+
   //**********************************************************************//  
 
   delete mcparticle_tree ;
