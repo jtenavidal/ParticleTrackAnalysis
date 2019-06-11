@@ -544,8 +544,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoDecDaughPi ;
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
 	    else ++mu_recoDecDaughOth ; 
-	    SaveTrack( "storing_event_michael", it->first );
 	  }
+	    SaveTrack( "storing_event_michael", it->first );
+	    std::cout<<" storing Michael electron candidate" << std::endl;
 	} else if( Tmuon_decay == false && map_RecoDaughters[it->first].size() > 0 ) {
 	  Tmuon_absorbed = true ; 
 	  ++T_recoabsorbed ; 
@@ -1094,28 +1095,47 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   if ( max_y < nu_reco_vertex[1] ) max_y = nu_reco_vertex[1] ;
   if ( max_z < nu_reco_vertex[2] ) max_z = nu_reco_vertex[2] ;
 
+  /* DETECTOR SIZE 
+  min_x = -200;
+  max_x = 200;
+  min_y = min_x;
+  max_y = max_x; 
+  min_z = 0 ;
+  max_z = 500;
+  */
 
   TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
 
   TH3D * h_track_primary = new TH3D("h_track_primary", " Particle Track ", bins, min_x, max_x, bins, min_y, max_y, bins, min_z, max_z );
-  h_track_primary->SetFillColor(4);
-
   TH3D * h_RecoVertex = (TH3D * ) h_track_primary ->Clone();
+  TH3D * h_track_secondary = (TH3D * ) h_track_primary ->Clone();
+  TH3D * h_track_terciary = (TH3D * ) h_track_primary ->Clone();
+  std::string pdg_id ;
+  h_track_primary->SetFillColor(4);
+  h_track_primary->SetLineColor(4);
 
   if( secondary_id > 0 ) {
-    TH3D * h_track_secondary = (TH3D * ) h_track_primary ->Clone();
     h_track_secondary -> SetFillColor(2);
-    leg->AddEntry(h_track_secondary, "PDG code secondary = " ); //+ std::to_string(mapMC_reco_pdg[map_MCID_RecoID[secondary_id]]).c_str());
+    h_track_secondary -> SetLineColor(2);
+    pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[secondary_id]]) ;
+    leg->AddEntry(h_track_secondary, ("PDG code secondary = "+ pdg_id).c_str());
+    for( int i = 0; i < map_RecoHits[secondary_id]; ++i ){
+      h_track_secondary-> Fill(map_RecoXPosition[secondary_id][i], map_RecoYPosition[secondary_id][i], map_RecoZPosition[secondary_id][i] ) ; }
+
   }
 
   if( terciary_id > 0 ) {
-    TH3D * h_track_terciary = (TH3D * ) h_track_primary ->Clone();
     h_track_terciary -> SetFillColor(9);
-    leg->AddEntry(h_track_terciary, "PDG code terciary = " ); //+ std::to_string(mapMC_reco_pdg[map_MCID_RecoID[terciary_id]]).c_str()); 
+    h_track_terciary -> SetLineColor(9);
+    pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[terciary_id]]) ;
+    leg->AddEntry(h_track_terciary, ("PDG code terciary = " + pdg_id).c_str()); 
+    for( int i = 0; i < map_RecoHits[terciary_id]; ++i ){
+      h_track_terciary-> Fill(map_RecoXPosition[terciary_id][i], map_RecoYPosition[terciary_id][i], map_RecoZPosition[terciary_id][i] ) ; }
   }
 
   for( int i = 0; i < map_RecoHits[primary_reco_id]; ++i ){
     h_track_primary-> Fill(map_RecoXPosition[primary_reco_id][i], map_RecoYPosition[primary_reco_id][i], map_RecoZPosition[primary_reco_id][i] ) ; }
+
 
   if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 13 ) { leg->AddEntry(h_track_primary, "Primary #mu^{-}") ;}
   if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 211 ) { leg->AddEntry(h_track_primary, "Primary #pi^{-}") ;}
@@ -1125,13 +1145,12 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   TCanvas *c = new TCanvas();
   gStyle->SetPalette(55);
   gStyle->SetNumberContours(250);
-  h_track_primary->SetLineColor(4);
   h_track_primary->GetXaxis()->SetTitle("X [cm]");
   h_track_primary->GetYaxis()->SetTitle("Y [cm]");
   h_track_primary->GetZaxis()->SetTitle("Z [cm]");
-  leg->AddEntry( h_track_primary, " Track 3D trajectory ");
-  h_track_primary->Draw("BOX2Z");
-
+  h_track_primary->Draw("BOX");
+  if( secondary_id > 0 ) h_track_secondary->Draw("BOX same");
+  if( terciary_id  > 0 ) h_track_terciary->Draw("BOX same");
   h_RecoVertex->Fill( nu_reco_vertex[0], nu_reco_vertex[1], nu_reco_vertex[2]) ;
   h_RecoVertex->SetLineColor(1) ;
   h_RecoVertex->SetLineWidth(3) ;
@@ -1744,6 +1763,10 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_RecoKEnergy.clear();
   map_RecoLength.clear();
   map_RecoHits.clear();
+  map_RecoXPosition.clear();
+  map_RecoYPosition.clear();
+  map_RecoZPosition.clear();
+
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
