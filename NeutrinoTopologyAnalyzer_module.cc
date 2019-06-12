@@ -80,7 +80,7 @@ public:
   void analyze(art::Event const& e) override;
 
   // -> Added functions ( * )
-  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::PFParticle > > const & pfParticleHandle, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f, std::vector< art::Ptr<recob::PFParticle> > const & pfps ) ;
+  void StoreInformation( art::Event const & e, art::Handle< std::vector< recob::PFParticle > > const & pfParticleHandle, art::Handle< std::vector< recob::Track > > const & trackHandle, art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks,  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;
   bool IsMuonPionCandidateChi2( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsMuonChi2( art::Ptr<anab::ParticleID> const & pid_f );
   bool IsPionChi2( art::Ptr<anab::ParticleID> const & pid_f );
@@ -88,9 +88,10 @@ public:
   bool IsMuonPionCandidatePIDA( art::Ptr<anab::ParticleID> const & pid_f);
   double EfficiencyCalo( art::Ptr<anab::ParticleID> const & pid_f , int const & true_pdg , std::string const & particle ) ;
   void IsReconstructed( int  const & best_id ) ;
-  int FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
-		  art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
-		  std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;  
+  int FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::PFParticle > > const & pfParticleHandle, 
+		   art::Handle< std::vector< recob::Track > > const & trackHandle, 
+		   art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
+		   std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) ;  
   std::vector< bool > MCIsContained( simb::MCParticle const & trueParticle ) ;
   std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
   double FindMaxCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
@@ -432,15 +433,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   
   art::FindManyP< recob::Shower > findShowers( pfParticleHandle, e, ParticleLabel );
 
-  // DOM CODE
-  std::vector<art::Ptr<recob::PFParticle> > pfps;
-  if(  e.getByLabel(ParticleLabel, pfParticleHandle ) ) {art::fill_ptr_vector(pfps,pfParticleHandle);}
 
   if( pfParticleHandle.isValid() && pfParticleHandle->size() && hitListHandle.isValid() && trackHandle.isValid() ){
     is_reconstructed = true ; 
     for( unsigned int i = 0 ; i < pfParticleHandle->size(); ++i ){ // loop over pfParticleHandle to find Primary
       art::Ptr< recob::PFParticle > pfparticle( pfParticleHandle, i ) ; // Point to particle i 
-
       if( pfparticle->IsPrimary() == 1 && pfparticle->NumDaughters() != 0 ) { //found primary particle => NEUTRINO real candidate. Has daughers!
 	// Get vertex association 
 	numb_nu_reco += 1 ; // now checking number of neutrinos with daughters
@@ -464,39 +461,35 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
 	    int part_id_f = pfparticle->Daughters()[j] ;
-	    int part_MCID_f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
+	    
+	    int part_MCID_f = FindBestMCID(e, pfParticleHandle,trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
 	    is_candidate = false ; // reset for each pfparticle daughter of the neutrino
-	    StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f, pfps ) ;
-	    std::cout<< " particle id = " << part_id_f << " pdg code " << mapMC_reco_pdg[part_MCID_f] << std::endl;
+	    StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
 	    if( is_candidate == true ) { // store daugher information for muons and pion candidates
-	      std::cout<<"  ->  is candidate " << std::endl;
 	      map_MCID_RecoID[part_id_f] = part_MCID_f ; 
 	      map_RecoHiearchy[part_id_f] = 1 ; // reconstructed as primary 
 	      map_PandoraPDG[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	      map_RecoContained[part_id_f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
-	    
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
-		int part_MCID_2f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
+		int part_MCID_2f = FindBestMCID(e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 		map_MCID_RecoID[part_id_2f] = part_MCID_2f ; 
 		map_RecoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
 		map_RecoHiearchy[part_id_2f] = 2 ; 
 		map_PandoraPDG[part_id_2f] = particleMap[ part_id_2f ] -> PdgCode() ;
 		map_RecoContained[part_id_2f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_2f ) ;
-		StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f, pfps ) ;
-		std::cout<< " --- Daughters : particle id = " << part_id_2f << " pdg code " << mapMC_reco_pdg[part_MCID_2f] << std::endl;
-
+		StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
 		for( int j3 = 0 ; j3 < particleMap[particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2]] -> NumDaughters() ; ++j3 ) {
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
-		  int part_MCID_3f = FindBestMCID(e, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
+		  int part_MCID_3f = FindBestMCID(e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		  map_MCID_RecoID[part_id_3f] = part_MCID_3f ; 
 		  map_RecoDaughters[part_id_2f].push_back( part_id_3f ) ;
 		  map_RecoHiearchy[part_id_3f] = 3 ; 
 		  map_PandoraPDG[part_id_3f] = particleMap[ part_id_3f ] ->PdgCode() ; 
 		  map_RecoContained[part_id_3f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_3f ) ;
-		  StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f, pfps ) ;
+		  StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
 		}
 	      }	
 	    }
@@ -553,9 +546,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
 	    else ++mu_recoDecDaughOth ; 
 	  }
-	  //event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	  //	  SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
-	  //std::cout<<" storing Michael electron candidate" << std::endl;
+	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	  SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
+	  std::cout<<" storing Michael electron candidate" << std::endl;
 	} else if( Tmuon_decay == false && map_RecoDaughters[it->first].size() > 0 ) {
 	  Tmuon_absorbed = true ; 
 	  ++T_recoabsorbed ; 
@@ -664,7 +657,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
       art::Event const & e, art::Handle< std::vector< recob::PFParticle > > const & pfParticleHandle, 
       art::Handle< std::vector< recob::Track > > const & trackHandle, 
       art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
-      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f, std::vector< art::Ptr<recob::PFParticle> > const & pfps ){
+      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ){
   /*
     1) Find muon/pion candidates
     2) Efficiency simple method
@@ -785,63 +778,59 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
     // DOM CODE
+    has_reco_showers = true ; 
     art::FindManyP<recob::Cluster> fmch(pfParticleHandle, e, ParticleLabel);
     art::Handle<std::vector< recob::Cluster > > clusterHandle;
-    if(fmch.isValid()){
-      e.getByLabel(ParticleLabel,clusterHandle);
-      if(clusterHandle.isValid()){
-	art::FindManyP<recob::Shower> fms(clusterHandle, e, "emshower");
-	
-	for(auto const& pfp: pfps){
-	  std::vector<art::Ptr<recob::Cluster>> pfclusters = fmch.at(pfp.key());
-	  if(pfclusters.size() == 0){continue;}
-	  std::vector<art::Ptr<recob::Shower>> pfshowers = fms.at(pfclusters[0].key());
-	}
-      }
-    }
- 
-    // Need to call with id! 
-    has_reco_showers = true ; 
-    
     art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
-    for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
-      std::cout<<" shower" << y << part_id_f << std::endl;
-      art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
-      std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
-      std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
-      if( spacepoint_f.size() == 0 ) continue ; 
+    std::vector<art::Ptr<recob::Shower>> pfshowers ;
 
-      std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
-      tr_id_best = ShowerTrackInfo.first ;
-      if( !ShowerTrackInfo.first ) tr_id_best = -9999 ; // default no match 
-     
-      map_RecoHits[ part_id_f ] += spacepoint_f.size() ; 
-      
-      for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
-	  map_RecoXPosition[ part_id_f ].push_back( spacepoint_f[l]->XYZ()[0] ) ; 
-	  map_RecoYPosition[ part_id_f ].push_back( spacepoint_f[l]->XYZ()[1] ) ; 
-	  map_RecoZPosition[ part_id_f ].push_back( spacepoint_f[l]->XYZ()[2] ) ;
+    if(fmch.isValid()){
+      e.getByLabel(ParticleLabel,clusterHandle);
+      if(clusterHandle.isValid() && clusterHandle->size() != 0 ){
+	art::FindManyP<recob::Shower> fms(clusterHandle, e, "emshower");	
+	std::vector<art::Ptr<recob::Cluster>> pfclusters = fmch.at(part_id_f);
+	if(pfclusters.size() != 0){
+	  pfshowers = fms.at(pfclusters[0].key());
+	  if( pfshowers.size() == 1 ){
+	    art::Ptr< recob::Shower > shower_f = pfshowers[0] ;
+	    std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(pfshowers[0].key()) ; 
+	    std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(pfshowers[0].key()) ;
+	    if( spacepoint_f.size() != 0 ) {
+	      std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
+	      tr_id_best = ShowerTrackInfo.first ;
+	      if( !ShowerTrackInfo.first ) tr_id_best = -9999 ; // default no match 
+	      map_RecoHits[ part_id_f ] += spacepoint_f.size() ; 
+	      
+	      for( unsigned int l = 0 ; l < spacepoint_f.size() ; ++l ) {
+		map_RecoXPosition[ part_id_f ].push_back( spacepoint_f[l]->XYZ()[0] ) ; 
+		map_RecoYPosition[ part_id_f ].push_back( spacepoint_f[l]->XYZ()[1] ) ; 
+		map_RecoZPosition[ part_id_f ].push_back( spacepoint_f[l]->XYZ()[2] ) ;
+	      }
+	      
+	      if( shower_f->has_length() ) { 
+		map_RecoLength[ part_id_f ] += shower_f->Length(); //primary_daughter 
+	      } else  {
+		map_RecoLength[ part_id_f ]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
+		map_RecoLength[ part_id_f ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
+		map_RecoLength[ part_id_f ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
+		map_RecoLength[ part_id_f ]  = sqrt( map_RecoLength[ part_id_f ] ) ;
+	      }
+	      
+	      IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
+	    }
+	  }
 	}
-	          
-      if( shower_f->has_length() ) { 
-	map_RecoLength[ part_id_f ] += shower_f->Length(); //primary_daughter 
-      } else  {
-	map_RecoLength[ part_id_f ]  = pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[0] - spacepoint_f[0]->XYZ()[0], 2 ) ;
-	map_RecoLength[ part_id_f ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[1] - spacepoint_f[0]->XYZ()[1], 2 ) ;
-	map_RecoLength[ part_id_f ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
-	map_RecoLength[ part_id_f ]  = sqrt( map_RecoLength[ part_id_f ] ) ;
       }
-
-      IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
-
     }
   } // track vs shower
 }
 
-int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::Track > > const & trackHandle, 
-      art::Handle< std::vector< recob::Shower > > const & showerHandle, art::FindManyP< recob::Track > const & findTracks, 
-      std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) {
+int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Handle< std::vector< recob::PFParticle > > const & pfParticleHandle, 
+						 art::Handle< std::vector< recob::Track > > const & trackHandle, 
+						 art::Handle< std::vector< recob::Shower > > const & showerHandle, 
+						 art::FindManyP< recob::Track > const & findTracks, 
+						 std::map< int , std::vector< int > > & ShowerMothers, int const & part_id_f ) {
   if ( findTracks.at( part_id_f ).size() != 0 ){
     std::vector< art::Ptr<recob::Track> > track_f = findTracks.at(part_id_f);
     art::FindManyP< recob::Hit > findHits (  trackHandle, e, RecoTrackLabel ) ;
@@ -869,17 +858,31 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
       }
     }
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
+    art::FindManyP<recob::Cluster> fmch(pfParticleHandle, e, ParticleLabel);
+    art::Handle<std::vector< recob::Cluster > > clusterHandle;
     art::FindManyP< recob::Hit > findHitShower( showerHandle, e, RecoShowerLabel ) ;
     art::FindManyP< recob::SpacePoint > findSpacePoint( showerHandle, e, RecoShowerLabel ) ;
-    for( unsigned int y = 0 ; y < showerHandle->size() ; ++y ) {
-      art::Ptr< recob::Shower > shower_f( showerHandle, y ) ;
-      std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(y) ; 
-      std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(y) ;
-      if( spacepoint_f.size() == 0 ) continue ; 
-      
-      std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
-      tr_id_best = ShowerTrackInfo.first ;
-      if( !ShowerTrackInfo.first ) tr_id_best = -9999 ; // default no match 
+    std::vector<art::Ptr<recob::Shower>> pfshowers ;
+    
+    if(fmch.isValid()){
+      e.getByLabel(ParticleLabel,clusterHandle);
+      if(clusterHandle.isValid() && clusterHandle->size() != 0 ){
+	art::FindManyP<recob::Shower> fms(clusterHandle, e, "emshower");	
+	std::vector<art::Ptr<recob::Cluster>> pfclusters = fmch.at(part_id_f);
+	if(pfclusters.size() != 0){
+	  pfshowers = fms.at(pfclusters[0].key());
+	  if( pfshowers.size() == 1 ){
+	    art::Ptr< recob::Shower > shower_f = pfshowers[0] ;
+	    std::vector< art::Ptr<recob::Hit> > hit_sh_f = findHitShower.at(pfshowers[0].key()) ; 
+	    std::vector< art::Ptr<recob::SpacePoint> > spacepoint_f = findSpacePoint.at(pfshowers[0].key()) ;
+	    if( spacepoint_f.size() != 0 ) {
+	      std::pair<int,double> ShowerTrackInfo = ShowerUtils::TrueParticleIDFromTrueChain( ShowerMothers, hit_sh_f , shower_f->best_plane() ) ;
+	      tr_id_best = ShowerTrackInfo.first ;
+	      if( !ShowerTrackInfo.first ) tr_id_best = -9999 ; // default no match 
+	    }
+	  }
+	}
+      }
     }
   }// end shower
   return tr_id_best ;
