@@ -97,6 +97,7 @@ public:
   double FindMaxCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
   double FindMinCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
   void SaveTrack( std::string const & path , const unsigned int & primary_reco_id );
+  double DistanceMotherDaughter( int  const & mother_reco_id ) ;
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -181,10 +182,11 @@ private:
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_RecoDaughters ; 
   std::map< int , int > map_RecoHiearchy ; 
+  std::map< int , std::vector< TVector3 > > map_RecoDirection ;
   std::string event_s ;
   // Efficiency calculation: just calorimetry information
   int reco_primary_mu , reco_primary_pi ;
-  int true_mu, true_pi, true_p ; // total pdg-particle in event. Includes secondaries 
+  int true_mu, true_pi, true_p, true_e ; // total pdg-particle in event. Includes secondaries 
   int true_primary_mu, true_primary_pi ;
   int signal_mu, signal_pi ;
   int bg_mu_pi, bg_mu_p, bg_mu_others ; 
@@ -193,7 +195,7 @@ private:
 
 
   // Is reconstructed information ( look if particles are reconstructed by pandora )
-  int reco_track_mu, reco_track_pi, reco_track_p ; 
+  int reco_track_mu, reco_track_pi, reco_track_p, reco_track_e ; 
   int recoDec_MuDaughTr, recoDec_MuDaughShw, recoAbs_MuDaughTr, recoAbs_MuDaughShw ; 
   int mu_recoDecDaughEl, mu_recoDecDaughPh, mu_recoDecDaughMu, mu_recoDecDaughPi, mu_recoDecDaughP, mu_recoDecDaughOth ;
   int mu_recoAbsDaughEl, mu_recoAbsDaughPh, mu_recoAbsDaughMu, mu_recoAbsDaughPi, mu_recoAbsDaughP, mu_recoAbsDaughOth ;
@@ -370,7 +372,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if( trueParticle.PdgCode() == 13 )                ++T_mum ;
 	if( TMath::Abs(trueParticle.PdgCode()) == 211  )  ++true_pi ;
 	if( trueParticle.PdgCode() == 2212 )              ++true_p  ;
-
+	if( trueParticle.PdgCode() == 11 )                ++true_e ;
 	if(trueParticle.Process() == "primary" ) mapTPrimary[trueParticle.TrackId()] = 1 ;
 	else mapTPrimary[trueParticle.TrackId()] = 2 ;
 
@@ -511,6 +513,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if ( TMath::Abs( mapMC_reco_pdg[ it -> first] ) == 13   && ( it -> second ) != 0 ) ++reco_track_mu ;
     if ( TMath::Abs( mapMC_reco_pdg[ it -> first] ) == 211  && ( it -> second ) != 0 ) ++reco_track_pi ;
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) != 0 ) ++reco_track_p  ;
+    if ( mapMC_reco_pdg[ it -> first ] == 11 && ( it -> second ) != 0 ) ++reco_track_e  ;
     //    if ( mapMC_reco_pdg[ it -> first ] == 13   ) reco_track_mu += ( it -> second ) ;
     //    if ( mapMC_reco_pdg[ it -> first ] == 211  ) reco_track_pi += ( it -> second ) ;
     //    if ( mapMC_reco_pdg[ it -> first ] == 2212 ) reco_track_p  += ( it -> second ) ;    
@@ -546,9 +549,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
 	    else ++mu_recoDecDaughOth ; 
 	  }
-	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	  SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
-	  std::cout<<" storing Michael electron candidate" << std::endl;
+	  //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	  //SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
+	  //std::cout<<" storing Michael electron candidate" << std::endl;
 	} else if( Tmuon_decay == false && map_RecoDaughters[it->first].size() > 0 ) {
 	  Tmuon_absorbed = true ; 
 	  ++T_recoabsorbed ; 
@@ -562,9 +565,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoAbsDaughP ;
 	    else  ++mu_recoAbsDaughOth ;
 	  }
-	  //event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	  //SaveTrack( ("storing_event_absorbed"+event_s).c_str(), it->first );
-	  //std::cout<<" storing absorbed muon candidate" << std::endl;
+	  std::cout<< " distance mother daughter " << DistanceMotherDaughter( it->first ) << std::endl ; 
+	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	  SaveTrack( ("storing_event_absorbed"+event_s).c_str(), it->first );
+	  std::cout<<" storing absorbed muon candidate" << std::endl;
 	}
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
@@ -616,7 +620,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if( map_RecoDaughters[it->first].size() > 0 ){
 	  h_MichaelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
 	}else {
-	    h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	  h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
 	}
       } 
     }
@@ -743,6 +747,13 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 		map_RecoZPosition[ part_id_f ].push_back( track_f[n]->TrajectoryPoint( l ).position.Z() ) ; 
 	      }
 	      EfficiencyCalo( pid_f[k] , mapMC_reco_pdg[ tr_id_best ], "muon" ); 
+	      TVector3 direction_v ;
+	      direction_v.SetXYZ( track_f[n]->StartDirection().X(), track_f[n]->StartDirection().Y(), track_f[n]->StartDirection().Z() );
+	      map_RecoDirection[ part_id_f ].push_back( direction_v );
+	      TVector3 direction_e ;
+	      direction_e.SetXYZ( track_f[n]->EndDirection().X(), track_f[n]->EndDirection().Y(), track_f[n]->EndDirection().Z() );
+	      map_RecoDirection[ part_id_f ].push_back( direction_e );
+	    
 	    }
 	  }// just collection plane 
 	  // calo information is stored in all planes. Need to read dEdx in an ordered way           
@@ -788,7 +799,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     if(fmch.isValid()){
       e.getByLabel(ParticleLabel,clusterHandle);
       if(clusterHandle.isValid() && clusterHandle->size() != 0 ){
-	art::FindManyP<recob::Shower> fms(clusterHandle, e, "emshower");	
+	art::FindManyP<recob::Shower> fms(clusterHandle, e, RecoShowerLabel );	
 	std::vector<art::Ptr<recob::Cluster>> pfclusters = fmch.at(part_id_f);
 	if(pfclusters.size() != 0){
 	  pfshowers = fms.at(pfclusters[0].key());
@@ -816,6 +827,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 		map_RecoLength[ part_id_f ] += pow(spacepoint_f[spacepoint_f.size()-1]->XYZ()[2] - spacepoint_f[0]->XYZ()[2], 2 ) ;
 		map_RecoLength[ part_id_f ]  = sqrt( map_RecoLength[ part_id_f ] ) ;
 	      }
+	      map_RecoDirection[ part_id_f ].push_back( shower_f->Direction() );
 	      
 	      IsReconstructed( tr_id_best ) ; // check if MC particle is reconstructed and stores it in a map 
 	    }
@@ -867,7 +879,7 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
     if(fmch.isValid()){
       e.getByLabel(ParticleLabel,clusterHandle);
       if(clusterHandle.isValid() && clusterHandle->size() != 0 ){
-	art::FindManyP<recob::Shower> fms(clusterHandle, e, "emshower");	
+	art::FindManyP<recob::Shower> fms(clusterHandle, e, RecoShowerLabel );	
 	std::vector<art::Ptr<recob::Cluster>> pfclusters = fmch.at(part_id_f);
 	if(pfclusters.size() != 0){
 	  pfshowers = fms.at(pfclusters[0].key());
@@ -1197,6 +1209,23 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   c->Clear();
 }
 
+double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & mother_reco_id )  {
+  double distance_x = 0 , distance_y = 0 , distance_z = 0 ;
+  int hits_m = 0 , hits_d = 0 ;
+  // check if mother is mother
+  if( map_RecoHiearchy[ mother_reco_id ] != 1 ) return 0 ;
+  // Check if mother id has daughters 
+  if( map_RecoDaughters[ mother_reco_id ].size() == 0 ) return 0 ;
+  // Loop over daughters to acces reco_daughter id 
+  for( unsigned int i = 0 ; i < map_RecoDaughters[ mother_reco_id ].size() ; ++i ){
+    hits_m = map_RecoXPosition[ mother_reco_id ].size() ;
+    hits_d = map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ].size() ;
+    distance_x = TMath::Abs( map_RecoXPosition[ mother_reco_id ][hits_m-1] - map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ][hits_d-1] )  ;
+    distance_y = TMath::Abs( map_RecoYPosition[ mother_reco_id ][hits_m-1] - map_RecoYPosition[ map_RecoDaughters[ mother_reco_id ][i] ][hits_d-1] )  ;
+    distance_z = TMath::Abs( map_RecoZPosition[ mother_reco_id ][hits_m-1] - map_RecoZPosition[ map_RecoDaughters[ mother_reco_id ][i] ][hits_d-1] )  ;
+  }
+  return TMath::Sqrt( distance_x*distance_x + distance_y*distance_y + distance_z*distance_z ) ;
+}
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 {
@@ -1207,11 +1236,24 @@ void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 
 void test::NeutrinoTopologyAnalyzer::beginJob( )
 {
+  // Detector Geometry
+  DetectorHalfLengthX = 400 ;
+  DetectorHalfLengthY = 400 ;
+  DetectorHalfLengthZ = 500 ;
+  CoordinateOffSetX = 200 ; 
+  CoordinateOffSetY = 200 ; 
+  CoordinateOffSetZ = 0 ; 
+  SelectedBorderX = 16.5 ;
+  SelectedBorderY = 15 ;
+  SelectedBorderZ = 15 ; //47.5 ;
+
+
   // don't initialize per event. 
 
   true_mu = 0 ;
   true_pi = 0 ;
   true_p = 0 ; 
+  true_e = 0 ;
   T_mum = 0 ;
   T_decay = 0 ;
   reco_primary_mu = 0 ;
@@ -1235,6 +1277,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   reco_track_mu = 0 ;
   reco_track_pi = 0 ;
   reco_track_p = 0 ;
+  reco_track_e = 0 ;
   T_recodecay = 0 ;
   T_recoabsorbed = 0 ;  
   recoDec_MuDaughTr = 0 ;
@@ -1382,9 +1425,10 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " \n\n******************** STUDY PANDORA RECONSTRUCTION ************************************* \n" ;
     eff_chi2_file << " * Looking at if particle is reconstructed, I don't care if we reconstruct them right  * \n" ;
     eff_chi2_file << " *************************************************************************************** \n" ;
-    eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu << "   vs   #MC muons   = " << true_mu << " \n" ;  
-    eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi << "   vs   #MC pions   = " << true_pi << " \n" ;  
-    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p  << "   vs   #MC protons = " << true_p  << " \n" ;  
+    eff_chi2_file << "  # True muon leaves signal in TPC   : " << reco_track_mu   << "   vs   #MC muons    = " << true_mu << " \n" ;  
+    eff_chi2_file << "  # True pion leaves signal in TPC   : " << reco_track_pi   << "   vs   #MC pions    = " << true_pi << " \n" ;  
+    eff_chi2_file << "  # True proton leaves signal in TPC : " << reco_track_p    << "   vs   #MC protons  = " << true_p  << " \n" ;  
+    eff_chi2_file << "  # True electron leaves signal in TPC : " << reco_track_e  << "   vs   #MC electron = " << true_e  << " \n" ;  
   }
 
   eff_chi2_file.close();
@@ -1683,7 +1727,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_reco3Daughters_mu -> SetLineColor(1) ; 
   h_reco3Daughters_pi -> SetLineColor(2) ; 
   h_reco3Daughters_p  -> SetLineColor(4) ;
-
+  
   l->AddEntry(h_reco3Daughters_mu, "3rd daughters mu");
   l->AddEntry(h_reco3Daughters_pi, "3rd daughters pi");
   l->AddEntry(h_reco3Daughters_p, "3rd daughters p");
@@ -1731,16 +1775,6 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 void test::NeutrinoTopologyAnalyzer::clearVariables() {
 
   // Define default for parameters and create variables and trees
-  // Detector Geometry
-  DetectorHalfLengthX = 400 ;
-  DetectorHalfLengthY = 400 ;
-  DetectorHalfLengthZ = 500 ;
-  CoordinateOffSetX = 200 ; 
-  CoordinateOffSetY = 200 ; 
-  CoordinateOffSetZ = 0 ; 
-  SelectedBorderX = 16.5 ;
-  SelectedBorderY = 15 ;
-  SelectedBorderZ = 15 ; //47.5 ;
 
   // event tree variables 
   event_id = 0 ;
@@ -1799,7 +1833,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_RecoXPosition.clear();
   map_RecoYPosition.clear();
   map_RecoZPosition.clear();
-
+  map_RecoDirection.clear();
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
