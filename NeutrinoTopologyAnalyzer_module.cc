@@ -96,7 +96,8 @@ public:
   std::vector< bool > IsContained( art::Event const & e, art::Handle< std::vector< recob::Track > > & trackHandle, art::Handle< std::vector< recob::Shower > > & showerHandle, art::FindManyP< recob::Track > & findTracks , int & part_id_f ) ;
   double FindMaxCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
   double FindMinCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
-  void SaveTrack( std::string const & path , const unsigned int & primary_reco_id );
+  void SaveTrack( std::string const & path , const unsigned int & primary_reco_id ) ;
+  void PrintdEdx( const std::string & path, const unsigned int & primary_reco_id ) ;
   double DistanceMotherDaughter( int  const & mother_reco_id ) ;
   double AngleMotherDaughter( int  const & mother_reco_id ) ;
   bool CathodGapMotherDaughter( int  const & mother_reco_id ) ;
@@ -568,8 +569,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
 	    h_MichaelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    //std::cout<< " angle michael " << AngleMotherDaughter( it->first ) << std::endl;
-	    //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	    //SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
+	    PrintdEdx( ("storing_event_michael"+event_s).c_str(), it->first );
 	    //std::cout<<" storing Michael electron candidate" << std::endl;
 	  } else {
 	    Tmuon_absorbed = true ; 
@@ -589,8 +591,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
 	    h_MichaelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    //std::cout<< " angle absorbed " << AngleMotherDaughter( it->first ) << std::endl;
-	    //event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	    //SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	    PrintdEdx( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	    // std::cout<<" storing muon absorbtion candidate" << std::endl;
 	  }
 	}
@@ -1233,6 +1236,21 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   c->Clear();
 }
 
+
+void test::NeutrinoTopologyAnalyzer::PrintdEdx( const std::string & path, const unsigned int & primary_reco_id ) {
+  int bins = map_RecoHits[primary_reco_id] ;
+  std::cout<< bins << std::endl;
+  TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", int( bins /10 ), 0, bins );
+  for ( int i = 0 ; i < map_RecoHits[primary_reco_id] ; ++i ){
+    h_dEdx -> Fill ( i ,  map_RecodEdx[ primary_reco_id ][i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_dEdx -> Draw("hist") ;
+  c->SaveAs( (path+"_dEdx.root").c_str() ) ;
+  
+}
+
 double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & mother_reco_id )  {
   double distance_x = 0 , distance_y = 0 , distance_z = 0 , distance = 0 ;
   double distance_min = 999 ;
@@ -1300,6 +1318,7 @@ bool test::NeutrinoTopologyAnalyzer::CathodGapMotherDaughter( int  const & mothe
  
   return false;
 }
+
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
 {
