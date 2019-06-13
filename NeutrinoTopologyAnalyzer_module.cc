@@ -269,6 +269,9 @@ private:
   TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael Length reco " , 20, 0, 500 );
   TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael Length miss " , 20, 0, 500 );
 
+  TH1D * h_MichaelAngle_true = new TH1D("MichaelAngleTrue" , "Michael angle True " , 10, 0, 180 );
+  TH1D * h_MichaelAngle_miss = new TH1D("MichaelAngleMiss" , "Michael angle miss " , 10, 0, 180 );
+
 };
 
 
@@ -540,44 +543,56 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
 	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_mu -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_mu -> Fill( map_RecoDaughters[it->first].size() ) ;
-	if( Tmuon_decay == true && map_RecoDaughters[it->first].size() > 0 ) {
-	  Tmuon_recodecay = true ;
-	  ++T_recodecay ;
-	  for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
-	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoDec_MuDaughTr;
-	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoDec_MuDaughShw;
-	    if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++mu_recoDecDaughEl ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++mu_recoDecDaughPh ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++mu_recoDecDaughMu ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoDecDaughPi ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
-	    else ++mu_recoDecDaughOth ; 
+	for( unsigned int j = 0 ; j < map_RecoDaughters[it->first].size() ; ++j ){
+	  // check if is muon decay: 
+	  // Truth MC says muon decay
+	  // electron is reconstructed
+	  // muon has daughters
+	  if( map_IsReconstructed[ map_MCID_RecoID[map_RecoDaughters[it->first][j]] ] == 1 
+	      && mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][j]] ] == 11 
+	      && Tmuon_decay == true ) {
+	    Tmuon_recodecay = true ;
+	    ++T_recodecay ;
+	    for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	      if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoDec_MuDaughTr;
+	      if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoDec_MuDaughShw;
+	      if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++mu_recoDecDaughEl ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++mu_recoDecDaughPh ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++mu_recoDecDaughMu ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoDecDaughPi ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
+	      else ++mu_recoDecDaughOth ; 
+	    }
+	    if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_dec ; 
+	    if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_mu_dec ;
+	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
+	    h_MichaelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
+	    //std::cout<< " angle michael " << AngleMotherDaughter( it->first ) << std::endl;
+	    //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	    //SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
+	    //std::cout<<" storing Michael electron candidate" << std::endl;
+	  } else {
+	    Tmuon_absorbed = true ; 
+	    ++T_recoabsorbed ; 
+	    for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	      if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoAbs_MuDaughTr;
+	      if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoAbs_MuDaughShw;
+	      if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++mu_recoAbsDaughEl ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++mu_recoAbsDaughPh ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++mu_recoAbsDaughMu ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoAbsDaughPi ;
+	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoAbsDaughP ;
+	      else  ++mu_recoAbsDaughOth ;
+	    }
+	    if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_abs ; 
+	    if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_mu_abs ;
+	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
+	    h_MichaelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
+	    //std::cout<< " angle absorbed " << AngleMotherDaughter( it->first ) << std::endl;
+	    //event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	    //SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	    // std::cout<<" storing muon absorbtion candidate" << std::endl;
 	  }
-	  if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_dec ; 
-	  if ( AngleMotherDaughter( it->first ) > 5 ) ++bigAngleMD_mu_dec ;
-	  if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
-	  //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	  //SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
-	  //std::cout<<" storing Michael electron candidate" << std::endl;
-	} else if( Tmuon_decay == false && map_RecoDaughters[it->first].size() > 0 ) {
-	  Tmuon_absorbed = true ; 
-	  ++T_recoabsorbed ; 
-	  for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
-	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoAbs_MuDaughTr;
-	    if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoAbs_MuDaughShw;
-	    if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++mu_recoAbsDaughEl ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++mu_recoAbsDaughPh ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++mu_recoAbsDaughMu ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoAbsDaughPi ;
-	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoAbsDaughP ;
-	    else  ++mu_recoAbsDaughOth ;
-	  }
-	  if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_abs ; 
-	  if ( AngleMotherDaughter( it->first ) > 5 ) ++bigAngleMD_mu_abs ;
-	  if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
-	  //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	  //SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
-	  //std::cout<<" storing muon absorbtion candidate" << std::endl;
 	}
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
@@ -1835,11 +1850,28 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_MichaelLength->Add(h_MichaelLength_miss);
   
   h_MichaelLength->Draw();
-
+  l->Draw();
   c->SaveAs("MichaelLength.root");
   c->Clear();
   l->Clear();
 
+  //**********************************************************************//  
+  h_MichaelAngle_true -> SetLineColor( 4 ) ;
+  h_MichaelAngle_miss -> SetLineColor( 2 ) ;
+
+  l->AddEntry( h_MichaelAngle_true , " Michael true " );
+  l->AddEntry( h_MichaelAngle_miss , " Michael false " );
+
+  h_MichaelAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
+  h_MichaelAngle_true -> GetYaxis() -> SetTitle( "#Events" );
+
+  h_MichaelAngle_true -> Draw();
+  h_MichaelAngle_miss -> Draw("same");
+  
+  l->Draw();
+  c->SaveAs("MichaelAngle.root");
+  c->Clear();
+  l->Clear();
   //**********************************************************************//  
 
   delete mcparticle_tree ;
