@@ -98,6 +98,9 @@ public:
   double FindMinCoordinate( const unsigned int & primary_reco_id , const int & coordinate_id ) ;
   void SaveTrack( std::string const & path , const unsigned int & primary_reco_id );
   double DistanceMotherDaughter( int  const & mother_reco_id ) ;
+  double AngleMotherDaughter( int  const & mother_reco_id ) ;
+  bool CathodGapMotherDaughter( int  const & mother_reco_id ) ;
+
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -566,6 +569,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else  ++mu_recoAbsDaughOth ;
 	  }
 	  std::cout<< " distance mother daughter " << DistanceMotherDaughter( it->first ) << std::endl ; 
+	  std::cout<< " angle mother daughter " << AngleMotherDaughter( it->first ) << std::endl ; 
+	  std::cout<< " cathod mother daughter ? " << CathodGapMotherDaughter( it->first ) << std::endl ; 
 	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	  SaveTrack( ("storing_event_absorbed"+event_s).c_str(), it->first );
 	  std::cout<<" storing absorbed muon candidate" << std::endl;
@@ -1224,6 +1229,51 @@ double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & moth
     distance_z = TMath::Abs( map_RecoZPosition[ mother_reco_id ][hits_m-1] - map_RecoZPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
   }
   return TMath::Sqrt( distance_x*distance_x + distance_y*distance_y + distance_z*distance_z ) ;
+}
+
+double test::NeutrinoTopologyAnalyzer::AngleMotherDaughter( int  const & mother_reco_id )  {
+  double angle = 0 ; 
+  int dir_id_m = 0, dir_id_d = 0 ;
+
+  // check if mother is mother
+  if( map_RecoHiearchy[ mother_reco_id ] != 1 ) return 0 ;
+  // Check if mother id has daughters 
+  if( map_RecoDaughters[ mother_reco_id ].size() == 0 ) return 0 ;
+  // check if mother has starting direction and end direction
+  if( map_RecoDirection[ mother_reco_id ].size() == 0 ) return 0 ;
+  if( map_RecoDirection[ mother_reco_id ].size() == 1 ) dir_id_m = 0 ;
+  if( map_RecoDirection[ mother_reco_id ].size() == 2 ) dir_id_m = 1 ;
+
+  // Loop over daughters to acces reco_daughter id 
+  for( unsigned int i = 0 ; i < map_RecoDaughters[ mother_reco_id ].size() ; ++i ){
+    // check if daughter has starting direction and end direction
+    if( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ].size() == 0 ) continue ;
+    if( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ].size() == 1 ) dir_id_d = 0 ;
+    if( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ].size() == 2 ) dir_id_d = 1 ;
+    // get angle
+    angle = map_RecoDirection[ mother_reco_id ][dir_id_m].Angle( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ][dir_id_d] )  ;
+  }
+  
+  return angle;
+}
+
+
+bool test::NeutrinoTopologyAnalyzer::CathodGapMotherDaughter( int  const & mother_reco_id )  {
+  int hits_m = 0 ;
+  // check if mother is mother
+  if( map_RecoHiearchy[ mother_reco_id ] != 1 ) return false ;
+  // Check if mother id has daughters 
+  if( map_RecoDaughters[ mother_reco_id ].size() == 0 ) return false ;
+  // check if mother end is close to cathod
+  hits_m = map_RecoXPosition[ mother_reco_id ].size() ;
+  if ( TMath::Abs( map_RecoXPosition[ mother_reco_id ][hits_m-1] ) < 4 ) return true ;  
+  // Loop over daughters to acces reco_daughter id 
+  for( unsigned int i = 0 ; i < map_RecoDaughters[ mother_reco_id ].size() ; ++i ){
+    // check if daughter starting point is close to cathod
+    if ( TMath::Abs( map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] ) < 4 ) return true ;  
+  }
+ 
+  return false;
 }
 
 void test::NeutrinoTopologyAnalyzer::reconfigure(fhicl::ParameterSet const & p)
