@@ -1,6 +1,0 @@
-/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodgenie_nu_singleinteraction_tpc_gsimple-configd-v1/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/61/reco-c85b8059-0811-4d8b-9d71-649b9fc2dcca.root
-/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodgenie_nu_singleinteraction_tpc_gsimple-configd-v1/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/01/subrun_number/00/00/00/83/reco-9b231153-3b94-406b-88ff-6106244fe79d.root
-/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodgenie_nu_singleinteraction_tpc_gsimple-configd-v1/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/02/subrun_number/00/00/00/60/reco-14341ec7-dab6-4823-91a9-b91e36a33055.root
-/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodgenie_nu_singleinteraction_tpc_gsimple-configd-v1/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/05/subrun_number/00/00/00/51/reco-9f47bdff-85be-4716-a40f-a931a822fe7f.root
-/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodgenie_nu_singleinteraction_tpc_gsimple-configd-v1/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/06/subrun_number/00/00/00/77/reco-fe1c3654-001c-4f3a-95ce-c06cd3c8a1cd.root
-/pnfs/sbnd/mc/reco/artroot/pre-production/MCP0.9/prodgenie_nu_singleinteraction_tpc_gsimple-configd-v1/sbndcode/v07_07_00_2_MCP0_9/run_number/00/00/00/06/subrun_number/00/00/00/63/reco-d49245f8-d945-498d-9c65-a7ad9eb197c1.root

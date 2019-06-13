@@ -1,3 +1,0 @@
-# Dom file 
-
-/sbnd/app/users/dbarker/larsoft_sbnd_shower/srcs/larreco/larreco/ShowerFinder/ShowerValidation_module.cc
