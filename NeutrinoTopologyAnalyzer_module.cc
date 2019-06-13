@@ -1211,7 +1211,7 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
 
 double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & mother_reco_id )  {
   double distance_x = 0 , distance_y = 0 , distance_z = 0 ;
-  int hits_m = 0 , hits_d = 0 ;
+  int hits_m = 0 ;
   // check if mother is mother
   if( map_RecoHiearchy[ mother_reco_id ] != 1 ) return 0 ;
   // Check if mother id has daughters 
@@ -1219,10 +1219,9 @@ double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & moth
   // Loop over daughters to acces reco_daughter id 
   for( unsigned int i = 0 ; i < map_RecoDaughters[ mother_reco_id ].size() ; ++i ){
     hits_m = map_RecoXPosition[ mother_reco_id ].size() ;
-    hits_d = map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ].size() ;
-    distance_x = TMath::Abs( map_RecoXPosition[ mother_reco_id ][hits_m-1] - map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ][hits_d-1] )  ;
-    distance_y = TMath::Abs( map_RecoYPosition[ mother_reco_id ][hits_m-1] - map_RecoYPosition[ map_RecoDaughters[ mother_reco_id ][i] ][hits_d-1] )  ;
-    distance_z = TMath::Abs( map_RecoZPosition[ mother_reco_id ][hits_m-1] - map_RecoZPosition[ map_RecoDaughters[ mother_reco_id ][i] ][hits_d-1] )  ;
+    distance_x = TMath::Abs( map_RecoXPosition[ mother_reco_id ][hits_m-1] - map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
+    distance_y = TMath::Abs( map_RecoYPosition[ mother_reco_id ][hits_m-1] - map_RecoYPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
+    distance_z = TMath::Abs( map_RecoZPosition[ mother_reco_id ][hits_m-1] - map_RecoZPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
   }
   return TMath::Sqrt( distance_x*distance_x + distance_y*distance_y + distance_z*distance_z ) ;
 }
