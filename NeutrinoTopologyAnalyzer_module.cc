@@ -202,7 +202,8 @@ private:
   int recoDec_MuDaughTr, recoDec_MuDaughShw, recoAbs_MuDaughTr, recoAbs_MuDaughShw ; 
   int mu_recoDecDaughEl, mu_recoDecDaughPh, mu_recoDecDaughMu, mu_recoDecDaughPi, mu_recoDecDaughP, mu_recoDecDaughOth ;
   int mu_recoAbsDaughEl, mu_recoAbsDaughPh, mu_recoAbsDaughMu, mu_recoAbsDaughPi, mu_recoAbsDaughP, mu_recoAbsDaughOth ;
-
+  int bigDistanceMD_mu_dec, bigAngleMD_mu_dec, cathodGapMD_mu_dec ;
+  int bigDistanceMD_mu_abs, bigAngleMD_mu_abs, cathodGapMD_mu_abs ;
   /******************************************
    * HISTOGRAMS FOR STUDIES                 *   
    ******************************************/
@@ -552,6 +553,9 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
 	    else ++mu_recoDecDaughOth ; 
 	  }
+	  if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_dec ; 
+	  if ( AngleMotherDaughter( it->first ) > 5 ) ++bigAngleMD_mu_dec ;
+	  if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
 	  //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	  //SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
 	  //std::cout<<" storing Michael electron candidate" << std::endl;
@@ -568,12 +572,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoAbsDaughP ;
 	    else  ++mu_recoAbsDaughOth ;
 	  }
-	  std::cout<< " distance mother daughter " << DistanceMotherDaughter( it->first ) << std::endl ; 
-	  std::cout<< " angle mother daughter " << AngleMotherDaughter( it->first ) << std::endl ; 
-	  std::cout<< " cathod mother daughter ? " << CathodGapMotherDaughter( it->first ) << std::endl ; 
-	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	  SaveTrack( ("storing_event_absorbed"+event_s).c_str(), it->first );
-	  std::cout<<" storing absorbed muon candidate" << std::endl;
+	  if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_abs ; 
+	  if ( AngleMotherDaughter( it->first ) > 5 ) ++bigAngleMD_mu_abs ;
+	  if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
+	  //	  event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	  //SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	  //std::cout<<" storing muon absorbtion candidate" << std::endl;
 	}
       }
       else h_recoDaughters_mu -> Fill( 0 ) ;
@@ -1215,8 +1219,9 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
 }
 
 double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & mother_reco_id )  {
-  double distance_x = 0 , distance_y = 0 , distance_z = 0 ;
-  int hits_m = 0 ;
+  double distance_x = 0 , distance_y = 0 , distance_z = 0 , distance = 0 ;
+  double distance_min = 999 ;
+  int hits_m = 0 , hits_d = 0 ;
   // check if mother is mother
   if( map_RecoHiearchy[ mother_reco_id ] != 1 ) return 0 ;
   // Check if mother id has daughters 
@@ -1224,11 +1229,16 @@ double test::NeutrinoTopologyAnalyzer::DistanceMotherDaughter( int  const & moth
   // Loop over daughters to acces reco_daughter id 
   for( unsigned int i = 0 ; i < map_RecoDaughters[ mother_reco_id ].size() ; ++i ){
     hits_m = map_RecoXPosition[ mother_reco_id ].size() ;
-    distance_x = TMath::Abs( map_RecoXPosition[ mother_reco_id ][hits_m-1] - map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
-    distance_y = TMath::Abs( map_RecoYPosition[ mother_reco_id ][hits_m-1] - map_RecoYPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
-    distance_z = TMath::Abs( map_RecoZPosition[ mother_reco_id ][hits_m-1] - map_RecoZPosition[ map_RecoDaughters[ mother_reco_id ][i] ][0] )  ;
+    hits_d = map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ].size() ;
+    for( int j = 0 ; j < hits_d ; ++j ) {
+      distance_x = TMath::Abs( map_RecoXPosition[ mother_reco_id ][hits_m-1] - map_RecoXPosition[ map_RecoDaughters[ mother_reco_id ][i] ][j] )  ;
+      distance_y = TMath::Abs( map_RecoYPosition[ mother_reco_id ][hits_m-1] - map_RecoYPosition[ map_RecoDaughters[ mother_reco_id ][i] ][j] )  ;
+      distance_z = TMath::Abs( map_RecoZPosition[ mother_reco_id ][hits_m-1] - map_RecoZPosition[ map_RecoDaughters[ mother_reco_id ][i] ][j] )  ;
+      distance = TMath::Sqrt( distance_x*distance_x + distance_y*distance_y + distance_z*distance_z ) ;
+      if( distance < distance_min ) distance_min = distance ; 
+    }
   }
-  return TMath::Sqrt( distance_x*distance_x + distance_y*distance_y + distance_z*distance_z ) ;
+  return distance_min ;
 }
 
 double test::NeutrinoTopologyAnalyzer::AngleMotherDaughter( int  const & mother_reco_id )  {
@@ -1251,7 +1261,7 @@ double test::NeutrinoTopologyAnalyzer::AngleMotherDaughter( int  const & mother_
     if( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ].size() == 1 ) dir_id_d = 0 ;
     if( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ].size() == 2 ) dir_id_d = 1 ;
     // get angle
-    angle = map_RecoDirection[ mother_reco_id ][dir_id_m].Angle( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ][dir_id_d] )  ;
+    angle = map_RecoDirection[ mother_reco_id ][dir_id_m].Angle( map_RecoDirection[ map_RecoDaughters[ mother_reco_id ][i] ][dir_id_d] ) * 360 / ( 2 * 3.1415926535897 )  ;
   }
   
   return angle;
@@ -1345,6 +1355,12 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   mu_recoAbsDaughMu = 0 ;
   mu_recoAbsDaughP = 0 ;
   mu_recoAbsDaughOth = 0 ;
+  bigDistanceMD_mu_abs = 0 ;
+  bigAngleMD_mu_abs = 0 ;
+  cathodGapMD_mu_abs = 0 ;
+  bigDistanceMD_mu_dec = 0 ;
+  bigAngleMD_mu_dec = 0 ;
+  cathodGapMD_mu_dec = 0 ;
 
   clearVariables();
   // Declare trees and branches
@@ -1448,24 +1464,33 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " \n\n******************** DECAY MUON- STUDY *********************** \n" ;
     eff_chi2_file << " Number of true mu- (primary) = " << T_mum << "\n" ; 
     eff_chi2_file << " Number of decaying mu- = " << T_decay << "\n" ; 
-    eff_chi2_file << " Number of events in which true decay + mu- has daughters = " << T_recodecay << "\n" ; 
-    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoDec_MuDaughTr << "\n" ; 
+    eff_chi2_file << " Number of events in which true decay + mu- has daughters = " << T_recodecay         << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoDec_MuDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoDec_MuDaughShw << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoDecDaughEl << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoDecDaughPh << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoDecDaughMu << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoDecDaughPi << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Proton          = " << mu_recoDecDaughP << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoDecDaughEl  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoDecDaughPh  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoDecDaughMu  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoDecDaughPi  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Proton          = " << mu_recoDecDaughP   << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Other           = " << mu_recoDecDaughOth << "\n" ; 
-    eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed << "\n" ; 
-    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoAbs_MuDaughTr << "\n" ; 
+    eff_chi2_file << "                                                                                  "  << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter distance > 5cm  = " << bigDistanceMD_mu_dec << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter angle > 5deg    = " << bigAngleMD_mu_dec    << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_dec   << "\n" ; 
+    eff_chi2_file << "                                                                                  "  << "\n" ; 
+    eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed     << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoAbs_MuDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoAbs_MuDaughShw << "\n" ;
-    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoAbsDaughEl << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoAbsDaughPh << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoAbsDaughMu << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoAbsDaughPi << "\n" ; 
-    eff_chi2_file << "                         Particle-PDG code Proton          = " << mu_recoAbsDaughP << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoAbsDaughEl  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoAbsDaughPh  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoAbsDaughMu  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoAbsDaughPi  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Proton          = " << mu_recoAbsDaughP   << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Other           = " << mu_recoAbsDaughOth << "\n" ; 
+    eff_chi2_file << "                                                                                  "  << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter distance > 5cm  = " << bigDistanceMD_mu_abs << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter angle > 5deg    = " << bigAngleMD_mu_abs    << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_abs   << "\n" ; 
 
   }
 
