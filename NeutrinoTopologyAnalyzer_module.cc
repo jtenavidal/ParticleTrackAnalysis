@@ -201,10 +201,14 @@ private:
   // Is reconstructed information ( look if particles are reconstructed by pandora )
   int reco_track_mu, reco_track_pi, reco_track_p, reco_track_e ; 
   int recoDec_MuDaughTr, recoDec_MuDaughShw, recoAbs_MuDaughTr, recoAbs_MuDaughShw ; 
+  int recoScat_PiDaughTr, recoScat_PiDaughShw ; 
   int mu_recoDecDaughEl, mu_recoDecDaughPh, mu_recoDecDaughMu, mu_recoDecDaughPi, mu_recoDecDaughP, mu_recoDecDaughOth ;
   int mu_recoAbsDaughEl, mu_recoAbsDaughPh, mu_recoAbsDaughMu, mu_recoAbsDaughPi, mu_recoAbsDaughP, mu_recoAbsDaughOth ;
+  int pi_recoScatDaughEl, pi_recoScatDaughPh, pi_recoScatDaughMu, pi_recoScatDaughPi, pi_recoScatDaughP, pi_recoScatDaughOth ;
   int bigDistanceMD_mu_dec, bigAngleMD_mu_dec, cathodGapMD_mu_dec ;
   int bigDistanceMD_mu_abs, bigAngleMD_mu_abs, cathodGapMD_mu_abs ;
+  int bigDistanceMD_pi_scat, bigAngleMD_pi_scat, cathodGapMD_pi_scat ;
+  
   /******************************************
    * HISTOGRAMS FOR STUDIES                 *   
    ******************************************/
@@ -272,7 +276,7 @@ private:
 
   TH1D * h_MichaelAngle_true = new TH1D("MichaelAngleTrue" , "Michael angle True " , 10, 0, 180 );
   TH1D * h_MichaelAngle_miss = new TH1D("MichaelAngleMiss" , "Michael angle miss " , 10, 0, 180 );
-
+  TH1D * h_PionScatteringAngle_true = new TH1D("h_PionScatteringAngle_true", " angle pion scattering ", 10, 0, 180 );
 };
 
 
@@ -570,7 +574,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    h_MichaelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    //std::cout<< " angle michael " << AngleMotherDaughter( it->first ) << std::endl;
 	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	    //SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
+	    SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
 	    PrintdEdx( ("storing_event_michael"+event_s).c_str(), it->first );
 	    //std::cout<<" storing Michael electron candidate" << std::endl;
 	  } else {
@@ -592,7 +596,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    h_MichaelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    //std::cout<< " angle absorbed " << AngleMotherDaughter( it->first ) << std::endl;
 	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	    //SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	    SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	    PrintdEdx( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	    // std::cout<<" storing muon absorbtion candidate" << std::endl;
 	  }
@@ -614,6 +618,23 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
 	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
 	else h_recoDaughters_pi -> Fill( map_RecoDaughters[it->first].size() ) ;
+	for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
+	  if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoScat_PiDaughTr;
+	  if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoScat_PiDaughShw;
+	  if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++pi_recoScatDaughEl ;
+	  else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++pi_recoScatDaughPh ;
+	  else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++pi_recoScatDaughMu ;
+	  else if(TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211)) ++pi_recoScatDaughPi ; // either pi+ pi-
+	  else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++pi_recoScatDaughP ;
+	  else ++pi_recoScatDaughOth ; 
+	}
+	if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_pi_scat ; 
+	if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_pi_scat ;
+	if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_pi_scat ; 
+	h_PionScatteringAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
+	event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	SaveTrack( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
+	PrintdEdx( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
       }
       else h_recoDaughters_pi -> Fill( 0 ) ;
       // Loop over ID secondaries
@@ -623,7 +644,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
         else { h_reco3Daughters_pi -> Fill(0);}
       }
     } 
-
+    
     if( it -> second == 1 && mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ] == 2212 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
@@ -783,7 +804,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
 	    
 	    }
 	  }// just collection plane 
-	  // calo information is stored in all planes. Need to read dEdx in an ordered way           
+	  // calo information is stored in all planes. Need to read dEdx in the same order as the track position information
 	  if( is_candidate == false ) continue ; 
 	  
 	  for( unsigned int l = 0 ; l < (cal_f[m]->XYZ()).size() ; ++l ) {
@@ -1183,7 +1204,7 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   TH3D * h_track_secondary = (TH3D * ) h_track_primary ->Clone();
   TH3D * h_track_terciary = (TH3D * ) h_track_primary ->Clone();
   std::string pdg_id ;
-  h_track_primary->SetFillColor(4);
+  //  h_track_primary->SetFillColor(4);
   h_track_primary->SetLineColor(4);
 
   if( secondary_id > 0 ) {
@@ -1206,7 +1227,8 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   }
 
   for( int i = 0; i < map_RecoHits[primary_reco_id]; ++i ){
-    h_track_primary-> Fill(map_RecoXPosition[primary_reco_id][i], map_RecoYPosition[primary_reco_id][i], map_RecoZPosition[primary_reco_id][i] ) ; }
+    h_track_primary-> Fill(map_RecoXPosition[primary_reco_id][i], map_RecoYPosition[primary_reco_id][i], 
+			   map_RecoZPosition[primary_reco_id][i] , map_RecodEdx[ primary_reco_id ][i] ) ; }
 
 
   if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 13 ) { leg->AddEntry(h_track_primary, "Primary #mu^{-}") ;}
@@ -1220,7 +1242,7 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   h_track_primary->GetXaxis()->SetTitle("X [cm]");
   h_track_primary->GetYaxis()->SetTitle("Y [cm]");
   h_track_primary->GetZaxis()->SetTitle("Z [cm]");
-  h_track_primary->Draw("BOX");
+  h_track_primary->Draw("BOX2Z");
   if( secondary_id > 0 ) h_track_secondary->Draw("BOX same");
   if( terciary_id  > 0 ) h_track_terciary->Draw("BOX same");
   h_RecoVertex->Fill( nu_reco_vertex[0], nu_reco_vertex[1], nu_reco_vertex[2]) ;
@@ -1395,7 +1417,18 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   bigDistanceMD_mu_dec = 0 ;
   bigAngleMD_mu_dec = 0 ;
   cathodGapMD_mu_dec = 0 ;
-
+  recoScat_PiDaughTr = 0 ;
+  recoScat_PiDaughShw = 0 ;
+  pi_recoScatDaughEl = 0 ;
+  pi_recoScatDaughPh = 0 ;
+  pi_recoScatDaughMu = 0 ;
+  pi_recoScatDaughPi = 0 ; 
+  pi_recoScatDaughP = 0 ;
+  pi_recoScatDaughOth = 0 ;
+  bigDistanceMD_pi_scat = 0 ;
+  bigAngleMD_pi_scat = 0 ;
+  cathodGapMD_pi_scat = 0 ;
+  
   clearVariables();
   // Declare trees and branches
   event_tree   = new TTree( "event_tree",    "Event tree: General information about the event" ) ;
@@ -1509,7 +1542,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "                         Particle-PDG code Other           = " << mu_recoDecDaughOth << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
     eff_chi2_file << "                         Mother - Daughter distance > 5cm  = " << bigDistanceMD_mu_dec << "\n" ; 
-    eff_chi2_file << "                         Mother - Daughter angle > 5deg    = " << bigAngleMD_mu_dec    << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter angle > 60deg    = " << bigAngleMD_mu_dec    << "\n" ; 
     eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_dec   << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
     eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed     << "\n" ; 
@@ -1525,7 +1558,24 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "                         Mother - Daughter distance > 5cm  = " << bigDistanceMD_mu_abs << "\n" ; 
     eff_chi2_file << "                         Mother - Daughter angle > 5deg    = " << bigAngleMD_mu_abs    << "\n" ; 
     eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_abs   << "\n" ; 
-
+    eff_chi2_file << "                                                                                  "  << "\n" ; 
+    eff_chi2_file << " \n\n******************** PI+ SCATTERING STUDY *********************** \n" ;
+    eff_chi2_file << " Number of events in which pi- has daughters = " << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoScat_PiDaughTr  << "\n" ; 
+    eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoScat_PiDaughShw << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Electron        = " << pi_recoScatDaughEl  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Photon          = " << pi_recoScatDaughPh  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Muon            = " << pi_recoScatDaughMu  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Pion (+&-)      = " << pi_recoScatDaughPi  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Proton          = " << pi_recoScatDaughP   << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code Other           = " << pi_recoScatDaughOth << "\n" ; 
+    eff_chi2_file << "                                                                                  "  << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter distance > 5cm  = " << bigDistanceMD_pi_scat << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter angle > 60deg   = " << bigAngleMD_pi_scat    << "\n" ; 
+    eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_pi_scat   << "\n" ; 
+    eff_chi2_file << "                                                                                     "  << "\n" ; 
+    eff_chi2_file << "                                                                                  "  << "\n" ; 
+ 
   }
 
 
@@ -1892,6 +1942,22 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   c->Clear();
   l->Clear();
   //**********************************************************************//  
+  //**********************************************************************//  
+  h_MichaelAngle_true -> SetLineColor( 4 ) ;
+  
+  l->AddEntry( h_PionScatteringAngle_true , " Michael true " );
+  
+  h_PionScatteringAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
+  h_PionScatteringAngle_true -> GetYaxis() -> SetTitle( "#Events" );
+
+  h_PionScatteringAngle_true -> Draw();
+  
+  l->Draw();
+  c->SaveAs("PionScatteringAngle.root");
+  c->Clear();
+  l->Clear();
+  //**********************************************************************//  
+	
 
   delete mcparticle_tree ;
   delete recoevent_tree ; 
