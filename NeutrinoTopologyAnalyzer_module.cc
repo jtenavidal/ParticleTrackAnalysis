@@ -208,7 +208,10 @@ private:
   int bigDistanceMD_mu_dec, bigAngleMD_mu_dec, cathodGapMD_mu_dec ;
   int bigDistanceMD_mu_abs, bigAngleMD_mu_abs, cathodGapMD_mu_abs ;
   int bigDistanceMD_pi_scat, bigAngleMD_pi_scat, cathodGapMD_pi_scat ;
-  
+
+  // For the real analysis 
+  int SignalMu, SignalPi, SelectedMu, SelectedPi, BGMu, BGPi, missParticle ;
+
   /******************************************
    * HISTOGRAMS FOR STUDIES                 *   
    ******************************************/
@@ -711,7 +714,77 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 2212 ) h_recoKE_p_wD  -> Fill( itD->second ) ; 
     }
   }
+
+  /******************************************************************************************************/
+  /*******************ADDING HERE ALGORITHM TO DISTINGUISH BETWEEN MUONS AND PIONS **********************/
+  /******************************************************************************************************/
+
+  // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
+  for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
+    // LOOP OVER CANDIDATES
+    // CHECK MIN NUM HITS = 10 ( R.J STUDY )
+    if( map_RecoHits[it->first] < 10 ) ++missParticle ; 
+    // IF NOT CONTAINED : MUON
+    else if( it -> second == 1 && map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 0 ) {
+      ++SelectedMu ;  
+      if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu ;
+      else ++BGMu; 
+    } 
+    // IF CONTAINED THEN :
+    else if( it -> second == 1 && map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){ 
+      if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
+	// IF NO DAUGHTERS or if HAS ONE DAUGHTER WHITH ANGLE < 30 (MISS RECO DAUGHTER BY PANDORA) or if daughter + cathode plane 
+	// or if CLEAR PHOTON CONVERSION LENGHT CUT 
+	if( map_RecoDaughters[it->first].size() == 0 || ( map_RecoDaughters[it->first].size() == 1 && AngleMotherDaughter( it->first ) < 30 )
+	    || ( map_RecoDaughters[it->first].size() == 1 && CathodGapMotherDaughter(it->first) == true ) 
+	    || ( map_RecoDaughters[it->first].size() == 1 && DistanceMotherDaughter(it->first) > 20 /*cm*/ ) ) { // check photon conversion lenght 
+	  // if longer than 200 cm call it a muon
+	  if( map_RecoLength[it->first] > 200 /* cm */ ) {
+	    ++SelectedMu ;
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu ;
+	    else ++BGMu;
+	  }
+	  // should add sth like : if longer candidate : muon 
+	  
+	  // should add if shorter than # : pion 
+
+	  // last check just call it pioni
+	  else {
+	    ++SelectedPi;
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi ; 
+	    else ++BGPi ; 
+	  }
+	// IF MORE THAN TWO DAUGHTERS OUT OF PRIMARY IS PION
+	} else if( map_RecoDaughters[it->first].size() > 2) {
+	  ++ SelectedPi ;  
+	  if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]== 211 ) ++SignalPi ; 
+	  else ++BGPi;
+	// IF HAS REAL DAUGHTERS
+	} else if( map_RecoDaughters[it->first].size() > 0) {
+	  // if daughter is track : check pid pandora
+
+	  // IF SECOND/PRIMARY LENGHT > 30 % OR IF LENGTH SECONDARY > 23 CM IS PION
+	  if( ( map_RecoLength[map_RecoDaughters[it->first][0]] / map_RecoLength[it->first] * 100 > 30 ) 
+	      || map_RecoLength[map_RecoDaughters[it->first][0]] > 24 /*cm*/ ) {
+	    ++SelectedPi ; 
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi ;
+	    else ++BGPi ; 
+	  }
+	  // THINK ABOUT OTHER CUTS BEFORE SAYING
+	  // --- NEED TO RUN WITH MORE STATISTICS TO SAY STH 
+	  // IF DAUGHTERS AND NONE OF THE ABOVE IS TRUE CALL IT PION 
+	  else {
+	    ++SelectedPi; 
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi ;
+	    else ++BGPi ; 
+	  }
+	}
+      
+      }
+    } 
+  }
   
+  /******************************************************************************************************/
  
   mcparticle_tree -> Fill();
   recoevent_tree -> Fill();
@@ -1493,7 +1566,16 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   bigDistanceMD_pi_scat = 0 ;
   bigAngleMD_pi_scat = 0 ;
   cathodGapMD_pi_scat = 0 ;
-  
+
+  // For the real analysis
+  SignalMu = 0 ;
+  SignalPi = 0 ; 
+  SelectedMu = 0 ;
+  SelectedPi = 0 ;
+  BGMu = 0 ;
+  BGPi = 0 ;
+  missParticle = 0 ;
+
   clearVariables();
   // Declare trees and branches
   event_tree   = new TTree( "event_tree",    "Event tree: General information about the event" ) ;
