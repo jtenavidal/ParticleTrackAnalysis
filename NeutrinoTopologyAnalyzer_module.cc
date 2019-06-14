@@ -224,12 +224,12 @@ private:
   int total_reco_p , reco_p ; 
 
   // Information about TPC reconstructed particles
-  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLenght_mu_TPC_signal", "mu MC Length, TPC Signal" , 20, 0 , 250 ) ;
-  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLenght_pi_TPC_signal", "pi MC Length, TPC Signal" , 20, 0 , 200 ) ;
-  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLenght_p_TPC_signal" , "p MC Length, TPC Signal"  , 20, 0 , 200 ) ;
-  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLenght_mu_TPC_miss"  , "mu MC Length, TPC Miss"   , 20, 0 , 250 ) ;
-  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLenght_pi_TPC_miss"  , "pi MC Length, TPC Miss"   , 20, 0 , 200 ) ;
-  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLenght_p_TPC_miss"   , "p MC Length, TPC Miss"    , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_signal = new TH1D("MCLength_mu_TPC_signal", "mu MC Length, TPC Signal" , 20, 0 , 250 ) ;
+  TH1D * h_MCLength_pi_TPC_signal = new TH1D("MCLength_pi_TPC_signal", "pi MC Length, TPC Signal" , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_signal  = new TH1D("MCLength_p_TPC_signal" , "p MC Length, TPC Signal"  , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_mu_TPC_miss   = new TH1D("MCLength_mu_TPC_miss"  , "mu MC Length, TPC Miss"   , 20, 0 , 250 ) ;
+  TH1D * h_MCLength_pi_TPC_miss   = new TH1D("MCLength_pi_TPC_miss"  , "pi MC Length, TPC Miss"   , 20, 0 , 200 ) ;
+  TH1D * h_MCLength_p_TPC_miss    = new TH1D("MCLength_p_TPC_miss"   , "p MC Length, TPC Miss"    , 20, 0 , 200 ) ;
 
   THStack * h_MCLength_mu_TPC = new THStack("h_MCLength_mu_TPC", "Mu MC Length TPC");
   THStack * h_MCLength_pi_TPC = new THStack("h_MCLength_pi_TPC", "Pi MC Length TPC");
@@ -277,6 +277,15 @@ private:
   TH1D * h_MichelAngle_true = new TH1D("MichelAngleTrue" , "Michel angle True " , 10, 0, 180 );
   TH1D * h_MichelAngle_miss = new TH1D("MichelAngleMiss" , "Michel angle miss " , 10, 0, 180 );
   TH1D * h_PionScatteringAngle_true = new TH1D("h_PionScatteringAngle_true", " angle pion scattering ", 10, 0, 180 );
+
+  TH1D * h_MuDaughLength_dec      = new TH1D("MuDaughLengthDec" , "Michael length " , 30, 0, 100 );
+  TH1D * h_MuDaughLength_abs      = new TH1D("MuDaughLengthAbs" , "Muon daughter decay length " , 30, 0, 100 );
+  TH1D * h_PiDaughLength          = new TH1D("PiDaughLength", " Pion daughter scattering length ", 30, 0, 100 );
+
+  TH1D * h_MuDaughRLength_dec      = new TH1D("MuDaughRLengthDec" , "Michael length ratio with muon lenght " , 30, 0, 120 );
+  TH1D * h_MuDaughRLength_abs      = new TH1D("MuDaughRLengthAbs" , "Muon daughter decay length " , 30, 0, 120 );
+  TH1D * h_PiDaughRLength          = new TH1D("PiDaughRLength", " Pion daughter scattering length ", 30, 0, 120 );
+  
 };
 
 
@@ -475,7 +484,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
 	    int part_id_f = pfparticle->Daughters()[j] ;
-	    //std:: cout << "part id f = " << part_id_f << std::endl;
 	    int part_MCID_f = FindBestMCID(e, pfParticleHandle,trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
 	    is_candidate = false ; // reset for each pfparticle daughter of the neutrino
 	    StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
@@ -484,12 +492,10 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      map_RecoHiearchy[part_id_f] = 1 ; // reconstructed as primary 
 	      map_PandoraPDG[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	      map_RecoContained[part_id_f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
-	      //std::cout<< " part_id_f =" << part_id_f << " is candidate and was " << mapMC_reco_pdg[part_MCID_f] << std::endl;
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
 		int part_MCID_2f = FindBestMCID(e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
-		//std::cout<<"  has daughters, id = " << part_id_2f << std::endl;
 		map_MCID_RecoID[part_id_2f] = part_MCID_2f ; 
 		map_RecoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
 		map_RecoHiearchy[part_id_2f] = 2 ; 
@@ -500,7 +506,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
-		  //		  std::cout<<" particle " << part_id_2f<< "  has daughters, id = " << part_id_3f << std::endl;
 		  map_MCID_RecoID[part_id_3f] = part_MCID_3f ; 
 		  map_RecoDaughters[part_id_2f].push_back( part_id_3f ) ;
 		  map_RecoHiearchy[part_id_3f] = 3 ; 
@@ -573,16 +578,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoDecDaughPi ;
 	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoDecDaughP ;
 	      else ++mu_recoDecDaughOth ; 
+	      h_MuDaughLength_dec -> Fill( map_RecoLength[map_RecoDaughters[it->first][i2]] );
+	      h_MuDaughRLength_dec -> Fill( map_RecoLength[map_RecoDaughters[it->first][i2]] / map_RecoLength[it->first] *100 );
 	    }
 	    if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_dec ; 
 	    if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_mu_dec ;
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
 	    h_MichelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
-	    //std::cout<< " angle michel " << AngleMotherDaughter( it->first ) << std::endl;
 	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	    SaveTrack( ("storing_event_michel"+event_s).c_str(), it->first );
 	    //PrintdEdx( ("storing_event_michel"+event_s).c_str(), it->first );
-	    //std::cout<<" storing Michel electron candidate" << std::endl;
 	  } else {
 	    Tmuon_absorbed = true ; 
 	    ++T_recoabsorbed ; 
@@ -595,16 +600,16 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211) ++mu_recoAbsDaughPi ;
 	      else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++mu_recoAbsDaughP ;
 	      else  ++mu_recoAbsDaughOth ;
+	      h_MuDaughLength_abs -> Fill( map_RecoLength[map_RecoDaughters[it->first][i2]] );
+	      h_MuDaughRLength_abs -> Fill( map_RecoLength[map_RecoDaughters[it->first][i2]] / map_RecoLength[it->first] *100 );
 	    }
 	    if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_abs ; 
 	    if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_mu_abs ;
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
 	    h_MichelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
-	    //std::cout<< " angle absorbed " << AngleMotherDaughter( it->first ) << std::endl;
 	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	    SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	    //PrintdEdx( ("storing_event_absorbtion"+event_s).c_str(), it->first );
-	    // std::cout<<" storing muon absorbtion candidate" << std::endl;
 	  }
 	}
       }
@@ -633,6 +638,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  else if(TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211)) ++pi_recoScatDaughPi ; // either pi+ pi-
 	  else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 2212) ++pi_recoScatDaughP ;
 	  else ++pi_recoScatDaughOth ; 
+	  h_PiDaughLength -> Fill( map_RecoLength[map_RecoDaughters[it->first][i2]] );
+	  h_PiDaughRLength -> Fill( map_RecoLength[map_RecoDaughters[it->first][i2]] / map_RecoLength[it->first] * 100 );
 	}
 	if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_pi_scat ; 
 	if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_pi_scat ;
@@ -641,7 +648,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	SaveTrack( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
 	//PrintdEdx( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
-	std::cout<< " storing scattering pion event " << std::endl;
       }
       else h_recoDaughters_pi -> Fill( 0 ) ;
       // Loop over ID secondaries
@@ -731,7 +737,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     art::FindManyP< recob::Hit > findHits (  trackHandle, e, RecoTrackLabel ) ;
     art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, RecoCaloLabel );
     art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, RecoPIDLabel );
-    std::cout<< " -- is track " << std::endl ;
     // Loop over tracks found for track_f
     for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
       has_reco_tracks = true ; 
@@ -843,7 +848,6 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     } //close track
     
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
-    std::cout<< " -- Is shower " << std::endl;
     // DOM CODE
     has_reco_showers = true ; 
     art::FindManyP<recob::Cluster> fmch(pfParticleHandle, e, ParticleLabel);
@@ -1323,7 +1327,6 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
 
 void test::NeutrinoTopologyAnalyzer::PrintdEdx( const std::string & path, const unsigned int & primary_reco_id ) {
   int bins = map_RecoHits[primary_reco_id] ;
-  std::cout<< bins << std::endl;
   TH1F * h_dEdx = new TH1F( "h_dEdx", "dEdx", int( bins /10 ), 0, bins );
   for ( int i = 0 ; i < map_RecoHits[primary_reco_id] ; ++i ){
     h_dEdx -> Fill ( i ,  map_RecodEdx[ primary_reco_id ][i] ) ;
@@ -1989,37 +1992,66 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   //**********************************************************************//  
   h_MichelAngle_true -> SetLineColor( 4 ) ;
   h_MichelAngle_miss -> SetLineColor( 2 ) ;
-
+  h_PionScatteringAngle_true -> SetLineColor ( 6 ) ;
   l->AddEntry( h_MichelAngle_true , " Michel true " );
   l->AddEntry( h_MichelAngle_miss , " Michel false " );
+  l->AddEntry( h_PionScatteringAngle_true , " Pion Scattering angle " );
 
   h_MichelAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
   h_MichelAngle_true -> GetYaxis() -> SetTitle( "#Events" );
 
   h_MichelAngle_true -> Draw();
   h_MichelAngle_miss -> Draw("same");
+  h_PionScatteringAngle_true -> Draw("same");
   
   l->Draw();
-  c->SaveAs("MichelAngle.root");
+  c->SaveAs("DaugtersAngle.root");
   c->Clear();
   l->Clear();
   //**********************************************************************//  
-  //**********************************************************************//  
-  h_MichelAngle_true -> SetLineColor( 4 ) ;
+  h_MuDaughLength_dec -> SetLineColor( 1 ) ;
+  h_MuDaughLength_abs -> SetLineColor( 2 ) ;
+  h_PiDaughLength     -> SetLineColor( 6 ) ;
+  h_MuDaughLength_dec -> SetStats( 0 ) ;
+  h_MuDaughLength_abs -> SetStats( 0 ) ;
+  h_PiDaughLength     -> SetStats( 0 ) ;
+  l->AddEntry( h_MuDaughLength_dec , " Michael electron length " ) ; 
+  l->AddEntry( h_MuDaughLength_abs , " Absorbed muon daughters length " ) ;
+  l->AddEntry( h_PiDaughLength, " Pion daughters length " ) ;
+  h_MuDaughLength_dec -> GetXaxis() -> SetTitle(" Length[cm] ");
+  h_MuDaughLength_dec -> GetYaxis() -> SetTitle(" Entries[cm] " );
+  h_PiDaughLength -> Draw("");
+  h_MuDaughLength_dec -> Draw("same");
+  h_MuDaughLength_abs -> Draw("same");
   
-  l->AddEntry( h_PionScatteringAngle_true , " Pion Scattering angle " );
-  
-  h_PionScatteringAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
-  h_PionScatteringAngle_true -> GetYaxis() -> SetTitle( "#Events" );
+  l->Draw();
+  c->SaveAs("DaughtersLength.root");
+  c->Clear();
+  l->Clear();
 
-  h_PionScatteringAngle_true -> Draw();
+  //**********************************************************************//  
+  h_MuDaughRLength_dec -> SetLineColor( 1 ) ;
+  h_MuDaughRLength_abs -> SetLineColor( 2 ) ;
+  h_PiDaughRLength     -> SetLineColor( 6 ) ;
+  h_MuDaughRLength_dec -> SetStats( 0 ) ;
+  h_MuDaughRLength_abs -> SetStats( 0 ) ;
+  h_PiDaughRLength     -> SetStats( 0 ) ;
+  l->AddEntry( h_MuDaughRLength_dec , " Michael electron length " ) ; 
+  l->AddEntry( h_MuDaughRLength_abs , " Absorbed muon daughters length " ) ;
+  l->AddEntry( h_PiDaughRLength, " Pion daughters length " ) ;
+  h_MuDaughRLength_dec -> GetXaxis() -> SetTitle(" LengthSecondary/LengthPrimary[%] ");
+  h_MuDaughRLength_dec -> GetYaxis() -> SetTitle(" Entries[cm] " );
+  h_PiDaughRLength -> Draw("");
+  h_MuDaughRLength_dec -> Draw("same");
+  h_MuDaughRLength_abs -> Draw("same");
   
   l->Draw();
-  c->SaveAs("PionScatteringAngle.root");
+  c->SaveAs("RatioDaughtersLength.root");
   c->Clear();
   l->Clear();
+
   //**********************************************************************//  
-	
+
 
   delete mcparticle_tree ;
   delete recoevent_tree ; 
