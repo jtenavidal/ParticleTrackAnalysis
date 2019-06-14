@@ -1870,6 +1870,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " TOTAL NUMBER OF SIGNAL PIONS =       "  << SignalPi_NoDShort + SignalPi_ManyD + SignalPi_HasDPID + SignalPi_HasDRatio + SignalPi_HasDFinalCut<< "\n" ; 
     eff_chi2_file << " TOTAL NUMBER OF BACKGROUND PIONS - MU =     "  << BGPi_TMu_NoDShort + BGPi_TMu_ManyD + BGPi_TMu_HasDPID + BGPi_TMu_HasDRatio + BGPi_TMu_HasDFinalCut<< "\n" ; 
     eff_chi2_file << " TOTAL NUMBER OF BACKGROUND PIONS - P =     "  << BGPi_TP_NoDShort + BGPi_TP_ManyD + BGPi_TP_HasDPID + BGPi_TP_HasDRatio + BGPi_TP_HasDFinalCut<< "\n" ; 
+  }
 
   if( eff_chi2_file.is_open() ) {
     eff_chi2_file << "                                                                                  "  << "\n" ; 
@@ -2286,7 +2287,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 }
 
 void test::NeutrinoTopologyAnalyzer::clearVariables() {
-
+  
   // Define default for parameters and create variables and trees
 
   // event tree variables 
