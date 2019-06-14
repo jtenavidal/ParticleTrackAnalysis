@@ -270,12 +270,12 @@ private:
   TH1D * h_recoKE_pi_wD = new TH1D("recoKE_pi_wD", " Candidate true Pion reconstructed KE with daughters", 50, 0, 1000) ;
   TH1D * h_recoKE_p_wD  = new TH1D("recoKE_p_wD",  " Candidate true Proton reconstructed KE with daughters", 50, 0, 1000) ;
 
-  THStack * h_MichaelLength = new THStack("MichaelLength", "MichaelLength");
-  TH1D * h_MichaelLength_reco = new TH1D("MichaelLengthReco" , "Michael Length reco " , 20, 0, 500 );
-  TH1D * h_MichaelLength_miss = new TH1D("MichaelLengthMiss" , "Michael Length miss " , 20, 0, 500 );
+  THStack * h_MichelLength = new THStack("MichelLength", "MichelLength");
+  TH1D * h_MichelLength_reco = new TH1D("MichelLengthReco" , "Michel Length reco " , 20, 0, 500 );
+  TH1D * h_MichelLength_miss = new TH1D("MichelLengthMiss" , "Michel Length miss " , 20, 0, 500 );
 
-  TH1D * h_MichaelAngle_true = new TH1D("MichaelAngleTrue" , "Michael angle True " , 10, 0, 180 );
-  TH1D * h_MichaelAngle_miss = new TH1D("MichaelAngleMiss" , "Michael angle miss " , 10, 0, 180 );
+  TH1D * h_MichelAngle_true = new TH1D("MichelAngleTrue" , "Michel angle True " , 10, 0, 180 );
+  TH1D * h_MichelAngle_miss = new TH1D("MichelAngleMiss" , "Michel angle miss " , 10, 0, 180 );
   TH1D * h_PionScatteringAngle_true = new TH1D("h_PionScatteringAngle_true", " angle pion scattering ", 10, 0, 180 );
 };
 
@@ -475,7 +475,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	  for( int j = 0 ; j < pfparticle->NumDaughters() ; ++j ) { // loop over neutrino daughters
 	    int part_id_f = pfparticle->Daughters()[j] ;
-	    
+	    //std:: cout << "part id f = " << part_id_f << std::endl;
 	    int part_MCID_f = FindBestMCID(e, pfParticleHandle,trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ; 
 	    is_candidate = false ; // reset for each pfparticle daughter of the neutrino
 	    StoreInformation( e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_f ) ;
@@ -484,10 +484,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	      map_RecoHiearchy[part_id_f] = 1 ; // reconstructed as primary 
 	      map_PandoraPDG[part_id_f] = particleMap[ pfparticle->Daughters()[j] ] -> PdgCode() ; // this is the pandora pdg code
 	      map_RecoContained[part_id_f] = IsContained( e, trackHandle, showerHandle, findTracks, part_id_f ) ;
+	      //std::cout<< " part_id_f =" << part_id_f << " is candidate " << std::endl;
 	      for( int j2 = 0 ; j2 < particleMap[pfparticle->Daughters()[j] ] -> NumDaughters() ; ++j2 ) {
 		// secondary particles 
 		int part_id_2f = particleMap[ pfparticle->Daughters()[j] ]->Daughters()[j2];
 		int part_MCID_2f = FindBestMCID(e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_2f ) ;
+		//std::cout<<"  has daughters, id = " << part_id_2f << std::endl;
 		map_MCID_RecoID[part_id_2f] = part_MCID_2f ; 
 		map_RecoDaughters[ part_id_f ].push_back( part_id_2f ) ; 
 		map_RecoHiearchy[part_id_2f] = 2 ; 
@@ -498,6 +500,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 		  //daugheter secondary particles
 		  int part_id_3f = particleMap[ particleMap[pfparticle->Daughters()[j] ]->Daughters()[j2]]->Daughters()[j3];
 		  int part_MCID_3f = FindBestMCID(e, pfParticleHandle, trackHandle, showerHandle, findTracks, ShowerMothers, part_id_3f ) ;
+		  //		  std::cout<<" particle " << part_id_2f<< "  has daughters, id = " << part_id_3f << std::endl;
 		  map_MCID_RecoID[part_id_3f] = part_MCID_3f ; 
 		  map_RecoDaughters[part_id_2f].push_back( part_id_3f ) ;
 		  map_RecoHiearchy[part_id_3f] = 3 ; 
@@ -537,9 +540,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if ( TMath::Abs(mapMC_reco_pdg[ it -> first ]) == 211  && ( it -> second ) != 0 ) h_MCLength_pi_TPC_signal -> Fill( mapTLength[ it -> first ] );
     if ( mapMC_reco_pdg[ it -> first ] == 2212 && ( it -> second ) != 0 ) h_MCLength_p_TPC_signal -> Fill( mapTLength[ it -> first ] );
     // missed signal in tpc
-    if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13   && ( it -> second ) == 0 ) h_MCLength_mu_TPC_miss -> Fill( mapTLength[ map_MCID_RecoID[it -> first] ] );
-    if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211  && ( it -> second ) == 0 ) h_MCLength_pi_TPC_miss -> Fill( mapTLength[ map_MCID_RecoID[it -> first] ] );
-    if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ] == 2212 && ( it -> second ) == 0 ) h_MCLength_p_TPC_miss  -> Fill( mapTLength[ map_MCID_RecoID[it -> first] ] );
+    if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13   && ( it -> second ) == 0 ) 
+      h_MCLength_mu_TPC_miss -> Fill( mapTLength[ map_MCID_RecoID[it -> first] ] );
+    if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211  && ( it -> second ) == 0 ) 
+      h_MCLength_pi_TPC_miss -> Fill( mapTLength[ map_MCID_RecoID[it -> first] ] );
+    if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ] == 2212 && ( it -> second ) == 0 ) 
+      h_MCLength_p_TPC_miss  -> Fill( mapTLength[ map_MCID_RecoID[it -> first] ] );
   }
   // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
@@ -571,12 +577,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_dec ; 
 	    if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_mu_dec ;
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
-	    h_MichaelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
-	    //std::cout<< " angle michael " << AngleMotherDaughter( it->first ) << std::endl;
-	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	    SaveTrack( ("storing_event_michael"+event_s).c_str(), it->first );
-	    PrintdEdx( ("storing_event_michael"+event_s).c_str(), it->first );
-	    //std::cout<<" storing Michael electron candidate" << std::endl;
+	    h_MichelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
+	    //std::cout<< " angle michel " << AngleMotherDaughter( it->first ) << std::endl;
+	    //event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	    //SaveTrack( ("storing_event_michel"+event_s).c_str(), it->first );
+	    //PrintdEdx( ("storing_event_michel"+event_s).c_str(), it->first );
+	    //std::cout<<" storing Michel electron candidate" << std::endl;
 	  } else {
 	    Tmuon_absorbed = true ; 
 	    ++T_recoabsorbed ; 
@@ -593,11 +599,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if ( DistanceMotherDaughter( it->first ) > 5 ) ++bigDistanceMD_mu_abs ; 
 	    if ( AngleMotherDaughter( it->first ) > 65 ) ++bigAngleMD_mu_abs ;
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
-	    h_MichaelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
+	    h_MichelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    //std::cout<< " angle absorbed " << AngleMotherDaughter( it->first ) << std::endl;
-	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	    SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
-	    PrintdEdx( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	    //	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
+	    //SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	    //PrintdEdx( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	    // std::cout<<" storing muon absorbtion candidate" << std::endl;
 	  }
 	}
@@ -621,7 +627,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
 	  if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoScat_PiDaughTr;
 	  if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoScat_PiDaughShw;
-	  if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 11) ++pi_recoScatDaughEl ;
+	  if(TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ]) == 11) ++pi_recoScatDaughEl ; // e+ or e-
 	  else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 22) ++pi_recoScatDaughPh ;
 	  else if(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 13) ++pi_recoScatDaughMu ;
 	  else if(TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[map_RecoDaughters[it->first][i2]] ] == 211)) ++pi_recoScatDaughPi ; // either pi+ pi-
@@ -634,7 +640,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	h_PionScatteringAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
 	event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
 	SaveTrack( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
-	PrintdEdx( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
+	//PrintdEdx( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
+	std::cout<< " storing scattering pion event " << std::endl;
       }
       else h_recoDaughters_pi -> Fill( 0 ) ;
       // Loop over ID secondaries
@@ -660,15 +667,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       }
     } 
   }
-    // Michael electron length study
+    // Michel electron length study
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 13 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( Tmuon_decay == true ){
 	if( map_RecoDaughters[it->first].size() > 0 ){
-	  h_MichaelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	  h_MichelLength_reco->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
 	}else {
-	  h_MichaelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
+	  h_MichelLength_miss->Fill(mapTLength[map_MCID_RecoID[it -> first]] ); 
 	}
       } 
     }
@@ -715,7 +722,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     2) Efficiency simple method
     3) Apply topology consideretions -> New efficiency
     4) Number of kinks -> Efficiency
-    5) Michael electrons -> Efficiency
+    5) Michel electrons -> Efficiency
   */
   
   // Save track info
@@ -724,7 +731,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     art::FindManyP< recob::Hit > findHits (  trackHandle, e, RecoTrackLabel ) ;
     art::FindManyP< anab::Calorimetry > findCalorimetry ( trackHandle, e, RecoCaloLabel );
     art::FindManyP< anab::ParticleID > findPID ( trackHandle, e, RecoPIDLabel );
-
+    //std::cout<< " -- is track " << std::endl ;
     // Loop over tracks found for track_f
     for( unsigned int n = 0 ; n < track_f.size() ; ++n ){
       has_reco_tracks = true ; 
@@ -836,6 +843,7 @@ void test::NeutrinoTopologyAnalyzer::StoreInformation(
     } //close track
     
   } else if( showerHandle.isValid() && showerHandle->size() != 0 ) { // if no track look into showers 
+    //    std::cout<< " -- Is shower " << std::endl;
     // DOM CODE
     has_reco_showers = true ; 
     art::FindManyP<recob::Cluster> fmch(pfParticleHandle, e, ParticleLabel);
@@ -1142,16 +1150,13 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   int bins = int(map_RecoHits[primary_reco_id]/10) ;
   if( map_RecoHits[primary_reco_id] < 100 ) bins = map_RecoHits[primary_reco_id];
   std::string title ;
-  int secondary_id = -999 ; 
-  int terciary_id = -999 ; 
-  
-  // check if daughters
-  for( unsigned int i = 0; i < map_RecoDaughters[primary_reco_id].size() ; ++i ){
-    if( map_RecoHiearchy[map_RecoDaughters[primary_reco_id][i]] == 2 ) secondary_id = map_RecoDaughters[primary_reco_id][i];
-    if( map_RecoHiearchy[map_RecoDaughters[primary_reco_id][i]] == 3 ) terciary_id = map_RecoDaughters[primary_reco_id][i];    
-  }
-  
+  std::vector<int> secondary_id ; 
+  std::vector<int> terciary_id ; 
   double min_x, min_y, min_z, max_x, max_y, max_z ;
+  TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
+
+  std::string pdg_id ;
+  
   // Find minimum and maximum coordinates for the priamry 
   min_x = FindMinCoordinate( primary_reco_id, 0 ) ;
   min_y = FindMinCoordinate( primary_reco_id, 1 ) ;
@@ -1160,26 +1165,34 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   max_y = FindMaxCoordinate( primary_reco_id, 1 ) ;
   max_z = FindMaxCoordinate( primary_reco_id, 2 ) ;
   
+  // check if daughters
+  for( unsigned int i = 0; i < map_RecoDaughters[primary_reco_id].size() ; ++i ){
+    if( map_RecoDaughters[primary_reco_id].size() > 0 ) secondary_id.push_back( map_RecoDaughters[primary_reco_id][i] );
+    if( map_RecoDaughters[secondary_id[i]].size() > 0 ) terciary_id.push_back( map_RecoDaughters[secondary_id[i]][i] );    
+  }
+   
   //If secondary reevaluate
-  if( secondary_id > 0 ){
-    if( FindMinCoordinate( secondary_id, 0 ) < min_x ) min_x = FindMinCoordinate( secondary_id, 0 ) ;
-    if( FindMinCoordinate( secondary_id, 1 ) < min_y ) min_y = FindMinCoordinate( secondary_id, 1 ) ;
-    if( FindMinCoordinate( secondary_id, 2 ) < min_z ) min_z = FindMinCoordinate( secondary_id, 2 ) ;
-    if( FindMaxCoordinate( secondary_id, 0 ) > max_x ) max_x = FindMaxCoordinate( secondary_id, 0 ) ;
-    if( FindMaxCoordinate( secondary_id, 1 ) > max_y ) max_y = FindMaxCoordinate( secondary_id, 1 ) ;
-    if( FindMaxCoordinate( secondary_id, 2 ) > max_z ) max_z = FindMaxCoordinate( secondary_id, 2 ) ;
-    bins = int( (map_RecoHits[primary_reco_id]+map_RecoHits[secondary_id])/10 ) ;
+  for( unsigned int i = 0 ; i < secondary_id.size() ; ++i ) {
+      if( FindMinCoordinate( secondary_id[i], 0 ) < min_x ) min_x = FindMinCoordinate( secondary_id[i], 0 ) ;
+      if( FindMinCoordinate( secondary_id[i], 1 ) < min_y ) min_y = FindMinCoordinate( secondary_id[i], 1 ) ;
+      if( FindMinCoordinate( secondary_id[i], 2 ) < min_z ) min_z = FindMinCoordinate( secondary_id[i], 2 ) ;
+      if( FindMaxCoordinate( secondary_id[i], 0 ) > max_x ) max_x = FindMaxCoordinate( secondary_id[i], 0 ) ;
+      if( FindMaxCoordinate( secondary_id[i], 1 ) > max_y ) max_y = FindMaxCoordinate( secondary_id[i], 1 ) ;
+      if( FindMaxCoordinate( secondary_id[i], 2 ) > max_z ) max_z = FindMaxCoordinate( secondary_id[i], 2 ) ;
+      bins = int( (map_RecoHits[primary_reco_id]+map_RecoHits[secondary_id[i]])/10 ) ;
   }
+
   //If terciary reevaluate
-  if( terciary_id > 0 ){
-    if( FindMinCoordinate( terciary_id, 0 ) < min_x ) min_x = FindMinCoordinate( terciary_id, 0 ) ;
-    if( FindMinCoordinate( terciary_id, 1 ) < min_y ) min_y = FindMinCoordinate( terciary_id, 1 ) ;
-    if( FindMinCoordinate( terciary_id, 2 ) < min_z ) min_z = FindMinCoordinate( terciary_id, 2 ) ;
-    if( FindMaxCoordinate( terciary_id, 0 ) > max_x ) max_x = FindMaxCoordinate( terciary_id, 0 ) ;
-    if( FindMaxCoordinate( terciary_id, 1 ) > max_y ) max_y = FindMaxCoordinate( terciary_id, 1 ) ;
-    if( FindMaxCoordinate( terciary_id, 2 ) > max_z ) max_z = FindMaxCoordinate( terciary_id, 2 ) ;
-    bins = int( (map_RecoHits[primary_reco_id]+map_RecoHits[secondary_id]+map_RecoHits[terciary_id])/10 ) ;
+  for( unsigned int i = 0 ; i < terciary_id.size() ; ++i ) {
+      if( FindMinCoordinate( terciary_id[i], 0 ) < min_x ) min_x = FindMinCoordinate( terciary_id[i], 0 ) ;
+      if( FindMinCoordinate( terciary_id[i], 1 ) < min_y ) min_y = FindMinCoordinate( terciary_id[i], 1 ) ;
+      if( FindMinCoordinate( terciary_id[i], 2 ) < min_z ) min_z = FindMinCoordinate( terciary_id[i], 2 ) ;
+      if( FindMaxCoordinate( terciary_id[i], 0 ) > max_x ) max_x = FindMaxCoordinate( terciary_id[i], 0 ) ;
+      if( FindMaxCoordinate( terciary_id[i], 1 ) > max_y ) max_y = FindMaxCoordinate( terciary_id[i], 1 ) ;
+      if( FindMaxCoordinate( terciary_id[i], 2 ) > max_z ) max_z = FindMaxCoordinate( terciary_id[i], 2 ) ;
+      bins = int( (map_RecoHits[primary_reco_id]+map_RecoHits[secondary_id[i]]+map_RecoHits[terciary_id[i]])/10 ) ;
   }
+
   // final check with neutrino vertex
   if ( min_x > nu_reco_vertex[0] ) min_x = nu_reco_vertex[0] ;
   if ( min_y > nu_reco_vertex[1] ) min_y = nu_reco_vertex[1] ;
@@ -1188,42 +1201,76 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   if ( max_y < nu_reco_vertex[1] ) max_y = nu_reco_vertex[1] ;
   if ( max_z < nu_reco_vertex[2] ) max_z = nu_reco_vertex[2] ;
 
-  /* DETECTOR SIZE 
-  min_x = -200;
-  max_x = 200;
-  min_y = min_x;
-  max_y = max_x; 
-  min_z = 0 ;
-  max_z = 500;
-  */
-
-  TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
-
-  TH3D * h_track_primary = new TH3D("h_track_primary", " Particle Track ", bins, min_x, max_x, bins, min_y, max_y, bins, min_z, max_z );
+  TH3D * h_track_primary = new TH3D("h_track_primary", " Particle Track ", bins, min_x, max_x, bins, min_y, max_y, bins, min_z, max_z );  
   TH3D * h_RecoVertex = (TH3D * ) h_track_primary ->Clone();
   TH3D * h_track_secondary = (TH3D * ) h_track_primary ->Clone();
+  TH3D * h_track_secondary_2 = (TH3D * ) h_track_primary ->Clone();
   TH3D * h_track_terciary = (TH3D * ) h_track_primary ->Clone();
-  std::string pdg_id ;
-  //  h_track_primary->SetFillColor(4);
+  TH3D * h_track_terciary_2 = (TH3D * ) h_track_primary ->Clone();
+  
+//  h_track_primary->SetFillColor(4);
   h_track_primary->SetLineColor(4);
+  h_track_secondary -> SetLineColor(2);
+  h_track_secondary_2 -> SetLineColor(7);  
+  h_track_terciary -> SetLineColor(8);
+  h_track_terciary_2 -> SetLineColor(3);
 
-  if( secondary_id > 0 ) {
-    h_track_secondary -> SetFillColor(2);
-    h_track_secondary -> SetLineColor(2);
-    pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[secondary_id]]) ;
+  if( secondary_id.size() > 0 ) {
+    pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[secondary_id[0]]]) ;
     leg->AddEntry(h_track_secondary, ("PDG code secondary = "+ pdg_id).c_str());
-    for( int i = 0; i < map_RecoHits[secondary_id]; ++i ){
-      h_track_secondary-> Fill(map_RecoXPosition[secondary_id][i], map_RecoYPosition[secondary_id][i], map_RecoZPosition[secondary_id][i] ) ; }
-
+    for( int i = 0; i < map_RecoHits[secondary_id[0]]; ++i ){
+      if( map_RecodEdx[ secondary_id[0] ].size() > 0 ) {
+	h_track_secondary-> Fill(map_RecoXPosition[secondary_id[0]][i], map_RecoYPosition[secondary_id[0]][i], 
+				 map_RecoZPosition[secondary_id[0]][i], map_RecodEdx[secondary_id[0]][i] ) ; 
+      } else { 
+	h_track_secondary -> SetFillColor(2);
+	h_track_secondary-> Fill(map_RecoXPosition[secondary_id[0]][i], map_RecoYPosition[secondary_id[0]][i], 
+			       map_RecoZPosition[secondary_id[0]][i] ) ; 
+      }
+    } 
+    if( secondary_id.size()>1){
+      pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[secondary_id[1]]]) ;
+      leg->AddEntry(h_track_secondary_2, ("PDG code secondary = "+ pdg_id).c_str());
+      for( int i = 0; i < map_RecoHits[secondary_id[1]]; ++i ){
+	if( map_RecodEdx[ secondary_id[1] ].size() > 0 ) {
+	  h_track_secondary_2-> Fill(map_RecoXPosition[secondary_id[1]][i], map_RecoYPosition[secondary_id[1]][i], 
+				   map_RecoZPosition[secondary_id[1]][i], map_RecodEdx[secondary_id[1]][i] ) ; 
+	} else { 
+	  h_track_secondary_2 -> SetFillColor(7);
+	  h_track_secondary_2-> Fill(map_RecoXPosition[secondary_id[1]][i], map_RecoYPosition[secondary_id[1]][i], 
+				   map_RecoZPosition[secondary_id[1]][i] ) ; 
+	}
+      } 
+    }
   }
 
-  if( terciary_id > 0 ) {
-    h_track_terciary -> SetFillColor(9);
-    h_track_terciary -> SetLineColor(9);
-    pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[terciary_id]]) ;
+  if( terciary_id.size() > 0 ) {
+    pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[terciary_id[0]]]) ;
     leg->AddEntry(h_track_terciary, ("PDG code terciary = " + pdg_id).c_str()); 
-    for( int i = 0; i < map_RecoHits[terciary_id]; ++i ){
-      h_track_terciary-> Fill(map_RecoXPosition[terciary_id][i], map_RecoYPosition[terciary_id][i], map_RecoZPosition[terciary_id][i] ) ; }
+    for( int i = 0; i < map_RecoHits[terciary_id[0]]; ++i ){
+      if( map_RecodEdx[ terciary_id[0] ].size() > 0 ) {
+	h_track_terciary-> Fill(map_RecoXPosition[terciary_id[0]][i], map_RecoYPosition[terciary_id[0]][i], 
+				 map_RecoZPosition[terciary_id[0]][i], map_RecodEdx[terciary_id[0]][i] ) ; 
+      } else { 
+	h_track_terciary -> SetFillColor(8);
+	h_track_terciary -> Fill(map_RecoXPosition[terciary_id[0]][i], map_RecoYPosition[terciary_id[0]][i], 
+			       map_RecoZPosition[terciary_id[0]][i] ) ; 
+      }
+    } 
+    if( terciary_id.size()>1){
+      pdg_id =  std::to_string(mapMC_reco_pdg[map_MCID_RecoID[terciary_id[1]]]) ;
+      leg->AddEntry(h_track_terciary_2, ("PDG code terciary = "+ pdg_id).c_str());
+      for( int i = 0; i < map_RecoHits[terciary_id[1]]; ++i ){
+	if( map_RecodEdx[ terciary_id[1] ].size() > 0 ) {
+	  h_track_terciary_2-> Fill(map_RecoXPosition[terciary_id[1]][i], map_RecoYPosition[terciary_id[1]][i], 
+				   map_RecoZPosition[terciary_id[1]][i], map_RecodEdx[terciary_id[1]][i] ) ; 
+	} else { 
+	  h_track_terciary_2 -> SetFillColor(3);
+	  h_track_terciary_2 -> Fill(map_RecoXPosition[terciary_id[1]][i], map_RecoYPosition[terciary_id[1]][i], 
+				   map_RecoZPosition[terciary_id[1]][i] ) ; 
+	}
+      } 
+    }
   }
 
   for( int i = 0; i < map_RecoHits[primary_reco_id]; ++i ){
@@ -1231,8 +1278,9 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
 			   map_RecoZPosition[primary_reco_id][i] , map_RecodEdx[ primary_reco_id ][i] ) ; }
 
 
+
   if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 13 ) { leg->AddEntry(h_track_primary, "Primary #mu^{-}") ;}
-  if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 211 ) { leg->AddEntry(h_track_primary, "Primary #pi^{-}") ;}
+  if( mapMC_reco_pdg[map_MCID_RecoID[primary_reco_id]] == 211 ) { leg->AddEntry(h_track_primary, "Primary #pi^{+}") ;}
 
   h_track_primary->SetTitle( "Stored_Track event" ) ;
 
@@ -1243,8 +1291,22 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   h_track_primary->GetYaxis()->SetTitle("Y [cm]");
   h_track_primary->GetZaxis()->SetTitle("Z [cm]");
   h_track_primary->Draw("BOX2Z");
-  if( secondary_id > 0 ) h_track_secondary->Draw("BOX same");
-  if( terciary_id  > 0 ) h_track_terciary->Draw("BOX same");
+  if( secondary_id.size() > 0 ) {
+    if( map_RecodEdx[secondary_id[0]].size() > 0 ) h_track_secondary->Draw("BOX2Z same");
+    else  h_track_secondary->Draw("BOX same");
+  }
+  if( secondary_id.size() > 1 ) {
+    if( map_RecodEdx[secondary_id[1]].size() > 0 ) h_track_secondary_2->Draw("BOX2Z same");
+    else  h_track_secondary_2->Draw("BOX same");
+  }
+  if( terciary_id.size() > 0 ) {
+    if( map_RecodEdx[terciary_id[0]].size() > 0 ) h_track_terciary->Draw("BOX2Z same");
+    else  h_track_terciary->Draw("BOX same");
+  }
+  if( terciary_id.size() > 1 ) {
+    if( map_RecodEdx[terciary_id[1]].size() > 0 ) h_track_terciary_2->Draw("BOX2Z same");
+    else  h_track_terciary_2->Draw("BOX same");
+  }
   h_RecoVertex->Fill( nu_reco_vertex[0], nu_reco_vertex[1], nu_reco_vertex[2]) ;
   h_RecoVertex->SetLineColor(1) ;
   h_RecoVertex->SetLineWidth(3) ;
@@ -1548,7 +1610,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed     << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoAbs_MuDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoAbs_MuDaughShw << "\n" ;
-    eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoAbsDaughEl  << "\n" ; 
+    eff_chi2_file << "                         Particle-PDG code e- or e+        = " << mu_recoAbsDaughEl  << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Photon          = " << mu_recoAbsDaughPh  << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Muon            = " << mu_recoAbsDaughMu  << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Pion            = " << mu_recoAbsDaughPi  << "\n" ; 
@@ -1560,7 +1622,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_abs   << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
     eff_chi2_file << " \n\n******************** PI+ SCATTERING STUDY *********************** \n" ;
-    eff_chi2_file << " Number of events in which pi- has daughters = " << "\n" ; 
+    eff_chi2_file << " Number of events in which pi+ has daughters = " << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoScat_PiDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoScat_PiDaughShw << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Electron        = " << pi_recoScatDaughEl  << "\n" ; 
@@ -1906,46 +1968,46 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   c->Clear();
   l->Clear();
   //**********************************************************************//  
-  h_MichaelLength_reco->SetFillColor(4);
-  h_MichaelLength_miss->SetFillColor(2);
+  h_MichelLength_reco->SetFillColor(4);
+  h_MichelLength_miss->SetFillColor(2);
   
-  l->AddEntry(h_MichaelLength_reco, "MichaelLength reco") ;
-  l->AddEntry(h_MichaelLength_miss, "MichaelLength miss") ;
+  l->AddEntry(h_MichelLength_reco, "MichelLength reco") ;
+  l->AddEntry(h_MichelLength_miss, "MichelLength miss") ;
 
-  h_MichaelLength_reco -> GetXaxis() -> SetTitle( "True #e^{-} KE" ) ; 
-  h_MichaelLength_reco -> GetYaxis() -> SetTitle( "#events" ) ; 
+  h_MichelLength_reco -> GetXaxis() -> SetTitle( "True #e^{-} KE" ) ; 
+  h_MichelLength_reco -> GetYaxis() -> SetTitle( "#events" ) ; 
 
-  h_MichaelLength->Add(h_MichaelLength_reco);
-  h_MichaelLength->Add(h_MichaelLength_miss);
+  h_MichelLength->Add(h_MichelLength_reco);
+  h_MichelLength->Add(h_MichelLength_miss);
   
-  h_MichaelLength->Draw();
+  h_MichelLength->Draw();
   l->Draw();
-  c->SaveAs("MichaelLength.root");
+  c->SaveAs("MichelLength.root");
   c->Clear();
   l->Clear();
 
   //**********************************************************************//  
-  h_MichaelAngle_true -> SetLineColor( 4 ) ;
-  h_MichaelAngle_miss -> SetLineColor( 2 ) ;
+  h_MichelAngle_true -> SetLineColor( 4 ) ;
+  h_MichelAngle_miss -> SetLineColor( 2 ) ;
 
-  l->AddEntry( h_MichaelAngle_true , " Michael true " );
-  l->AddEntry( h_MichaelAngle_miss , " Michael false " );
+  l->AddEntry( h_MichelAngle_true , " Michel true " );
+  l->AddEntry( h_MichelAngle_miss , " Michel false " );
 
-  h_MichaelAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
-  h_MichaelAngle_true -> GetYaxis() -> SetTitle( "#Events" );
+  h_MichelAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
+  h_MichelAngle_true -> GetYaxis() -> SetTitle( "#Events" );
 
-  h_MichaelAngle_true -> Draw();
-  h_MichaelAngle_miss -> Draw("same");
+  h_MichelAngle_true -> Draw();
+  h_MichelAngle_miss -> Draw("same");
   
   l->Draw();
-  c->SaveAs("MichaelAngle.root");
+  c->SaveAs("MichelAngle.root");
   c->Clear();
   l->Clear();
   //**********************************************************************//  
   //**********************************************************************//  
-  h_MichaelAngle_true -> SetLineColor( 4 ) ;
+  h_MichelAngle_true -> SetLineColor( 4 ) ;
   
-  l->AddEntry( h_PionScatteringAngle_true , " Michael true " );
+  l->AddEntry( h_PionScatteringAngle_true , " Pion Scattering angle " );
   
   h_PionScatteringAngle_true -> GetXaxis() -> SetTitle( "Angle [deg]" );
   h_PionScatteringAngle_true -> GetYaxis() -> SetTitle( "#Events" );
