@@ -182,7 +182,7 @@ private:
   std::map< int , int > map_MCID_RecoID ;
   std::map< int , std::vector<bool> > map_RecoContained ; 
   std::map< int , int > map_RecoHits, map_RecoPrimary, map_PandoraPDG ; 
-  std::map< int , bool > map_isCandidate ;
+  std::map< int , bool > map_isCandidate, map_LongestEvent ;
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_RecoDaughters ; 
@@ -215,6 +215,8 @@ private:
   int SignalMu_Cont, SignalPi_Cont, SelectedMu_Cont, SelectedPi_Cont, BGMu_TPi_Cont, BGMu_TP_Cont, BGPi_TMu_Cont, BGPi_TP_Cont ;
   int SignalMu_NoDLong, SignalPi_NoDLong, SelectedMu_NoDLong, SelectedPi_NoDLong, BGMu_TPi_NoDLong, BGMu_TP_NoDLong, 
     BGPi_TMu_NoDLong, BGPi_TP_NoDLong ;
+  int SignalMu_NoDLongest, SignalPi_NoDLongest, SelectedMu_NoDLongest, SelectedPi_NoDLongest, BGMu_TPi_NoDLongest, BGMu_TP_NoDLongest, 
+    BGPi_TMu_NoDLongest, BGPi_TP_NoDLongest ;
   int SignalMu_NoDShort, SignalPi_NoDShort, SelectedMu_NoDShort, SelectedPi_NoDShort, BGMu_TPi_NoDShort, 
     BGMu_TP_NoDShort, BGPi_TMu_NoDShort, BGPi_TP_NoDShort ;
   int SignalMu_ManyD, SignalPi_ManyD, SelectedMu_ManyD, SelectedPi_ManyD, BGMu_TPi_ManyD, BGMu_TP_ManyD, BGPi_TMu_ManyD, BGPi_TP_ManyD ;
@@ -731,7 +733,17 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       if( mapMC_reco_pdg[ map_MCID_RecoID[ itD->first ] ] == 2212 ) h_recoKE_p_wD  -> Fill( itD->second ) ; 
     }
   }
-
+  // check which candidate is longest
+  /*  double max_length = 0 ;
+  for( itD = map_RecoLength.begin(); itD != map_RecoLength.end() ; ++itD ) {
+    if( map_RecoHiearchy[itD->first] ==1 && map_RecoLength[itD->first] > max_length ) max_length = map_RecoLength[itD->first] ;
+  }
+  
+  for( itD = map_RecoLength.begin(); itD != map_RecoLength.end() ; ++it ) {
+    if( map_RecoHiearchy[itD->first] ==1 && map_RecoLength[itD->first] == max_length ) map_LongestEvent[itD->first] = true ; 
+    else map_LongestEvent[itD->first] = false ;
+    }*/
+  //
   /******************************************************************************************************/
   /*******************ADDING HERE ALGORITHM TO DISTINGUISH BETWEEN MUONS AND PIONS **********************/
   /******************************************************************************************************/
@@ -745,7 +757,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     else if( it -> second == 1 && map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 0 ) {
       ++SelectedMu_Cont ;  
       if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu_Cont ;
-      else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211  ) ++BGMu_TPi_Cont; 
+      else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_Cont; 
       else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_Cont; 
     } 
     // IF CONTAINED THEN :
@@ -756,15 +768,21 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if( map_RecoDaughters[it->first].size() == 0 || ( map_RecoDaughters[it->first].size() == 1 && AngleMotherDaughter( it->first ) < 30 )
 	    || ( map_RecoDaughters[it->first].size() == 1 && CathodGapMotherDaughter(it->first) == true ) 
 	    || ( map_RecoDaughters[it->first].size() == 1 && DistanceMotherDaughter(it->first) > 20 /*cm*/ ) ) { // check photon conversion lenght 
-	  // if longer than 200 cm call it a muon
-	  if( map_RecoLength[it->first] > 200 /* cm */ ) {
+	  // if longer than 100 cm call it a muon
+	  if( map_RecoLength[it->first] > 100 /* cm */ ) {
 	    ++SelectedMu_NoDLong ;
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu_NoDLong ;
-	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211  ) ++BGMu_TPi_NoDLong; 
+	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_NoDLong; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_NoDLong; 
 	  }
+	  else if ( map_LongestEvent[it->first] == true ){
+	    ++SelectedMu_NoDLongest ;
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu_NoDLongest ;
+	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_NoDLongest; 
+	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_NoDLongest;
+	  }
 	  // should add sth like : if longer candidate : muon . WOULD IMPROVE CC1PI SELECTION
-	  
+	  // add mapp
 	  // should add if shorter than # : pion 
 	  
 	  // last check just call it pioni
@@ -774,8 +792,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13  ) ++BGPi_TMu_NoDShort; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGPi_TP_NoDShort;  
 	  }
-	  // IF MORE THAN TWO DAUGHTERS OUT OF PRIMARY IS PION
-	} else if( map_RecoDaughters[it->first].size() > 2) {
+	  // IF MORE THAN TWO DAUGHTERS OUT OF PRIMARY IS PION OR IF THERE'S A THIRD DAUGHTER 
+	} else if( map_RecoDaughters[it->first].size() > 2 || map_RecoDaughters[map_RecoDaughters[it->first][0]].size() > 0 ) {
 	  ++ SelectedPi_ManyD ;  
 	  if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]== 211 ) ++SignalPi_ManyD ; 
 	  else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13  ) ++BGPi_TMu_ManyD; 
@@ -784,26 +802,26 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  // IF HAS REAL DAUGHTERS
 	} else if( map_RecoDaughters[it->first].size() > 0) {
 	  // if daughter is track : check pid pandora
-	  if( map_isCandidate[it->first] == true ) {
+	  if( map_isCandidate[map_RecoDaughters[it->first][0]] == true ) { 
 	    ++SelectedPi_HasDPID; 
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi_HasDPID ;
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13  ) ++BGPi_TMu_HasDPID; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGPi_TP_HasDPID; 
-	  } else if( map_isCandidate[it->first] == false ){
-	    // IF NOT THE CASE ITS A PROTON: MUON OR PION IS ABSORBED AND PROTON IS EMMITED. BOTH OF THEM SEEM AS PROBABLE! 
-	    ++SelectedMu_HasDNPID; 
-	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalMu_HasDNPID ;
-	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211  ) ++BGMu_TPi_HasDNPID; 
-	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_HasDNPID;
-	  }
 	  // IF SECOND/PRIMARY LENGHT > 30 % OR IF LENGTH SECONDARY > 23 CM IS PION
-	  if( ( map_RecoLength[map_RecoDaughters[it->first][0]] / map_RecoLength[it->first] * 100 > 30 ) 
+	  } else if( ( map_RecoLength[map_RecoDaughters[it->first][0]] / map_RecoLength[it->first] * 100 > 30 ) 
 	      || map_RecoLength[map_RecoDaughters[it->first][0]] > 24 /*cm*/ ) {
 	    ++SelectedPi_HasDRatio ; 
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi_HasDRatio ;
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13  ) ++BGPi_TMu_HasDRatio; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGPi_TP_HasDRatio; 
+	  } else if( map_isCandidate[map_RecoDaughters[it->first][0]] == false ){
+	    // IF NOT THE CASE ITS A PROTON: MUON OR PION IS ABSORBED AND PROTON IS EMMITED. BOTH OF THEM SEEM AS PROBABLE! 
+	    ++SelectedMu_HasDNPID; 
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalMu_HasDNPID ;
+	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_HasDNPID; 
+	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_HasDNPID;
 	  }
+
 	  // THINK ABOUT OTHER CUTS BEFORE SAYING
 	  // --- NEED TO RUN WITH MORE STATISTICS TO SAY STH 
 	  // IF DAUGHTERS AND NONE OF THE ABOVE IS TRUE CALL IT PION 
@@ -1622,6 +1640,14 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   BGMu_TP_NoDLong = 0 ;
   BGPi_TMu_NoDLong = 0 ;
   BGPi_TP_NoDLong = 0 ;
+  SignalMu_NoDLongest = 0 ;
+  SignalPi_NoDLongest = 0 ;
+  SelectedMu_NoDLongest = 0 ;
+  SelectedPi_NoDLongest = 0 ;
+  BGMu_TPi_NoDLongest = 0 ;
+  BGMu_TP_NoDLongest = 0 ;
+  BGPi_TMu_NoDLongest = 0 ;
+  BGPi_TP_NoDLongest = 0 ;
   SignalMu_NoDShort = 0 ;
   SignalPi_NoDShort = 0 ;
   SelectedMu_NoDShort = 0 ;
@@ -1822,42 +1848,47 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " - Number of candidates after hits cut  = " << totalCandidates - missParticle  << "\n" ; 
     eff_chi2_file << " - Containment cut  " << "\n" ; 
     eff_chi2_file << "             - Selected muons      " << SelectedMu_Cont << "\n" ; 
-    eff_chi2_file << "             - Signal muons        " << SelectedMu_Cont << "\n" ; 
+    eff_chi2_file << "             - Signal muons        " << SignalMu_Cont << "\n" ; 
     eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_Cont << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_Cont << "\n" ; 
-    eff_chi2_file << " - No daugthters L>200cm cut  " << "\n" ; 
+    eff_chi2_file << " - No daugthters L>100cm cut  " << "\n" ; 
     eff_chi2_file << "             - Selected muons      " << SelectedMu_NoDLong << "\n" ; 
-    eff_chi2_file << "             - Signal muons        " << SelectedMu_NoDLong << "\n" ; 
+    eff_chi2_file << "             - Signal muons        " << SignalMu_NoDLong << "\n" ; 
     eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_NoDLong << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_NoDLong << "\n" ; 
+    eff_chi2_file << " - No daugthters Longest in event cut  " << "\n" ; 
+    eff_chi2_file << "             - Selected muons      " << SelectedMu_NoDLongest << "\n" ; 
+    eff_chi2_file << "             - Signal muons        " << SignalMu_NoDLongest << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_NoDLongest << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_NoDLongest << "\n" ; 
     eff_chi2_file << " - No daugthters L<200cm cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_NoDShort << "\n" ; 
-    eff_chi2_file << "             - Signal pions        " << SelectedPi_NoDShort << "\n" ; 
+    eff_chi2_file << "             - Signal pions        " << SignalPi_NoDShort << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_NoDShort << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_NoDShort << "\n" ; 
     eff_chi2_file << " - More than 2 daughters cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_ManyD << "\n" ; 
-    eff_chi2_file << "             - Signal pions        " << SelectedPi_ManyD << "\n" ; 
+    eff_chi2_file << "             - Signal pions        " << SignalPi_ManyD << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_ManyD << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_ManyD << "\n" ; 
     eff_chi2_file << " - Has daughter with PID cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_HasDPID << "\n" ; 
-    eff_chi2_file << "             - Signal pions        " << SelectedPi_HasDPID << "\n" ; 
+    eff_chi2_file << "             - Signal pions        " << SignalPi_HasDPID << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_HasDPID << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_HasDPID << "\n" ; 
-    eff_chi2_file << " - Has daughter with NO PID cut    " << "\n" ; 
-    eff_chi2_file << "             - Selected muons      " << SelectedMu_HasDNPID << "\n" ; 
-    eff_chi2_file << "             - Signal muons        " << SelectedMu_HasDNPID << "\n" ; 
-    eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_HasDNPID << "\n" ; 
-    eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_HasDNPID << "\n" ; 
     eff_chi2_file << " - Has daughter Ratio > 30 or secondary length > 24 cm cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_HasDRatio << "\n" ; 
-    eff_chi2_file << "             - Signal pions        " << SelectedPi_HasDRatio << "\n" ; 
+    eff_chi2_file << "             - Signal pions        " << SignalPi_HasDRatio << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_HasDRatio << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_HasDRatio << "\n" ; 
+    eff_chi2_file << " - Has daughter with NO PID cut    " << "\n" ; 
+    eff_chi2_file << "             - Selected muons      " << SelectedMu_HasDNPID << "\n" ; 
+    eff_chi2_file << "             - Signal muons        " << SignalMu_HasDNPID << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_HasDNPID << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_HasDNPID << "\n" ; 
     eff_chi2_file << " - Has daughter FINAL cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_HasDFinalCut << "\n" ; 
-    eff_chi2_file << "             - Signal pions        " << SelectedPi_HasDFinalCut << "\n" ; 
+    eff_chi2_file << "             - Signal pions        " << SignalPi_HasDFinalCut << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_HasDFinalCut << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_HasDFinalCut << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
@@ -2349,6 +2380,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_RecoZPosition.clear();
   map_RecoDirection.clear();
   map_isCandidate.clear();
+  map_LongestEvent.clear();
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
