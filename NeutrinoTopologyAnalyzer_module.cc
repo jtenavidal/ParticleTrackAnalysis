@@ -149,8 +149,8 @@ private:
   int Tnu_PDG, T_interaction, T_decay, T_mum ;
   double t_vertex[3], t_momentum[3], t_vertex_energy ;
   bool is_cc ; 
-
-  // Truth information of primary particles 
+ 
+ // Truth information of primary particles 
   std::map < int, int >  map_IsReconstructed, mapTDaughters, mapTRescatter, mapTPrimary, mapTPiDaughterPdg; 
   std::map < int, double > mapTLength;
   //  std::map < int, bool > mapTPrimary ;
@@ -162,6 +162,8 @@ private:
   
   lar_pandora::PFParticleMap particleMap ;   
 
+  int cutPPID = 120, cutPPID_LL = 100 ;
+ 
   // neutrino related quantities
   bool primary_vcontained, primary_econtained ;
   bool nu_reconstructed , nu_rvertex_contained ;
@@ -222,14 +224,15 @@ private:
   int SignalMu_ManyD, SignalPi_ManyD, SelectedMu_ManyD, SelectedPi_ManyD, BGMu_TPi_ManyD, BGMu_TP_ManyD, BGPi_TMu_ManyD, BGPi_TP_ManyD ;
   int SignalMu_HasDPID, SignalPi_HasDPID, SelectedMu_HasDPID, SelectedPi_HasDPID, BGMu_TPi_HasDPID, 
     BGMu_TP_HasDPID, BGPi_TMu_HasDPID, BGPi_TP_HasDPID ;
-  int SignalMu_HasDNPID, SignalPi_HasDNPID, SelectedMu_HasDNPID, SelectedPi_HasDNPID, BGMu_TPi_HasDNPID, 
-    BGMu_TP_HasDNPID, BGPi_TMu_HasDNPID, BGPi_TP_HasDNPID ;
   int SignalMu_HasDRatio, SignalPi_HasDRatio, SelectedMu_HasDRatio, SelectedPi_HasDRatio, BGMu_TPi_HasDRatio, 
     BGMu_TP_HasDRatio, BGPi_TMu_HasDRatio, BGPi_TP_HasDRatio ;
+  int SignalMu_HasDNPID_Longest, SignalPi_HasDNPID_Longest, SelectedMu_HasDNPID_Longest, SelectedPi_HasDNPID_Longest, BGMu_TPi_HasDNPID_Longest, 
+    BGMu_TP_HasDNPID_Longest, BGPi_TMu_HasDNPID_Longest, BGPi_TP_HasDNPID_Longest ;
+  int SignalMu_HasDNPID, SignalPi_HasDNPID, SelectedMu_HasDNPID, SelectedPi_HasDNPID, BGMu_TPi_HasDNPID, 
+    BGMu_TP_HasDNPID, BGPi_TMu_HasDNPID, BGPi_TP_HasDNPID ;
   int SignalMu_HasDFinalCut, SignalPi_HasDFinalCut, SelectedMu_HasDFinalCut, SelectedPi_HasDFinalCut, BGMu_TPi_HasDFinalCut, 
     BGMu_TP_HasDFinalCut, BGPi_TMu_HasDFinalCut, BGPi_TP_HasDFinalCut ;
-  
-
+  int candidate_TMu, candidate_TMuP, candidate_TPi, candidate_TPim, candidate_TP, candidate_TOther ;
 
   /******************************************
    * HISTOGRAMS FOR STUDIES                 *   
@@ -608,7 +611,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_dec ; 
 	    h_MichelAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	    SaveTrack( ("storing_event_michel"+event_s).c_str(), it->first );
+	    //SaveTrack( ("storing_event_michel"+event_s).c_str(), it->first );
 	    //PrintdEdx( ("storing_event_michel"+event_s).c_str(), it->first );
 	  } else {
 	    Tmuon_absorbed = true ; 
@@ -630,7 +633,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_mu_abs ; 
 	    h_MichelAngle_miss ->Fill( AngleMotherDaughter( it->first ) ) ;
 	    event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	    SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
+	    //	    SaveTrack( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	    //PrintdEdx( ("storing_event_absorbtion"+event_s).c_str(), it->first );
 	  }
 	}
@@ -668,7 +671,7 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	if ( CathodGapMotherDaughter( it->first ) == true ) ++cathodGapMD_pi_scat ; 
 	h_PionScatteringAngle_true ->Fill( AngleMotherDaughter( it->first ) ) ;
 	event_s = "_event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first) ;
-	SaveTrack( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
+	//SaveTrack( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
 	//PrintdEdx( ("storing_event_pion_scattering"+event_s).c_str(), it->first );
       }
       else h_recoDaughters_pi -> Fill( 0 ) ;
@@ -734,15 +737,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     }
   }
   // check which candidate is longest
-  /*  double max_length = 0 ;
+  double max_length = 0 ;
   for( itD = map_RecoLength.begin(); itD != map_RecoLength.end() ; ++itD ) {
     if( map_RecoHiearchy[itD->first] ==1 && map_RecoLength[itD->first] > max_length ) max_length = map_RecoLength[itD->first] ;
   }
   
-  for( itD = map_RecoLength.begin(); itD != map_RecoLength.end() ; ++it ) {
+  for( itD = map_RecoLength.begin(); itD != map_RecoLength.end() ; ++itD ) {
     if( map_RecoHiearchy[itD->first] ==1 && map_RecoLength[itD->first] == max_length ) map_LongestEvent[itD->first] = true ; 
     else map_LongestEvent[itD->first] = false ;
-    }*/
+  }
   //
   /******************************************************************************************************/
   /*******************ADDING HERE ALGORITHM TO DISTINGUISH BETWEEN MUONS AND PIONS **********************/
@@ -750,7 +753,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
   // READING MAPS TO STUDY HIEARCHY OF FINAL STATE 
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     // LOOP OVER CANDIDATES
+    if( it->second != 1 ) continue ; 
     ++ totalCandidates;
+    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++candidate_TMu;
+    else if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == -13 ) ++candidate_TMuP;
+    else if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++candidate_TPi;
+    else if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == -211 ) ++candidate_TPim;
+    else if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++candidate_TP; 
+    else ++candidate_TOther;
+
     // CHECK MIN NUM HITS = 10 ( R.J STUDY )
     if( map_RecoHits[it->first] < 10 ) ++missParticle ; 
     // IF NOT CONTAINED : MUON
@@ -814,12 +825,18 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi_HasDRatio ;
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13  ) ++BGPi_TMu_HasDRatio; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGPi_TP_HasDRatio; 
+	  } else if( map_isCandidate[map_RecoDaughters[it->first][0]] == false && map_LongestEvent[it->first] == true ){
+	    // IF NOT THE CASE ITS A PROTON OR ELECTRON , CHECK LENGHT CANDIDATES
+	    ++SelectedMu_HasDNPID_Longest; 
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu_HasDNPID_Longest ;
+	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_HasDNPID_Longest; 
+	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_HasDNPID_Longest;
 	  } else if( map_isCandidate[map_RecoDaughters[it->first][0]] == false ){
 	    // IF NOT THE CASE ITS A PROTON: MUON OR PION IS ABSORBED AND PROTON IS EMMITED. BOTH OF THEM SEEM AS PROBABLE! 
-	    ++SelectedMu_HasDNPID; 
-	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalMu_HasDNPID ;
-	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_HasDNPID; 
-	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_HasDNPID;
+	    ++SelectedPi_HasDNPID; 
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi_HasDNPID ;
+	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 13  ) ++BGPi_TMu_HasDNPID; 
+	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGPi_TP_HasDNPID;
 	  }
 
 	  // THINK ABOUT OTHER CUTS BEFORE SAYING
@@ -1089,14 +1106,14 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
 
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonChi2( art::Ptr<anab::ParticleID> const & pid_f ) {
-  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Muon() ) return true ; 
+  if( pid_f -> Chi2Proton() < cutPPID && pid_f -> Chi2Proton() > cutPPID_LL  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Muon() ) return true ; 
   else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ;
   else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) return true ; 
   return false ;
 }
 
 bool test::NeutrinoTopologyAnalyzer::IsPionChi2( art::Ptr<anab::ParticleID> const & pid_f ) {
-  if( pid_f -> Chi2Proton() < 100 && pid_f -> Chi2Proton() > 70  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Pion() ) return true ; 
+  if( pid_f -> Chi2Proton() < cutPPID && pid_f -> Chi2Proton() > cutPPID_LL  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Pion() ) return true ; 
   else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ;
   else if( pid_f ->Chi2Pion() < pid_f ->Chi2Proton() && pid_f ->Chi2Pion() < pid_f ->Chi2Kaon() && pid_f ->Chi2Pion() < pid_f -> Chi2Muon() ) return true ; 
   return false ;
@@ -1111,7 +1128,7 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::Par
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f )
 {
-  if( pid_f->Chi2Proton() < 100 ) return false ; // R.J : 80  
+  if( pid_f->Chi2Proton() < cutPPID ) return false ; // R.J : 80  
   // If this cut is increased, many muons will be missreconstructed 
   // Keep the information for now 
 	 
@@ -1680,6 +1697,14 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   BGMu_TP_HasDNPID = 0 ;
   BGPi_TMu_HasDNPID = 0 ;
   BGPi_TP_HasDNPID = 0 ;
+  SignalMu_HasDNPID_Longest = 0 ;
+  SignalPi_HasDNPID_Longest = 0 ;
+  SelectedMu_HasDNPID_Longest = 0 ;
+  SelectedPi_HasDNPID_Longest = 0 ;
+  BGMu_TPi_HasDNPID_Longest = 0 ;
+  BGMu_TP_HasDNPID_Longest = 0 ;
+  BGPi_TMu_HasDNPID_Longest = 0 ;
+  BGPi_TP_HasDNPID_Longest = 0 ;
   SignalMu_HasDRatio = 0 ;
   SignalPi_HasDRatio = 0 ;
   SelectedMu_HasDRatio = 0 ;
@@ -1696,7 +1721,15 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   BGMu_TP_HasDFinalCut = 0 ;
   BGPi_TMu_HasDFinalCut = 0 ; 
   BGPi_TP_HasDFinalCut = 0 ;
-  
+
+  candidate_TMu= 0 ;
+  candidate_TMuP = 0 ; 
+  candidate_TPi= 0 ;
+  candidate_TPim = 0;
+  candidate_TP= 0 ;
+  candidate_TOther = 0 ;
+
+   
   clearVariables();
   // Declare trees and branches
   event_tree   = new TTree( "event_tree",    "Event tree: General information about the event" ) ;
@@ -1845,6 +1878,12 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "                                                                                  "  << "\n" ; 
     eff_chi2_file << " \n\n******************** GLOBAL ANALYSIS OF CANDIDATES  *********************** \n" ;
     eff_chi2_file << " - Total number of candidates    = " << totalCandidates  << "\n" ; 
+    eff_chi2_file << "       - True Mu-    = " << candidate_TMu  << "\n" ; 
+    eff_chi2_file << "       - True Mu+    = " << candidate_TMuP  << "\n" ; 
+    eff_chi2_file << "       - True Pi+    = " << candidate_TPi  << "\n" ; 
+    eff_chi2_file << "       - True Pi-    = " << candidate_TPim  << "\n" ; 
+    eff_chi2_file << "       - True P      = " << candidate_TP  << "\n" ; 
+    eff_chi2_file << "       - True Oth    = " << candidate_TOther  << "\n" ; 
     eff_chi2_file << " - Number of candidates after hits cut  = " << totalCandidates - missParticle  << "\n" ; 
     eff_chi2_file << " - Containment cut  " << "\n" ; 
     eff_chi2_file << "             - Selected muons      " << SelectedMu_Cont << "\n" ; 
@@ -1881,26 +1920,31 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "             - Signal pions        " << SignalPi_HasDRatio << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_HasDRatio << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_HasDRatio << "\n" ; 
-    eff_chi2_file << " - Has daughter with NO PID cut    " << "\n" ; 
-    eff_chi2_file << "             - Selected muons      " << SelectedMu_HasDNPID << "\n" ; 
-    eff_chi2_file << "             - Signal muons        " << SignalMu_HasDNPID << "\n" ; 
-    eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_HasDNPID << "\n" ; 
-    eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_HasDNPID << "\n" ; 
+    eff_chi2_file << " - Has daughter with NO PID cut & longest primary   " << "\n" ; 
+    eff_chi2_file << "             - Selected muons      " << SelectedMu_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << "             - Signal muons        " << SignalMu_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TPi_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << " - Has daughter with NO PID cut & not ongest   " << "\n" ; 
+    eff_chi2_file << "             - Selected pions      " << SelectedPi_HasDNPID << "\n" ; 
+    eff_chi2_file << "             - Signal pions        " << SignalPi_HasDNPID << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_HasDNPID << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_HasDNPID << "\n" ; 
     eff_chi2_file << " - Has daughter FINAL cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_HasDFinalCut << "\n" ; 
     eff_chi2_file << "             - Signal pions        " << SignalPi_HasDFinalCut << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_HasDFinalCut << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_HasDFinalCut << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF SELECTED MUONS =   "  << SelectedMu_Cont + SelectedMu_NoDLong + SelectedMu_HasDNPID << "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF SIGNAL MUONS =     "  << SignalMu_Cont + SignalMu_NoDLong + SignalMu_HasDNPID << "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF BG MUONS - PI =    "  << BGMu_TPi_Cont + BGMu_TPi_NoDLong + BGMu_TPi_HasDNPID << "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF BG MUONS - P =     "  << BGMu_TP_Cont + BGMu_TP_NoDLong + BGMu_TP_HasDNPID << "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF SELECTED MUONS =   "  << SelectedMu_Cont + SelectedMu_NoDLong + SelectedMu_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF SIGNAL MUONS =     "  << SignalMu_Cont + SignalMu_NoDLong + SignalMu_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF BG MUONS - PI =    "  << BGMu_TPi_Cont + BGMu_TPi_NoDLong + BGMu_TPi_HasDNPID_Longest << "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF BG MUONS - P =     "  << BGMu_TP_Cont + BGMu_TP_NoDLong + BGMu_TP_HasDNPID_Longest << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ;
-    eff_chi2_file << " TOTAL NUMBER OF SELECTED PIONS =     "  << SelectedPi_NoDShort + SelectedPi_ManyD + SelectedPi_HasDPID + SelectedPi_HasDRatio + SelectedPi_HasDFinalCut<< "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF SIGNAL PIONS =       "  << SignalPi_NoDShort + SignalPi_ManyD + SignalPi_HasDPID + SignalPi_HasDRatio + SignalPi_HasDFinalCut<< "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF BACKGROUND PIONS - MU =     "  << BGPi_TMu_NoDShort + BGPi_TMu_ManyD + BGPi_TMu_HasDPID + BGPi_TMu_HasDRatio + BGPi_TMu_HasDFinalCut<< "\n" ; 
-    eff_chi2_file << " TOTAL NUMBER OF BACKGROUND PIONS - P =     "  << BGPi_TP_NoDShort + BGPi_TP_ManyD + BGPi_TP_HasDPID + BGPi_TP_HasDRatio + BGPi_TP_HasDFinalCut<< "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF SELECTED PIONS =     "  << SelectedPi_NoDShort + SelectedPi_ManyD + SelectedPi_HasDPID + SelectedPi_HasDRatio + SelectedPi_HasDFinalCut + SelectedPi_HasDNPID << "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF SIGNAL PIONS =       "  << SignalPi_NoDShort + SignalPi_ManyD + SignalPi_HasDPID + SignalPi_HasDRatio + SignalPi_HasDFinalCut + SignalPi_HasDNPID<< "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF BACKGROUND PIONS - MU =     "  << BGPi_TMu_NoDShort + BGPi_TMu_ManyD + BGPi_TMu_HasDPID + BGPi_TMu_HasDRatio + BGPi_TMu_HasDFinalCut + BGPi_TMu_HasDNPID<< "\n" ; 
+    eff_chi2_file << " TOTAL NUMBER OF BACKGROUND PIONS - P =     "  << BGPi_TP_NoDShort + BGPi_TP_ManyD + BGPi_TP_HasDPID + BGPi_TP_HasDRatio + BGPi_TP_HasDFinalCut+ BGPi_TP_HasDNPID<< "\n" ; 
   }
 
   if( eff_chi2_file.is_open() ) {
