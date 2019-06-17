@@ -202,7 +202,8 @@ private:
 
 
   // Is reconstructed information ( look if particles are reconstructed by pandora )
-  int reco_track_mu, reco_track_pi, reco_track_p, reco_track_e ; 
+  int reco_track_mu, reco_track_pi, reco_track_p, reco_track_e ;
+  int reco_piDaugh ;
   int recoDec_MuDaughTr, recoDec_MuDaughShw, recoAbs_MuDaughTr, recoAbs_MuDaughShw ; 
   int recoScat_PiDaughTr, recoScat_PiDaughShw ; 
   int mu_recoDecDaughEl, mu_recoDecDaughPh, mu_recoDecDaughMu, mu_recoDecDaughPi, mu_recoDecDaughP, mu_recoDecDaughOth ;
@@ -659,8 +660,14 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     if( it -> second == 1 && TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first] ]) == 211 
 	&& map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 1 ){
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
-	if( map_RecoDaughters[it->first].size() > 2) h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
-	else h_recoDaughters_pi -> Fill( map_RecoDaughters[it->first].size() ) ;
+	if( map_RecoDaughters[it->first].size() > 2) {
+	  h_recoDaughters_pi -> Fill( 3 ) ; // 3 means more than 2. 
+	  ++reco_piDaugh;
+	}
+	else{
+	  h_recoDaughters_pi -> Fill( map_RecoDaughters[it->first].size() ) ;
+	  ++reco_piDaugh;
+	}
 	for( unsigned int i2 = 0 ; i2 < map_RecoDaughters[it->first].size() ; ++i2 ){
 	  if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 13) ++recoScat_PiDaughTr;
 	  if(map_PandoraPDG[map_RecoDaughters[it->first][i2]] == 11) ++recoScat_PiDaughShw;
@@ -1690,6 +1697,7 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   true_e = 0 ;
   T_mum = 0 ;
   T_decay = 0 ;
+  reco_piDaugh = 0 ;
   reco_primary_mu = 0 ;
   reco_primary_pi = 0 ;
   true_primary_mu = 0 ;
@@ -1949,9 +1957,10 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
 
   if( eff_chi2_file.is_open() ) {
     eff_chi2_file << " Primary particles study " << std::endl;
-    eff_chi2_file << " ******************** MUONS CALORIMETRY STUDY *********************** \n" ;
+    eff_chi2_file << " ******************** MUONS CALORIMETRY STUDY - just chi2 info *********************** \n" ;
     eff_chi2_file << " Number of reconstructed muons = " << reco_primary_mu << "\n" ;
     eff_chi2_file << " Number of true muons from MC = " << true_primary_mu << "\n" ;
+    eff_chi2_file << " Number of true muons that leave signal = " << reco_track_mu << "\n";
     eff_chi2_file << " Signal events ( true & reco ) = " << signal_mu << "\n" ;
     eff_chi2_file << " Background events : \n " ;
     eff_chi2_file << "     -- > True MC ID - pions " << bg_mu_pi << "\n" ; 
@@ -1959,9 +1968,10 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "     -- > True MC ID - other " << bg_mu_others << "\n" ; 
     eff_chi2_file << " EFFICIENCY =  " << eff_mu << "\n" ;
     eff_chi2_file << " PURITY =  " << purity_mu << "\n" ; 
-    eff_chi2_file << " \n\n******************** PIONS CALORIMETRY STUDY *********************** \n" ;
+    eff_chi2_file << " \n\n******************** PIONS CALORIMETRY STUDY - just chi2 info *********************** \n" ;
     eff_chi2_file << " Number of reconstructed pions = " << reco_primary_pi << "\n" ;
     eff_chi2_file << " Number of true pions from MC = " << true_primary_pi << "\n" ;
+    eff_chi2_file << " Number of true pions that leave signal = " << reco_track_pi << "\n";
     eff_chi2_file << " Signal events ( true & reco ) = " << signal_pi << "\n" ;
     eff_chi2_file << " Background events : \n " ;
     eff_chi2_file << "     -- > True MC ID - muons " << bg_pi_mu << "\n" ; 
@@ -1971,12 +1981,15 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << " PURITY =  " << purity_pi << "\n" ; 
     eff_chi2_file << " \n\n******************** RECONSTRUCT PROTONS STUDY *********************** \n" ;
     eff_chi2_file << " Number of reconstructed protons = " << total_reco_p << "\n" ;
+    eff_chi2_file << " Number of true protons that leave signal = " << reco_track_p << "\n"; 
     eff_chi2_file << " Number of reco p reconstructed as protons = " << reco_p << "\n" ;
     eff_chi2_file << " % reconstructed  = " << (double) reco_p / (double) total_reco_p * 100 << "\n" ;
     eff_chi2_file << " \n\n******************** DECAY MUON- STUDY *********************** \n" ;
     eff_chi2_file << " Number of true mu- (primary) = " << T_mum << "\n" ; 
     eff_chi2_file << " Number of decaying mu- = " << T_decay << "\n" ; 
-    eff_chi2_file << " Number of events in which true decay + mu- has daughters = " << T_recodecay         << "\n" ; 
+    eff_chi2_file << " Number of true muons that leave signal = " << reco_track_mu << "\n";
+    eff_chi2_file << " Number of events in which true decay + mu- has daughters = " << T_recodecay         
+		  << "<-->" << (double)T_recodecay/reco_track_mu * 100 <<"\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoDec_MuDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoDec_MuDaughShw << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Electron        = " << mu_recoDecDaughEl  << "\n" ; 
@@ -1990,7 +2003,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "                         Mother - Daughter angle > 60deg    = " << bigAngleMD_mu_dec    << "\n" ; 
     eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_dec   << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
-    eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed     << "\n" ; 
+    eff_chi2_file << " Number of events in which false decay + mu- has daughters = " << T_recoabsorbed     
+		  << "<-->" << (double)T_recoabsorbed/reco_track_mu * 100 <<"\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoAbs_MuDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoAbs_MuDaughShw << "\n" ;
     eff_chi2_file << "                         Particle-PDG code e- or e+        = " << mu_recoAbsDaughEl  << "\n" ; 
@@ -2005,7 +2019,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "                         Mother - Daughter cathod gap      = " << cathodGapMD_mu_abs   << "\n" ; 
     eff_chi2_file << "                                                                                  "  << "\n" ; 
     eff_chi2_file << " \n\n******************** PI+ SCATTERING STUDY *********************** \n" ;
-    eff_chi2_file << " Number of events in which pi+ has daughters = " << "\n" ; 
+    eff_chi2_file << " Number of true pions that leave signal = " << reco_track_pi << "\n";
+    eff_chi2_file << " Number of events in which pi+ has daughters = " << reco_piDaugh << "<--->" << (double) reco_piDaugh/reco_track_pi * 100 << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Track    = " << recoScat_PiDaughTr  << "\n" ; 
     eff_chi2_file << "                         Pandora-PDG code daugher Shower   = " << recoScat_PiDaughShw << "\n" ; 
     eff_chi2_file << "                         Particle-PDG code Electron        = " << pi_recoScatDaughEl  << "\n" ; 
@@ -2030,7 +2045,8 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "       - True Oth    = " << candidate_TOther  << "\n" ; 
     eff_chi2_file << " - Number of candidates after hits cut  = " << totalCandidates - missParticle  << "\n" ; 
     eff_chi2_file << " - Number of candidates after contaiment cut (only longest is allowed to escape) = " 
-		  << totalCandidates - missParticle - miss_escape << "\n" ; 
+		  << totalCandidates - missParticle - miss_escape 
+		  << "<-->" << (double)(totalCandidates - missParticle - miss_escape)/(totalCandidates)*100 << "\n" ; 
     eff_chi2_file << " - 0 cut : only muon escapes and it's the longest (always longest)  " << "\n" ; 
     eff_chi2_file << "             - Selected muons      " << SelectedR0Mu << "\n" ; 
     eff_chi2_file << "             - Signal muons        " << SignalR0Mu << "\n" ; 
@@ -2052,14 +2068,14 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "             - Backgrounds (pion-)  " << BGR2Mu_TPim << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGR2Mu_TP << "\n" ; 
     eff_chi2_file << "             - Backgrounds (Oth)     " << BGR2Mu_TOth << "\n" ; 
-    eff_chi2_file << " - Second cut : none escapes and it's the longest  " << "\n" ; 
+    eff_chi2_file << " - Third cut : none escapes and it's the longest  " << "\n" ; 
     eff_chi2_file << "             - Selected muons      " << SelectedR4Mu << "\n" ; 
     eff_chi2_file << "             - Signal muons        " << SignalR4Mu << "\n" ; 
     eff_chi2_file << "             - Backgrounds (pion+-)  " << BGR4Mu_TPiM << "\n" ; 
     eff_chi2_file << "             - Backgrounds (pion-)  " << BGR4Mu_TPim << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGR4Mu_TP << "\n" ; 
     eff_chi2_file << "             - Backgrounds (Oth)     " << BGR4Mu_TOth << "\n" ; 
-    eff_chi2_file << " - Second cut : muon found, must be pion " << "\n" ; 
+    eff_chi2_file << " - Forth cut : muon found, must be pion " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedR3Pi << "\n" ; 
     eff_chi2_file << "             - Signal pions        " << SignalR3Pi << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGR3Pi_TMu << "\n" ; 
