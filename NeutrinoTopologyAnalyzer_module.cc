@@ -136,6 +136,8 @@ private:
   bool is_reconstructed, has_reco_tracks, has_reco_showers ; 
   int has_reco_daughters ; 
 
+  bool cc_event ; 
+  bool cc_1pi ; 
   /******************************************
    *  MC INFORMATION                        *
    ******************************************/
@@ -184,7 +186,7 @@ private:
   std::map< int , int > map_MCID_RecoID ;
   std::map< int , std::vector<bool> > map_RecoContained ; 
   std::map< int , int > map_RecoHits, map_RecoPrimary, map_PandoraPDG ; 
-  std::map< int , bool > map_isCandidate, map_LongestEvent, map_AlwaysLongest ;
+  std::map< int , bool > map_isCandidate, map_LongestEvent, map_AlwaysLongest, map_HasBraggPeak ;
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_RecoDaughters ; 
@@ -239,6 +241,8 @@ private:
     BGMu_TP_HasDNPID_Longest, BGPi_TMu_HasDNPID_Longest, BGPi_TP_HasDNPID_Longest ;
   int SignalMu_HasDNPID, SignalPi_HasDNPID, SelectedMu_HasDNPID, SelectedPi_HasDNPID, BGMu_TPi_HasDNPID, 
     BGMu_TP_HasDNPID, BGPi_TMu_HasDNPID, BGPi_TP_HasDNPID ;
+  int SignalMu_HasDBraggPeak, SignalPi_HasDBraggPeak, SelectedMu_HasDBraggPeak, SelectedPi_HasDBraggPeak, BGMu_TPi_HasDBraggPeak, 
+    BGMu_TP_HasDBraggPeak, BGPi_TMu_HasDBraggPeak, BGPi_TP_HasDBraggPeak ;
   int SignalMu_HasDFinalCut, SignalPi_HasDFinalCut, SelectedMu_HasDFinalCut, SelectedPi_HasDFinalCut, BGMu_TPi_HasDFinalCut, 
     BGMu_TP_HasDFinalCut, BGPi_TMu_HasDFinalCut, BGPi_TP_HasDFinalCut ;
   int candidate_TMu, candidate_TMuP, candidate_TPi, candidate_TPim, candidate_TP, candidate_TOther ;
@@ -406,7 +410,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
     t_vertex[2] = nu.Nu().Vz();
     t_vertex_energy = nu.Nu().E();
     is_cc = nu.CCNC() == simb::curr_type_::kCC;
-    
+    if ( is_cc ) cc_event = true ; 
+
     if(mcParticles.isValid()){
       // Loop over true info
       //std::cout<< " MC INFORMATION : " << std::endl;
@@ -433,7 +438,11 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
 	// muons and pions
 	if(trueParticle.Process() == "primary" && trueParticle.PdgCode() == 13  ) { Thas_primary_mu = true ; ++true_primary_mu ; }
-	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 211 ) { Thas_primary_pi = true ; ++true_primary_pi ;}
+	if(trueParticle.Process() == "primary" && TMath::Abs(trueParticle.PdgCode()) == 211 ) { 
+	  Thas_primary_pi = true ; 
+	  ++true_primary_pi ;
+	  if( cc_event == true ) cc_1pi = true ; 
+	}
 
 	// Study of mu^- decay. We expect a mu^- for numu CC interactions. If studying numubar CC interactions, change decay products.
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && mapMC_reco_pdg[trueParticle.Mother()] == 13 ){
@@ -445,7 +454,6 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	    ++T_decay;
 	  }
 	}
-
 
 	// Study of pi+ elastic and inelastic scattering : final products pdg
 	if( trueParticle.Process() != "primary" && trueParticle.Mother() != 0 && TMath::Abs(mapMC_reco_pdg[trueParticle.Mother()]) == 211 ){
@@ -783,20 +791,52 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       continue ; 
     }
   }
+  // check if Bragg peak   bool has_BraggPeak = false ; // default none escapes  
+  double average_dEdx = 0 ;
+  for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
+    if( it -> second == 1 && map_RecoContained[ it -> first ][0] == 1 && map_RecoContained[ it -> first ][1] == 0 ) {
+      for( unsigned int i = 0 ; i < (int) ( map_RecodEdx[it->first].size() * 0.5 ) ; ++i ) {
+	average_dEdx += map_RecodEdx[it->first][i] ;
+      }
+      average_dEdx = (double) ( average_dEdx / (int) ( map_RecodEdx[it->first].size() * 0.5 ) ) ;
+      if( map_RecodEdx[it->first][map_RecodEdx[it->first][map_RecodEdx[it->first].size()-1]] > 4 * average_dEdx ) 
+	map_HasBraggPeak[it->first] = true ;
+      else map_HasBraggPeak[it->first] = false ;
 
-  /******************************************************************************************************/
-  /*******************ADDING HERE RHIANNON'S ALGORITHM BASED ON CHI2 AND GEOMETRY  **********************/
-  /******************************************************************************************************/
-  // Remember that chi2 methods are applied previously when looking for candidates, so R.J method is simplified
-  // by just having to look for long tracks in this selection 
+    }
+  }
+  // ************************************ APPLYING TRUTH INFO CUTS : get smaller sample to test *******************************
   bool mu_found = false ; 
   bool skip_event = false ; 
-
+  int count_candidates = 0 ;
+  int count_TMuCandidates = 0 , count_TPiCandidates = 0, count_TPCandidates = 0 ;
+  bool Tcc_1pi_reco = false ; // true cc1pi and the particles have left a signal. Still to reconstruct 
+  // count number of candidates
+  for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
+    // LOOP OVER CANDIDATES
+    if( it->second != 1 ) continue ; 
+    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++count_TMuCandidates ; 
+    if( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211 ) ++count_TPiCandidates ; 
+    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++count_TPCandidates ; 
+    ++count_candidates;
+  }
+  if( count_candidates > 1 && count_TMuCandidates == 1 && count_TPiCandidates > 0 ) Tcc_1pi_reco = true ; 
+  // THIS ALGORITHM HERE IS COMMON TO BOTH ANALYSIS 
   // check if event satisfies the first drastic cuts :
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     // LOOP OVER CANDIDATES
     if( it->second != 1 ) continue ; 
-  
+    // adding here an optional cut to remove all events which are not cc1pi and with less than two candidates : good for testing 
+    if( cc_1pi == false ) {
+      ++missParticle ;
+      skip_event= true ; 
+      continue ;
+    }
+    if( cc_1pi == true && Tcc_1pi_reco == false ){
+      ++missParticle ;
+      skip_event= true ; 
+      continue ;
+    }
     // CHECK MIN NUM HITS = 10 ( R.J STUDY )
     if( map_RecoHits[it->first] < 10 ) {
       ++missParticle ; 
@@ -818,6 +858,12 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       continue ; 
     } 
   }
+
+  /******************************************************************************************************/
+  /*******************ADDING HERE RHIANNON'S ALGORITHM BASED ON CHI2 AND GEOMETRY  **********************/
+  /******************************************************************************************************/
+  // Remember that chi2 methods are applied previously when looking for candidates, so R.J method is simplified
+  // by just having to look for long tracks in this selection 
   
   for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
     // LOOP OVER CANDIDATES
@@ -908,26 +954,26 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       if( map_RecoDaughters.find( it -> first ) != map_RecoDaughters.end() ) { 
 	// IF NO DAUGHTERS or if HAS ONE DAUGHTER WHITH ANGLE < 30 (MISS RECO DAUGHTER BY PANDORA) or if daughter + cathode plane 
 	// or if CLEAR PHOTON CONVERSION LENGHT CUT 
-	if( map_RecoDaughters[it->first].size() == 0 || ( map_RecoDaughters[it->first].size() == 1 && AngleMotherDaughter( it->first ) < 30 )
+	if( map_RecoDaughters[it->first].size() == 0 || ( map_RecoDaughters[it->first].size() == 1 && AngleMotherDaughter( it->first ) < 20 )
 	    || ( map_RecoDaughters[it->first].size() == 1 && CathodGapMotherDaughter(it->first) == true ) 
 	    || ( map_RecoDaughters[it->first].size() == 1 && DistanceMotherDaughter(it->first) > 20 ) ) { // check photon conversion lenght 
 	
-	  // if longer than 100 cm call it a muon
-	  if( mu_found == false && map_RecoLength[it->first] > 100 ) {
+	  // if longer than 180 cm call it a muon
+	  if( mu_found == false && map_RecoLength[it->first] > 180 ) {
 	    ++SelectedMu_NoDLong ;
 	    mu_found = true ; 
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu_NoDLong ;
 	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_NoDLong; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_NoDLong; 
 	  }
-	  else if ( mu_found == false && map_LongestEvent[it->first] == true ){
+	  else if ( mu_found == false && map_AlwaysLongest[it->first] == true ){
 	    ++SelectedMu_NoDLongest ;
 	    mu_found = true ;
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 ) ++SignalMu_NoDLongest ;
 	    else if ( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211  ) ++BGMu_TPi_NoDLongest; 
 	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_NoDLongest;
 	  }
-	  // should add if shorter than # : pion 
+	  else if ( map_RecoLength[ it->first ] < 10 /*cm*/ ) continue ; // its a proton
 	  // if not muon then is pion 
 	  else {
 	    ++SelectedPi_NoDShort;
@@ -946,8 +992,15 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 	  
 	  // IF HAS REAL DAUGHTERS
 	} else if( map_RecoDaughters[it->first].size() > 0) {
+	  if ( map_RecoLength[ it->first ] < 10 /*cm*/ ) continue ; // its a proton
+	  if( map_HasBraggPeak[it->first] == true ){
+	    ++SelectedMu_HasDBraggPeak; 
+	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalMu_HasDBraggPeak ;
+	    else if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == -211 ) ++SignalMu_HasDBraggPeak ;
+	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13  ) ++BGMu_TPi_HasDBraggPeak ; 
+	    else if ( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 ) ++BGMu_TP_HasDBraggPeak ;
 	  // if daughter is track : check pid pandora
-	  if( map_isCandidate[map_RecoDaughters[it->first][0]] == true ) { 
+	  } else if( map_isCandidate[map_RecoDaughters[it->first][0]] == true ) { 
 	    ++SelectedPi_HasDPID; 
 	    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 211 ) ++SignalPi_HasDPID ;
 	    else if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == -211 ) ++SignalPi_HasDPID ;
@@ -1246,7 +1299,7 @@ int test::NeutrinoTopologyAnalyzer::FindBestMCID(art::Event const & e, art::Hand
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonChi2( art::Ptr<anab::ParticleID> const & pid_f ) {
   if( pid_f -> Chi2Proton() < cutPPID && pid_f -> Chi2Proton() > cutPPID_LL  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Muon() ) return true ; 
-  else if( IsMuonPionCandidateChi2Proton( pid_f ) == false ) return false ;
+  else if( IsMuonPionCandidateChi2Proton( pid_f ) == true ) return true ;
   else if( pid_f ->Chi2Muon() < pid_f ->Chi2Proton() && pid_f ->Chi2Muon() < pid_f ->Chi2Kaon() && pid_f ->Chi2Muon() < pid_f -> Chi2Pion() ) return true ; 
   return false ;
 }
@@ -1267,7 +1320,8 @@ bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2( art::Ptr<anab::Par
 
 bool test::NeutrinoTopologyAnalyzer::IsMuonPionCandidateChi2Proton( art::Ptr<anab::ParticleID> const & pid_f )
 {
-  if( pid_f->Chi2Proton() < cutPPID ) return false ; // R.J : 80  
+  if( pid_f -> Chi2Proton() < cutPPID && pid_f -> Chi2Proton() > cutPPID_LL  && pid_f -> Chi2Proton() > 2 * pid_f -> Chi2Pion() ) return true ; 
+  else if( pid_f->Chi2Proton() < cutPPID ) return false ; // R.J : 80  
   // If this cut is increased, many muons will be missreconstructed 
   // Keep the information for now 
 	 
@@ -1887,6 +1941,14 @@ void test::NeutrinoTopologyAnalyzer::beginJob( )
   BGMu_TP_HasDRatio = 0 ;
   BGPi_TMu_HasDRatio = 0 ;
   BGPi_TP_HasDRatio = 0 ;
+  SignalMu_HasDBraggPeak = 0 ;
+  SignalPi_HasDBraggPeak = 0 ;
+  SelectedMu_HasDBraggPeak = 0 ;
+  SelectedPi_HasDBraggPeak = 0 ;
+  BGMu_TPi_HasDBraggPeak = 0 ;
+  BGMu_TP_HasDBraggPeak = 0 ;
+  BGPi_TMu_HasDBraggPeak = 0 ; 
+  BGPi_TP_HasDBraggPeak = 0 ;
   SignalMu_HasDFinalCut = 0 ;
   SignalPi_HasDFinalCut = 0 ;
   SelectedMu_HasDFinalCut = 0 ;
@@ -2173,6 +2235,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
     eff_chi2_file << "             - Signal pions        " << SignalPi_NoDShort << "\n" ; 
     eff_chi2_file << "             - Backgrounds (muon)  " << BGPi_TMu_NoDShort << "\n" ; 
     eff_chi2_file << "             - Backgrounds (p)     " << BGPi_TP_NoDShort << "\n" ; 
+    eff_chi2_file << " - Has Bragg Peak " << "\n" ; 
+    eff_chi2_file << "             - Selected muons      " << SelectedMu_HasDBraggPeak << "\n" ; 
+    eff_chi2_file << "             - Signal muons        " << SignalMu_HasDBraggPeak << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (pion)  " << BGMu_TP_HasDBraggPeak << "\n" ; 
+    eff_chi2_file << "             - Backgrounds (p)     " << BGMu_TP_HasDBraggPeak << "\n" ; 
     eff_chi2_file << " - More than 2 daughters cut  " << "\n" ; 
     eff_chi2_file << "             - Selected pions      " << SelectedPi_ManyD << "\n" ; 
     eff_chi2_file << "             - Signal pions        " << SignalPi_ManyD << "\n" ; 
@@ -2284,16 +2351,17 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   l->AddEntry(  h_recoLength_mu,  " True Muon, reco length",    "l" );
   l->AddEntry(  h_recoLength_pi,  " True Muon, reco length",    "l" );
   l->AddEntry(  h_recoLength_p,  " True Muon, reco length",    "l" );
- 
+  /* 
   h_recoLength_mu -> Scale(1/h_recoLength_mu->GetEntries());
   h_recoLength_pi -> Scale(1/h_recoLength_pi->GetEntries());
   h_recoLength_p ->  Scale(1/h_recoLength_p->GetEntries());
-  
+  */
   h_recoLength_mu -> Draw( "HIST" ) ;
   h_recoLength_pi -> Draw( "same HIST" ) ;
   h_recoLength_p -> Draw( "same HIST" ) ;
   c->SaveAs("Length_recoCandidates.root");
   l->Draw();
+  l->Clear();
   c->Clear();
   //**********************************************************************//  
   h_recoKE_mu -> SetStats( 0 ) ;
@@ -2305,11 +2373,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_p -> SetLineColor( 4 ) ;
   
   h_recoKE_mu -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
-  
+  /*
   h_recoKE_mu -> Scale(1/h_recoKE_mu->GetEntries());
   h_recoKE_pi -> Scale(1/h_recoKE_pi->GetEntries());
   h_recoKE_p -> Scale(1/h_recoKE_p->GetEntries());
-  
+  */
   h_recoKE_mu -> Draw("HIST" ) ;
   h_recoKE_pi -> Draw( "same HIST" ) ;
   h_recoKE_p -> Draw( "same HIST" ) ;
@@ -2331,11 +2399,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_p_noD -> SetLineColor( 4 ) ;
   
   h_recoKE_mu_noD -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
-  
+  /*
   h_recoKE_mu_noD -> Scale(1/h_recoKE_mu_noD->GetEntries());
   h_recoKE_pi_noD -> Scale(1/h_recoKE_pi_noD->GetEntries());
   h_recoKE_p_noD -> Scale(1/h_recoKE_p_noD->GetEntries());
-
+  */
   h_recoKE_mu_noD -> Draw("HIST" ) ;
   h_recoKE_pi_noD -> Draw( "same HIST" ) ;
   h_recoKE_p_noD -> Draw( "same HIST" ) ;
@@ -2358,11 +2426,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_p_noD -> SetLineColor( 4 ) ;
   
   h_recoLength_mu_noD -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
-  
+  /*
   h_recoLength_mu_noD -> Scale(1/h_recoLength_mu_noD->GetEntries());
   h_recoLength_pi_noD -> Scale(1/h_recoLength_pi_noD->GetEntries());
   h_recoLength_p_noD -> Scale(1/h_recoLength_p_noD->GetEntries());
-  
+  */
   h_recoLength_mu_noD -> Draw( "HIST") ;
   h_recoLength_pi_noD -> Draw( "same HIST" ) ;
   h_recoLength_p_noD -> Draw( "same" ) ;
@@ -2384,11 +2452,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoKE_p_wD -> SetLineColor( 4 ) ;
   
   h_recoKE_mu_wD -> GetXaxis() ->SetTitle( "KE[GeV]" ) ;
-  
+  /*
   h_recoKE_mu_wD -> Scale(1./h_recoKE_mu_wD->GetEntries());
   h_recoKE_pi_wD -> Scale(1./h_recoKE_pi_wD->GetEntries());
   h_recoKE_p_wD -> Scale(1./h_recoKE_p_wD->GetEntries());
-
+  */
   h_recoKE_mu_wD -> Draw("HIST" ) ;
   h_recoKE_pi_wD -> Draw( "same HIST" ) ;
   h_recoKE_p_wD -> Draw( "same HIST" ) ;
@@ -2410,11 +2478,11 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoLength_p_wD -> SetLineColor( 4 ) ;
   
   h_recoLength_mu_wD -> GetXaxis() ->SetTitle( "Length[cm]" ) ;
-  
+  /*
   h_recoLength_mu_wD -> Scale(1/h_recoLength_mu_wD->GetEntries());
   h_recoLength_pi_wD -> Scale(1/h_recoLength_pi_wD->GetEntries());
   h_recoLength_p_wD -> Scale(1/h_recoLength_pi_wD->GetEntries());
-
+  */
   h_recoLength_mu_wD -> Draw("HIST" ) ;
   h_recoLength_pi_wD -> Draw( "same HIST" ) ;
   h_recoLength_p_wD -> Draw( "same HIST" ) ;
@@ -2506,9 +2574,9 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoDaughters_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
   h_recoDaughters_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
 
-  //  h_recoDaughters_mu -> Scale(1/h_recoDaughters_mu->GetEntries());
-  // h_recoDaughters_pi -> Scale(1/h_recoDaughters_pi->GetEntries());
-  //h_recoDaughters_p  -> Scale(1/h_recoDaughters_p->GetEntries());
+  h_recoDaughters_mu -> Scale(1/h_recoDaughters_mu->GetEntries());
+  h_recoDaughters_pi -> Scale(1/h_recoDaughters_pi->GetEntries());
+  h_recoDaughters_p  -> Scale(1/h_recoDaughters_p->GetEntries());
 
   l->AddEntry(h_recoDaughters_mu,"mu reco daughters");
   l->AddEntry(h_recoDaughters_pi,"pi reco daughters");
@@ -2519,6 +2587,7 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   h_recoDaughters_p  -> Draw("same HIST") ; 
   l->Draw();
   c->SaveAs("Daughters_primary.root") ; 
+  l->Clear();
   c->Clear();
   //**********************************************************************//  
   h_reco3Daughters_mu -> SetStats(0) ; 
@@ -2646,6 +2715,9 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   has_reco_tracks    =  false ;
   has_reco_showers = false ; 
 
+  cc_event = false ; 
+  cc_1pi = false ; 
+
   Tnu_PDG = 0 ;
   T_interaction = 0 ;
   t_vertex[0] = 0 ;
@@ -2700,6 +2772,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_isCandidate.clear();
   map_LongestEvent.clear();
   map_AlwaysLongest.clear();
+  map_HasBraggPeak.clear();
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
