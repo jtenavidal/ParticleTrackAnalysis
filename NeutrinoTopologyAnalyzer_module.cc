@@ -102,6 +102,16 @@ public:
   double AngleMotherDaughter( int  const & mother_reco_id ) ;
   bool CathodGapMotherDaughter( int  const & mother_reco_id ) ;
 
+  // MiniBooNE algorithm required functions : 
+  /**
+   * Functions to guess about the geometry of the track
+   */
+  std::vector< double > MeanData( const std::vector< double > & data ) ;
+  std::vector< double > DevData( const std::vector< double > & dat ) ;
+  std::vector< double > CovData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
+  std::vector< double > LinearityData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ) ;
+  std::vector< std::vector< double > > FindMinimumLinearityPosition( const std::vector< double > & Data_X, const std::vector< double > & Data_Y, 
+								     const std::vector< double > & Data_Z ); 
 
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
@@ -1741,6 +1751,174 @@ bool test::NeutrinoTopologyAnalyzer::CathodGapMotherDaughter( int  const & mothe
   }
  
   return false;
+}
+
+
+// STATISTICS GENERAL FUNCTIONS FOR THE MINIBOONE ALGORITHM 
+std::vector< double > test::NeutrinoTopologyAnalyzer::MeanData( const std::vector<double> & data ){
+  double muI_data;
+  std::vector< double > mu_data ;
+  int window =  int( data.size() * 0.05 ) ;
+  unsigned int starting_hit , end_hit ;
+
+  if( window < 5 ) window = 5 ;
+
+  for( int i = 0; i < int(data.size()); ++i ){
+    muI_data = 0. ;
+    if ( i - window < 0 ) {
+      starting_hit = 0 ;
+      end_hit = i + window ;
+    } else if ( i + window >= int(data.size())) {
+      starting_hit = i - window ;
+      end_hit = data.size() ;
+    } else if ( i - window < 0  && i + window >= int(data.size())) {
+      starting_hit = 0 ;
+      end_hit = data.size() ;
+    } else {
+      starting_hit = i - window ;
+      end_hit = i + window ;
+    }
+
+    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
+      muI_data += data[j];
+    }
+    mu_data.push_back( muI_data/( end_hit - starting_hit ) );
+  }
+
+  return mu_data;
+}
+
+std::vector< double > test::NeutrinoTopologyAnalyzer::DevData( const std::vector<double> & data ){
+  double devI_data;
+  std::vector< double > dev_data , mean ;
+  int window =  int( data.size() * 0.05 ) ;
+  unsigned int starting_hit , end_hit ;
+
+  if( window < 5 ) window = 5 ;
+  mean = MeanData( data ) ;
+
+  for( int i = 0; i < int(data.size()); ++i ){
+    devI_data = 0. ;
+    if ( i - window < 0 ) {
+      starting_hit = 0 ;
+      end_hit = i + window ;
+    } else if ( i + window >= int(data.size())) {
+      starting_hit = i - window ;
+      end_hit = data.size() ;
+    } else if ( i - window < 0  && i + window >= int(data.size())) {
+      starting_hit = 0 ;
+      end_hit = data.size() ;
+    } else {
+      starting_hit = i - window ;
+      end_hit = i + window ;
+    }
+
+    for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
+      devI_data += std::pow( data[j]-mean[i] ,2);
+    }
+    dev_data.push_back( std::sqrt( devI_data/( end_hit - starting_hit -1 ) ) );
+  }
+
+  return dev_data;
+}
+
+std::vector< double > test::NeutrinoTopologyAnalyzer::CovData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
+  double covI_12 ; // 1 - variable 1, 2 - second variable
+  std::vector< double > cov_12 , mean1, mean2;
+  mean1 = MeanData( Data_1 ) ; //variable 1
+  mean2 = MeanData( Data_2 ) ; //variable 2
+  int window =  int( Data_1.size() * 0.05 ) ;
+  unsigned int starting_hit , end_hit ;
+
+  if( window < 5 ) window = 5 ;
+
+
+  if( Data_1.size() == Data_2.size() ) {
+    for( int i = 0; i < int(Data_1.size()); ++i ) {
+
+      covI_12 = 0. ;
+      if ( i - window < 0 ) {
+        starting_hit = 0 ;
+        end_hit = i + window ;
+      } else if ( i + window >= int(Data_1.size())) {
+        starting_hit = i - window ;
+        end_hit = Data_1.size() ;
+      } else if ( i - window < 0  && i + window >= int(Data_1.size())) {
+        starting_hit = 0 ;
+        end_hit = Data_1.size() ;
+      } else {
+        starting_hit = i - window ;
+        end_hit = i + window ;
+      }
+
+      for( unsigned int j = starting_hit ; j < end_hit ; ++j ){
+        covI_12 += ( Data_1[j]-mean1[i])*( Data_2[j]-mean2[i]) ;
+      }
+
+      cov_12.push_back( covI_12/( end_hit - starting_hit -1 ) );
+    }
+  }
+
+  return cov_12;
+}
+
+std::vector< double > test::NeutrinoTopologyAnalyzer::LinearityData( const std::vector< double > & Data_1, const std::vector< double > & Data_2 ){
+  // It calculates the linearity from Pearson correlation coefficient (corrP)
+  std::vector< double > corrP_12, cov_12, dev1, dev2 ;
+  cov_12 = CovData( Data_1, Data_2 ) ;
+  dev1 = DevData( Data_1 ) ;
+  dev2 = DevData( Data_2 ) ;
+  int window =  int( Data_1.size() * 0.05 ) ;
+
+  if( window < 5 ) window = 5 ;
+
+
+  if ( Data_1.size() == Data_2.size()) {
+    for( int i = 0; i < int( Data_1.size() ); ++i ){
+      corrP_12.push_back( sqrt(std::pow(cov_12[i]/(dev1[i]*dev2[i]),2)) ) ;
+    }
+  }
+  return corrP_12;
+}
+
+std::vector< std::vector< double > > test::NeutrinoTopologyAnalyzer::FindMinimumLinearityPosition( const std::vector< double > & Data_X, const std::vector< double > & Data_Y, 
+								   const std::vector< double > & Data_Z ){
+
+  std::vector< std::vector< double > > min_Linearity_position ;
+  std::vector< double > position ;
+  std::vector< double > corrP_XY = LinearityData( Data_X, Data_Y ) ;
+  std::vector< double > corrP_XZ = LinearityData( Data_X, Data_Z ) ;
+  std::vector< double > corrP_YZ = LinearityData( Data_Z, Data_Y ) ;
+  std::vector< double > corrP ;
+  int window =  int( Data_X.size() * 0.07 ) ;
+  if( window < 5 ) window = 5 ;
+  double linearity_min = 2 ;
+  unsigned int min_hit = 0 ;
+  
+  for( unsigned int i = 0 ; i < corrP_XY.size() ; ++i ) {
+    corrP.push_back(corrP_XY[i]*corrP_XZ[i]*corrP_YZ[i] ) ;
+  }
+  
+  for( unsigned int i = 0 ; i < corrP_XY.size() - 1 ; ++i ) {
+    if( corrP[i+1] < corrP[i] && corrP[i] < linearity_min ) {
+      linearity_min = corrP[i+1] ;
+	min_hit = i+1 ;
+    }
+    
+    if( linearity_min < 0.9 && i == min_hit + int( window / 2 ) && corrP[i] > corrP[ min_hit ] ) {
+      // reseting : looking for other minima
+      position.push_back( Data_X[min_hit] ) ;
+      position.push_back( Data_Y[min_hit] ) ;
+      position.push_back( Data_Z[min_hit] ) ;
+      min_Linearity_position.push_back( position ) ;
+      // std::cout<< " x hit  = " << Data_1[min_hit] << " y hit = " << Data_2[min_hit] << " z hit = " << Data_Z[min_hit] << std::endl;
+      
+      position.clear();
+      linearity_min = 2 ;
+    }
+  }
+  
+  return min_Linearity_position;
 }
 
 
