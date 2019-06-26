@@ -113,6 +113,8 @@ public:
   std::vector< std::vector< double > > FindMinimumLinearityPosition( const std::vector< double > & Data_X, const std::vector< double > & Data_Y, 
 								     const std::vector< double > & Data_Z ); 
 
+  void PlotLinearityTrack( const std::string & path , const std::vector< double > & Data_X, const std::vector< double > & Data_Y,					        const std::vector< double > & Data_Z );
+
   void reconfigure(fhicl::ParameterSet const & p);
   //  void clearVariables() ;
   void beginJob() override;
@@ -200,9 +202,10 @@ private:
   std::map< int , double > map_RecoLength, map_RecoKEnergy ; 
   std::map< int , std::vector< double > > map_RecoXPosition, map_RecoYPosition, map_RecoZPosition, map_RecodEdx ;
   std::map< int , std::vector< int > > map_RecoDaughters ; 
-  std::map< int , int > map_RecoHiearchy ; 
+  std::map< int , int > map_RecoHiearchy, map_RecoKinks ; 
   std::map< int , std::vector< TVector3 > > map_RecoDirection ;
   std::string event_s ;
+
   // Efficiency calculation: just calorimetry information
   int reco_primary_mu , reco_primary_pi ;
   int true_mu, true_pi, true_p, true_e ; // total pdg-particle in event. Includes secondaries 
@@ -287,6 +290,10 @@ private:
   TH1D * h_recoDaughters_mu = new TH1D("recoDaughters_mu", " Total number of daughters for muons" , 4, -0.5, 3.5 ) ;
   TH1D * h_recoDaughters_pi = new TH1D("recoDaughters_pi", " Total number of daughters for pions" , 4, -0.5, 3.5 ) ;
   TH1D * h_recoDaughters_p  = new TH1D("recoDaughters_p", " Total number of daughters for protons" , 4, -0.5, 3.5 ) ;
+
+  TH1D * h_recoKinks_mu = new TH1D("recoKinks_mu", " Total number of Kinks for primary muons" , 4, -0.5, 3.5 ) ;
+  TH1D * h_recoKinks_pi = new TH1D("recoKinks_pi", " Total number of Kinks for primary pions" , 4, -0.5, 3.5 ) ;
+  TH1D * h_recoKinks_p  = new TH1D("recoKinkss_p", " Total number of Kinks for primary protons" , 4, -0.5, 3.5 ) ;
 
   TH1D * h_reco3Daughters_mu = new TH1D("reco3Daughters_mu", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
   TH1D * h_reco3Daughters_pi = new TH1D("reco3Daughters_pi", " Total number of 3rd-generation daughters" , 4, -0.5, 3.5 ) ;
@@ -815,6 +822,22 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
 
     }
   }
+  // ************************************ Finding kinks for tracks *******************************
+  for( it = map_RecoHiearchy.begin(); it != map_RecoHiearchy.end() ; ++it ) {
+    if( it->second != 1 ) continue ;
+    if( map_PandoraPDG[it->second] != 13 ) continue ; // just looking at tracks
+    map_RecoKinks[it->first] = 
+      FindMinimumLinearityPosition( map_RecoXPosition[it->first], map_RecoYPosition[it->first], map_RecoZPosition[it->first]).size();
+    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 13 )              h_recoKinks_mu -> Fill( map_RecoKinks[it->first] );
+    if( TMath::Abs(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) == 211 ) h_recoKinks_pi -> Fill( map_RecoKinks[it->first] );
+    if( mapMC_reco_pdg[ map_MCID_RecoID[it -> first]] == 2212 )            h_recoKinks_p  -> Fill( map_RecoKinks[it->first] );
+    event_s = "event_"+std::to_string(event_id)+"_partID_"+std::to_string(it->first)+"_PDG_"+std::to_string(mapMC_reco_pdg[ map_MCID_RecoID[it -> first]]) ;
+    if( map_RecoKinks[it->first] > 0 )  { 
+      PlotLinearityTrack( event_s , map_RecoXPosition[it->first], map_RecoYPosition[it->first], map_RecoZPosition[it->first] ) ;
+      SaveTrack( ("storing_event_absorbtion_"+event_s).c_str(), it->first );
+    }
+  }  
+
   // ************************************ APPLYING TRUTH INFO CUTS : get smaller sample to test *******************************
   bool mu_found = false ; 
   bool skip_event = false ; 
@@ -861,8 +884,8 @@ void test::NeutrinoTopologyAnalyzer::analyze(art::Event const& e)
       continue ;
     }
     else if( mu_found == false && map_RecoContained[it->first][0] == 1 && map_RecoContained[it->first][1] == 0 && only_one_escapes == true 
-	     && map_LongestEvent[it->first] == false  ){
-      // escapes and it's not the longest
+	     && ( map_LongestEvent[it->first] == false || map_RecoLength[it->first]<100 ) ){
+      // escapes and it's not the longest || escapes and the length is < 100 cm , not enought to reconstruct the momenta from multiple coulomb
       ++miss_escape ;
       skip_event = true ;
       continue ; 
@@ -1498,13 +1521,15 @@ double test::NeutrinoTopologyAnalyzer::FindMinCoordinate( const unsigned int & p
 
 
 void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const unsigned int & primary_reco_id ) {
-  int bins = int(map_RecoHits[primary_reco_id]/10) ;
+  int bins = int(map_RecoHits[primary_reco_id]/20) ;
   if( map_RecoHits[primary_reco_id] < 100 ) bins = map_RecoHits[primary_reco_id];
   std::string title ;
   std::vector<int> secondary_id ; 
   std::vector<int> terciary_id ; 
   double min_x, min_y, min_z, max_x, max_y, max_z ;
   TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
+  std::vector< std::vector< double > > min_Linearity_position =      
+    FindMinimumLinearityPosition( map_RecoXPosition[primary_reco_id], map_RecoYPosition[primary_reco_id], map_RecoZPosition[primary_reco_id]) ;
 
   std::string pdg_id ;
   
@@ -1558,8 +1583,7 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   TH3D * h_track_secondary_2 = (TH3D * ) h_track_primary ->Clone();
   TH3D * h_track_terciary = (TH3D * ) h_track_primary ->Clone();
   TH3D * h_track_terciary_2 = (TH3D * ) h_track_primary ->Clone();
-  
-//  h_track_primary->SetFillColor(4);
+  TH3D * h_track_kink = (TH3D * ) h_track_primary ->Clone();
   h_track_primary->SetLineColor(4);
   h_track_secondary -> SetLineColor(2);
   h_track_secondary_2 -> SetLineColor(7);  
@@ -1665,7 +1689,22 @@ void test::NeutrinoTopologyAnalyzer::SaveTrack( std::string const & path , const
   h_RecoVertex->SetFillStyle(3001);
   h_RecoVertex->Draw("BOX same") ;
   leg->AddEntry(h_RecoVertex, "Reconstructed vertex position" );
-
+  
+  
+  unsigned int kink_size = min_Linearity_position.size() ;
+  if ( kink_size > 3 ) kink_size = 3 ; // only look at the first third kinks
+  for( unsigned int i = 0 ; i < kink_size ; ++i ) {
+    h_track_kink -> Fill( min_Linearity_position[i][0], min_Linearity_position[i][1], min_Linearity_position[i][2] ) ;
+  }
+  h_track_kink->SetLineColor(3) ;
+  h_track_kink->SetLineWidth(3) ;
+  h_track_kink->SetFillColor(kRed);
+  h_track_kink->SetFillStyle(3004);
+  if( min_Linearity_position.size() > 0 ) {
+    // segfault: buffer offset too large (larger than 1073741822). Needs fixing
+    //h_track_kink->Draw("BOX same") ;
+    leg->AddEntry(h_track_kink, "Identified kink/s position" );
+  }
   leg->Draw();
   c->SaveAs((path+".root").c_str());
   c->Clear();
@@ -1758,7 +1797,7 @@ bool test::NeutrinoTopologyAnalyzer::CathodGapMotherDaughter( int  const & mothe
 std::vector< double > test::NeutrinoTopologyAnalyzer::MeanData( const std::vector<double> & data ){
   double muI_data;
   std::vector< double > mu_data ;
-  int window =  int( data.size() * 0.05 ) ;
+  int window =  5 ; //int( data.size() * 0.05 ) ;
   unsigned int starting_hit , end_hit ;
 
   if( window < 5 ) window = 5 ;
@@ -1791,7 +1830,7 @@ std::vector< double > test::NeutrinoTopologyAnalyzer::MeanData( const std::vecto
 std::vector< double > test::NeutrinoTopologyAnalyzer::DevData( const std::vector<double> & data ){
   double devI_data;
   std::vector< double > dev_data , mean ;
-  int window =  int( data.size() * 0.05 ) ;
+  int window =  5 ; //int( data.size() * 0.05 ) ;
   unsigned int starting_hit , end_hit ;
 
   if( window < 5 ) window = 5 ;
@@ -1827,7 +1866,7 @@ std::vector< double > test::NeutrinoTopologyAnalyzer::CovData( const std::vector
   std::vector< double > cov_12 , mean1, mean2;
   mean1 = MeanData( Data_1 ) ; //variable 1
   mean2 = MeanData( Data_2 ) ; //variable 2
-  int window =  int( Data_1.size() * 0.05 ) ;
+  int window = 5; //int( Data_1.size() * 0.05 ) ;
   unsigned int starting_hit , end_hit ;
 
   if( window < 5 ) window = 5 ;
@@ -1868,7 +1907,7 @@ std::vector< double > test::NeutrinoTopologyAnalyzer::LinearityData( const std::
   cov_12 = CovData( Data_1, Data_2 ) ;
   dev1 = DevData( Data_1 ) ;
   dev2 = DevData( Data_2 ) ;
-  int window =  int( Data_1.size() * 0.05 ) ;
+  int window =  5; //int( Data_1.size() * 0.05 ) ;
 
   if( window < 5 ) window = 5 ;
 
@@ -1881,8 +1920,7 @@ std::vector< double > test::NeutrinoTopologyAnalyzer::LinearityData( const std::
   return corrP_12;
 }
 
-std::vector< std::vector< double > > test::NeutrinoTopologyAnalyzer::FindMinimumLinearityPosition( const std::vector< double > & Data_X, const std::vector< double > & Data_Y, 
-								   const std::vector< double > & Data_Z ){
+std::vector< std::vector< double > > test::NeutrinoTopologyAnalyzer::FindMinimumLinearityPosition( 												  const std::vector< double > & Data_X, const std::vector< double > & Data_Y,								               const std::vector< double > & Data_Z ){
 
   std::vector< std::vector< double > > min_Linearity_position ;
   std::vector< double > position ;
@@ -1890,7 +1928,7 @@ std::vector< std::vector< double > > test::NeutrinoTopologyAnalyzer::FindMinimum
   std::vector< double > corrP_XZ = LinearityData( Data_X, Data_Z ) ;
   std::vector< double > corrP_YZ = LinearityData( Data_Z, Data_Y ) ;
   std::vector< double > corrP ;
-  int window =  int( Data_X.size() * 0.07 ) ;
+  int window =  5; //int( Data_X.size() * 0.07 ) ;
   if( window < 5 ) window = 5 ;
   double linearity_min = 2 ;
   unsigned int min_hit = 0 ;
@@ -1919,6 +1957,65 @@ std::vector< std::vector< double > > test::NeutrinoTopologyAnalyzer::FindMinimum
   }
   
   return min_Linearity_position;
+}
+
+
+void test::NeutrinoTopologyAnalyzer::PlotLinearityTrack( const std::string & path , 
+							 const std::vector< double > & Data_X, const std::vector< double > & Data_Y,								              const std::vector< double > & Data_Z ){
+
+  std::vector< double > corrP_XY = LinearityData( Data_X, Data_Y ) ;
+  std::vector< double > corrP_XZ = LinearityData( Data_X, Data_Z ) ;
+  std::vector< double > corrP_YZ = LinearityData( Data_Z, Data_Y ) ;
+  int window =  5; //int( Data_X.size() * 0.07 ) ;
+  if( window < 5 ) window = 5 ;
+
+  TH1F * h_Linearity = new TH1F( "h_Linearity", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
+  TH1F * h_LinearityXY = new TH1F( "h_LinearityXY", "Linearity", corrP_XY.size(), 0,  corrP_XY.size() );
+  TH1F * h_LinearityXZ = new TH1F( "h_LinearityXZ", "Linearity", corrP_XZ.size(), 0,  corrP_XZ.size() );
+  TH1F * h_LinearityYZ = new TH1F( "h_LinearityYZ", "Linearity", corrP_YZ.size(), 0,  corrP_YZ.size() );
+  TLegend * legend = new TLegend(0.15,0.15,0.35,0.35) ;
+
+  gStyle->SetOptStat(0);
+  h_Linearity->SetLineColor(46);
+  h_Linearity->SetLineWidth(2);
+  h_Linearity->SetLineStyle(1);
+  h_Linearity->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_Linearity , "r", "l") ;
+  gStyle->SetOptStat(0);
+  h_LinearityXY->SetLineColor(2);
+  h_LinearityXY->SetLineStyle(6);
+  //  h_LinearityXY->GetYaxis()->SetRangeUser(0,1);
+  legend->AddEntry( h_LinearityXY , "r_{XY}", "l") ;
+  h_LinearityXZ->SetLineColor(3);
+  h_LinearityXZ->SetLineStyle(2);
+  legend->AddEntry( h_LinearityXZ , "r_{XZ}", "l") ;
+  h_LinearityYZ->SetLineColor(4);
+  h_LinearityYZ->SetLineStyle(3);
+  legend->AddEntry( h_LinearityYZ , "r_{YZ}", "l") ;
+
+  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
+    h_LinearityXY -> Fill ( i, corrP_XY[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_XY.size() ; ++i ){
+    h_Linearity -> Fill ( i, corrP_XZ[i]*corrP_XY[i]*corrP_YZ[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_XZ.size() ; ++i ){
+    h_LinearityXZ -> Fill ( i, corrP_XZ[i] ) ;
+  }
+  for (unsigned int i = 0 ; i < corrP_YZ.size() ; ++i ){
+    h_LinearityYZ -> Fill ( i, corrP_YZ[i] ) ;
+  }
+
+  TCanvas *c = new TCanvas() ;
+  h_Linearity -> Draw("HIST L") ;
+  h_LinearityXY -> Draw("HIST L SAME") ;
+  h_LinearityXZ -> Draw("HIST L SAME") ;
+  h_LinearityYZ -> Draw("HIST L SAME") ;
+  h_Linearity->GetXaxis()->SetTitle("hits");
+  h_Linearity->GetYaxis()->SetTitle("r");
+  legend->Draw();
+  c->SaveAs( (path+"_LinearityX.root").c_str() ) ;
+
 }
 
 
@@ -2767,6 +2864,34 @@ void test::NeutrinoTopologyAnalyzer::endJob( )
   c->SaveAs("Daughters_primary.root") ; 
   l->Clear();
   c->Clear();
+
+  //**********************************************************************//  
+  h_recoKinks_mu -> SetStats(0) ; 
+  h_recoKinks_pi -> SetStats(0) ; 
+  h_recoKinks_p  -> SetStats(0) ;
+
+  h_recoKinks_mu -> SetLineColor(1) ; 
+  h_recoKinks_pi -> SetLineColor(2) ; 
+  h_recoKinks_p  -> SetLineColor(4) ;
+    
+  h_recoKinks_mu -> GetXaxis() -> SetTitle( "#Daughters primary" ) ; 
+  h_recoKinks_mu -> GetYaxis() -> SetTitle( "#events" ) ; 
+
+  h_recoKinks_mu -> Scale(1/h_recoKinks_mu->GetEntries());
+  h_recoKinks_pi -> Scale(1/h_recoKinks_pi->GetEntries());
+  h_recoKinks_p  -> Scale(1/h_recoKinks_p->GetEntries());
+
+  l->AddEntry(h_recoKinks_mu,"mu reco daughters");
+  l->AddEntry(h_recoKinks_pi,"pi reco daughters");
+  l->AddEntry(h_recoKinks_p,"p reco daughters");
+
+  h_recoKinks_mu -> Draw("HIST") ; 
+  h_recoKinks_pi -> Draw("same HIST") ; 
+  h_recoKinks_p  -> Draw("same HIST") ; 
+  l->Draw();
+  c->SaveAs("Kinks_primary.root") ; 
+  l->Clear();
+  c->Clear();
   //**********************************************************************//  
   h_reco3Daughters_mu -> SetStats(0) ; 
   h_reco3Daughters_pi -> SetStats(0) ; 
@@ -2951,6 +3076,7 @@ void test::NeutrinoTopologyAnalyzer::clearVariables() {
   map_LongestEvent.clear();
   map_AlwaysLongest.clear();
   map_HasBraggPeak.clear();
+  map_RecoKinks.clear();
 }
 
 DEFINE_ART_MODULE(test::NeutrinoTopologyAnalyzer)
